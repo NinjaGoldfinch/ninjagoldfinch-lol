@@ -375,3 +375,18 @@ Date: 2026-10-10 · Task: P3-04
 - The URL doesn't change when a row expands.
 
 **Consequences.** Expanding a row downloads the whole match page's data, builds and timeline gold included: 34 kB before compression for the recorded ranked game, though the inline view uses only the teams. A slimmer route would mean a second server load for the same match, so it is left as is. Two synthetic fixtures make the profile's second match fail, for the error state's test.
+
+## ADR-031: Gold chart: Blue's objectives above, Red's below; a crosshair with JavaScript
+
+Date: 2026-10-10 · Task: P3-03
+
+**Context.** In the chart from ADR-029, the two objective lanes under it were labelled "Blue" and "Red" in the y-axis column, so the labels read as part of the gold axis. The owner asked for the labels to go and for the chart to look better overall.
+
+**Decision.**
+
+- Blue's objectives sit in a strip above the chart and Red's in one below, the same way round as their leads. Position and colour tell the sides apart, so the strips have no labels. Blue's rows stack up from the chart and Red's down. The markers are opaque with a surface-coloured ring, so markers that touch on a phone stay legible.
+- Each side's area fades from its colour at the edge of the chart to almost nothing at zero, and Blue's leads are filled too. The grid lines other than zero are dashed and quieter. The final lead is a dot on the line, with its value (`−8.2k`) in a gutter to the right.
+- With JavaScript, pointing at the chart (or touching it) shows a crosshair and a dot on the nearest frame, with its time and lead. The frame is chosen by `nearestFrame` in `src/lib/domain/timeline.ts`. Without JavaScript, the per-frame SVG `<title>` bands from ADR-029 stay, and they are dropped once the crosshair is available, so the two never show together.
+- The key is a row of letter chips (T Tower, I Inhibitor, ...) in place of the line of text, and the time axis reads `5m`, `10m`, ....
+
+**Consequences.** The tooltip is hidden from screen readers, as the lanes are. The chart's accessible name and the objectives table still carry the figures.

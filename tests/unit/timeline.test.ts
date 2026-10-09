@@ -17,6 +17,7 @@ import {
 	leadPaths,
 	markerRows,
 	minuteTicks,
+	nearestFrame,
 	objectiveKills,
 	objectiveMarkers,
 	type ObjectiveKill
@@ -233,6 +234,26 @@ describe('goldAxis', () => {
 		expect(goldAxis(leads(3001))).toEqual({ limit: 4000, step: 2000 });
 		expect(goldAxis(lead)).toEqual({ limit: 10000, step: 5000 });
 		expect(goldAxis(leads(400000))).toEqual({ limit: 400000, step: 50000 });
+	});
+});
+
+describe('nearestFrame', () => {
+	const points = [
+		{ at: 0, lead: 0 },
+		{ at: 60, lead: 100 },
+		{ at: 120, lead: -300 }
+	];
+
+	it('finds the frame closest in time, the earlier one on a tie', () => {
+		expect(nearestFrame(points, 10)).toBe(0);
+		expect(nearestFrame(points, 30)).toBe(0);
+		expect(nearestFrame(points, 31)).toBe(1);
+		expect(nearestFrame(points, 500)).toBe(2);
+		expect(nearestFrame(points, -20)).toBe(0);
+	});
+
+	it('is -1 without points', () => {
+		expect(nearestFrame([], 10)).toBe(-1);
 	});
 });
 

@@ -162,6 +162,18 @@ export function goldAxis(points: GoldPoint[]): { limit: number; step: number } {
 	return { limit: Math.max(1, Math.ceil(largest / step)) * step, step };
 }
 
+/**
+ * The index of the point nearest `at` seconds, for pointing at the chart;
+ * -1 without points. Points are in time order; a tie goes to the earlier one.
+ */
+export function nearestFrame(points: GoldPoint[], at: number): number {
+	let best = -1;
+	for (let i = 0; i < points.length; i++) {
+		if (best === -1 || Math.abs(points[i].at - at) < Math.abs(points[best].at - at)) best = i;
+	}
+	return best;
+}
+
 /** Minute marks for the time axis: every 5 minutes, or every 10 past 45. */
 export function minuteTicks(duration: number): number[] {
 	const every = duration > 45 * 60 ? 10 : 5;
