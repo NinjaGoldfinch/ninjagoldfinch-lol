@@ -1,3 +1,4 @@
+import type { Shard } from '#lib/api/cdragon.ts';
 import type { Rune, StaticNames, Named } from '#lib/api/ddragon.ts';
 import {
 	OBJECTIVES,
@@ -6,12 +7,15 @@ import {
 	type Participant,
 	type Timeline
 } from '#lib/api/match.ts';
+import { itemSteps, skillOrder, toRunePage, type Build } from './builds.ts';
 import type { Region } from './regions.ts';
-import type { RiotId } from './riot-id.ts';
+import { sameRiotId, type RiotId } from './riot-id.ts';
 import { loadoutOf, patchOf, type MatchRow } from './matches.ts';
 
 /** One player's scoreboard line: only what the page renders. */
 export interface ScoreboardLine {
+	/** Riot's id for the player within the match (1–10), as in `Build`. */
+	participantId: number;
 	/** null when Riot did not report one. */
 	riotId: RiotId | null;
 	champion: MatchRow['champion'];
@@ -69,6 +73,8 @@ export interface MatchDetail {
 	teams: TeamScoreboard[];
 	/** From the timeline; null when it could not be loaded. */
 	gold: GoldFrame[] | null;
+	/** Every player's build, in Riot's order. */
+	builds: Build[];
 }
 
 const TEAM_NAMES: Record<number, string> = { 100: 'Blue team', 200: 'Red team' };
@@ -89,8 +95,14 @@ export function toMatchDetail(
 	{
 		region,
 		ddragonVersion,
-		timeline
-	}: { region: Region; ddragonVersion: string; timeline?: Timeline }
+		timeline,
+		shards = {}
+	}: {
+		region: Region;
+		ddragonVersion: string;
+		timeline?: Timeline;
+		shards?: Record<number, Shard>;
+	}
 ): MatchDetail {
 	const remake = match.participants.some((p) => p.gameEndedInEarlySurrender);
 	const teamIds = [...new Set(match.participants.map((p) => p.teamId))];
@@ -130,12 +142,19 @@ export function toMatchDetail(
 				players: players.map((p) => toLine(p, names))
 			};
 		}),
-		gold: timeline ? teamGold(timeline, match, teamIds) : null
+		gold: timeline ? teamGold(timeline, match, teamIds) : null,
+		builds: match.participants.map((p) => ({
+			participantId: p.participantId,
+			items: timeline ? itemSteps(timeline.events, p.participantId, names) : null,
+			skills: timeline ? skillOrder(timeline.events, p.participantId) : null,
+			runes: toRunePage(p.runePage, names, shards)
+		}))
 	};
 }
 
 function toLine(p: Participant, names: StaticNames): ScoreboardLine {
 	return {
+		participantId: p.participantId,
 		riotId:
 			p.riotIdGameName && p.riotIdTagline
 				? { gameName: p.riotIdGameName, tagLine: p.riotIdTagline }
@@ -185,14 +204,38 @@ export function isMatchIdFor(region: Region, matchId: string): boolean {
 }
 
 /**
- * The match page URL. `player` is whose champion to highlight: the profile the
- * visitor came from, written `GameName-TAG` as in profile URLs.
+ * Whose build the page shows: the player `build` names (a participant id),
+ * else the highlighted player, else the first player (normally Blue's top
+ * laner).
  */
-export function matchPath(region: string, matchId: string, player?: RiotId): string {
-	const query = player
-		? `?${new URLSearchParams({ player: `${player.gameName}-${player.tagLine}` })}`
-		: '';
-	return `/match/${region}/${encodeURIComponent(matchId)}${query}`;
+export function selectBuild(
+	detail: Pick<MatchDetail, 'teams' | 'builds'>,
+	build: string | null,
+	highlight: RiotId | null
+): Build | undefined {
+	const lines = detail.teams.flatMap((t) => t.players);
+	const wanted =
+		lines.find((l) => build !== null && String(l.participantId) === build) ??
+		lines.find((l) => highlight && l.riotId && sameRiotId(l.riotId, highlight)) ??
+		lines[0];
+	return detail.builds.find((b) => b.participantId === wanted?.participantId);
+}
+
+/**
+ * The match page URL. `player` is whose champion to highlight: the profile the
+ * visitor came from, written `GameName-TAG` as in profile URLs. `build` is
+ * whose build to show, by participant id.
+ */
+export function matchPath(
+	region: string,
+	matchId: string,
+	{ player, build }: { player?: RiotId | null; build?: number } = {}
+): string {
+	const query = new URLSearchParams();
+	if (player) query.set('player', `${player.gameName}-${player.tagLine}`);
+	if (build !== undefined) query.set('build', String(build));
+	const search = query.size > 0 ? `?${query}` : '';
+	return `/match/${region}/${encodeURIComponent(matchId)}${search}`;
 }
 
 /** `9 Oct 2026, 09:12 UTC`: the page is cached for a day, so no "N hours ago". */

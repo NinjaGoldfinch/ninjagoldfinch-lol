@@ -44,6 +44,14 @@ describe('parseMatch', () => {
 		expect(top?.perks).toEqual({ keystone: 8010, subStyle: 8400 });
 	});
 
+	it('reads the whole rune page', () => {
+		expect(parseMatch(raw)?.participants[7].runePage).toEqual({
+			primary: { style: 8200, perks: [8992, 8226, 8210, 8237] },
+			secondary: { style: 8000, perks: [9105, 8017] },
+			shards: [5005, 5008, 5001]
+		});
+	});
+
 	it('drops empty bans and reads missing counts as zero', () => {
 		const [first, ...rest] = raw.info.participants;
 		const noKills = { ...first, kills: undefined };
@@ -79,6 +87,48 @@ describe('parseTimeline', () => {
 			totalGold: { 1: 500, 2: 500, 3: 500, 4: 500, 5: 500, 6: 500, 7: 500, 8: 500, 9: 500, 10: 500 }
 		});
 		expect(timeline?.frames.at(-1)?.timestamp).toBe(1952002);
+	});
+
+	it('reads the item and skill events, in game order', () => {
+		const timeline = parseTimeline(fixtureBody(TIMELINE_PATH));
+		const types = timeline?.events.map((e) => e.type);
+		expect(types?.filter((t) => t === 'ITEM_PURCHASED')).toHaveLength(255);
+		expect(types?.filter((t) => t === 'ITEM_SOLD')).toHaveLength(11);
+		expect(types?.filter((t) => t === 'ITEM_UNDO')).toHaveLength(16);
+		expect(types?.filter((t) => t === 'SKILL_LEVEL_UP')).toHaveLength(164);
+		expect(timeline?.events.find((e) => e.type === 'SKILL_LEVEL_UP')).toEqual({
+			type: 'SKILL_LEVEL_UP',
+			participantId: 2,
+			timestamp: 1805,
+			skillSlot: 3,
+			levelUpType: 'NORMAL'
+		});
+		const stamps = timeline?.events.map((e) => e.timestamp) ?? [];
+		expect(stamps).toEqual([...stamps].sort((a, b) => a - b));
+	});
+
+	it('drops events missing a field it reads, and the kinds it does not', () => {
+		const body = {
+			metadata: { matchId: 'OC1_1' },
+			info: {
+				frames: [
+					{
+						timestamp: 0,
+						participantFrames: {},
+						events: [
+							{ type: 'ITEM_PURCHASED', participantId: 1, timestamp: 5 },
+							{ type: 'SKILL_LEVEL_UP', participantId: 1, timestamp: 6, skillSlot: 9 },
+							{ type: 'ITEM_UNDO', participantId: 1, timestamp: 7, beforeId: 0, afterId: 0 },
+							{ type: 'WARD_PLACED', participantId: 1, timestamp: 8 },
+							{ type: 'ITEM_SOLD', participantId: 1, timestamp: 9, itemId: 2031 }
+						]
+					}
+				]
+			}
+		};
+		expect(parseTimeline(body)?.events).toEqual([
+			{ type: 'ITEM_SOLD', participantId: 1, timestamp: 9, itemId: 2031 }
+		]);
 	});
 
 	it('rejects a payload without frames', () => {

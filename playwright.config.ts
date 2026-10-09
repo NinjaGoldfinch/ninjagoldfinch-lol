@@ -23,7 +23,9 @@ export default defineConfig({
 				PORT: '4173',
 				NODE_ENV: 'production',
 				PROXY_URL: `http://127.0.0.1:${MOCK_PROXY_PORT}`,
-				PROXY_KEY: 'e2e-placeholder'
+				PROXY_KEY: 'e2e-placeholder',
+				// The mock also replays the CommunityDragon fixture.
+				CDRAGON_URL: `http://127.0.0.1:${MOCK_PROXY_PORT}`
 			}
 		}
 	]

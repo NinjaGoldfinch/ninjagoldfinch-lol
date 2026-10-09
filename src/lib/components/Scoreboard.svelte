@@ -8,20 +8,25 @@
 
 	/**
 	 * `region` is the URL slug; `maxDamage` is the match's highest, for the bars;
-	 * `highlight` is whose line to mark, if anyone's.
+	 * `highlight` is whose line to mark, if anyone's. Each champion links to
+	 * `buildHref` for that player's build; `selected` is whose build is shown.
 	 */
 	let {
 		team,
 		version,
 		region,
 		maxDamage,
-		highlight = null
+		highlight = null,
+		selected = null,
+		buildHref
 	}: {
 		team: TeamScoreboard;
 		version: string;
 		region: string;
 		maxDamage: number;
 		highlight?: RiotId | null;
+		selected?: number | null;
+		buildHref: (participantId: number) => string;
 	} = $props();
 
 	const RESULT = {
@@ -96,7 +101,15 @@
 					>
 						<td class="px-4 py-2">
 							<div class="flex items-center gap-2">
-								<div class="relative shrink-0">
+								<!-- Replaces the history entry, so the back link still leads to the profile. -->
+								<a
+									href={buildHref(player.participantId)}
+									aria-label="Show {player.champion.name}'s build"
+									data-sveltekit-replacestate
+									class="relative block shrink-0 rounded {player.participantId === selected
+										? 'ring-2 ring-accent'
+										: 'hover:ring-2 hover:ring-border'}"
+								>
 									{#if player.champion.key}
 										<ChampionIcon
 											patch={version}
@@ -114,7 +127,7 @@
 											><span class="sr-only">Level&nbsp;</span>{player.champion.level}</span
 										>
 									{/if}
-								</div>
+								</a>
 								<div class="flex shrink-0 gap-0.5">
 									<Loadout spells={player.spells} runes={player.runes} {version} size={16} />
 								</div>

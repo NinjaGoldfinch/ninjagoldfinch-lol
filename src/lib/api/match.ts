@@ -36,8 +36,17 @@ export interface Participant {
 	summoner2Id: number;
 	/** The primary path's first rune, and the secondary path. */
 	perks: { keystone: number | null; subStyle: number | null };
+	runePage: RunePage;
 	win: boolean;
 	gameEndedInEarlySurrender: boolean;
+}
+
+/** A rune page as perk ids: each path's runes in slot order, then the stat shards. */
+export interface RunePage {
+	primary: { style: number | null; perks: number[] };
+	secondary: { style: number | null; perks: number[] };
+	/** Offense, flex and defense shards; missing ones are left out. */
+	shards: number[];
 }
 
 /** Team objective kill counts, by Riot's `objectives` keys. */
@@ -72,9 +81,43 @@ export interface TimelineFrame {
 	totalGold: Record<number, number>;
 }
 
+/** A purchase or sale. */
+export interface ItemEvent {
+	type: 'ITEM_PURCHASED' | 'ITEM_SOLD';
+	participantId: number;
+	timestamp: number;
+	itemId: number;
+}
+
+/**
+ * An undone purchase or sale. Riot names the item in `beforeId` or `afterId`
+ * (the other is 0), not consistently by which was undone.
+ */
+export interface ItemUndoEvent {
+	type: 'ITEM_UNDO';
+	participantId: number;
+	timestamp: number;
+	beforeId: number;
+	afterId: number;
+}
+
+export interface SkillEvent {
+	type: 'SKILL_LEVEL_UP';
+	participantId: number;
+	timestamp: number;
+	/** 1–4: Q, W, E, R. */
+	skillSlot: number;
+	/** NORMAL, or EVOLVE for an evolution (Kha'Zix, Viktor, ...). */
+	levelUpType: string | null;
+}
+
+export type TimelineEvent = ItemEvent | ItemUndoEvent | SkillEvent;
+
 export interface Timeline {
 	matchId: string;
 	frames: TimelineFrame[];
+	/** The item and skill events the site reads, in game order. */
+	events: TimelineEvent[];
 }
 
 /**
@@ -129,8 +172,9 @@ export function parseMatch(body: unknown): Match | undefined {
 }
 
 /**
- * Projects a match-v5 timeline to its frames' gold. undefined without a match
- * id or a list of frames; a frame without a timestamp is dropped.
+ * Projects a match-v5 timeline to its frames' gold and its item and skill
+ * events. undefined without a match id or a list of frames; a frame or event
+ * missing a field the site reads is dropped.
  */
 export function parseTimeline(body: unknown): Timeline | undefined {
 	const matchId = string(record(record(body)?.metadata)?.matchId);
@@ -139,6 +183,10 @@ export function parseTimeline(body: unknown): Timeline | undefined {
 
 	return {
 		matchId,
+		events: frames.flatMap((frame) => {
+			const events = record(frame)?.events;
+			return (Array.isArray(events) ? events : []).flatMap(parseEvent);
+		}),
 		frames: frames.flatMap((value): TimelineFrame[] => {
 			const frame = record(value);
 			const timestamp = number(frame?.timestamp);
@@ -153,6 +201,44 @@ export function parseTimeline(body: unknown): Timeline | undefined {
 	};
 }
 
+function parseEvent(value: unknown): TimelineEvent[] {
+	const e = record(value);
+	const participantId = number(e?.participantId);
+	const timestamp = number(e?.timestamp);
+	if (!e || participantId === null || timestamp === null) return [];
+
+	switch (e.type) {
+		case 'ITEM_PURCHASED':
+		case 'ITEM_SOLD': {
+			const itemId = number(e.itemId);
+			return itemId ? [{ type: e.type, participantId, timestamp, itemId }] : [];
+		}
+		case 'ITEM_UNDO': {
+			const beforeId = number(e.beforeId) ?? 0;
+			const afterId = number(e.afterId) ?? 0;
+			return beforeId || afterId
+				? [{ type: 'ITEM_UNDO', participantId, timestamp, beforeId, afterId }]
+				: [];
+		}
+		case 'SKILL_LEVEL_UP': {
+			const skillSlot = number(e.skillSlot);
+			return skillSlot !== null && skillSlot >= 1 && skillSlot <= 4
+				? [
+						{
+							type: 'SKILL_LEVEL_UP',
+							participantId,
+							timestamp,
+							skillSlot,
+							levelUpType: string(e.levelUpType)
+						}
+					]
+				: [];
+		}
+		default:
+			return [];
+	}
+}
+
 function parseParticipant(value: unknown): Participant | undefined {
 	const p = record(value);
 	const participantId = number(p?.participantId);
@@ -164,7 +250,20 @@ function parseParticipant(value: unknown): Participant | undefined {
 	const styles = record(p.perks)?.styles;
 	const style = (description: string) =>
 		(Array.isArray(styles) ? styles : []).map(record).find((s) => s?.description === description);
-	const primary = style('primaryStyle')?.selections;
+	const path = (description: string) => {
+		const s = style(description);
+		const selections = Array.isArray(s?.selections) ? s.selections : [];
+		return {
+			style: number(s?.style),
+			perks: selections.flatMap((sel) => {
+				const perk = number(record(sel)?.perk);
+				return perk ? [perk] : [];
+			})
+		};
+	};
+	const primary = path('primaryStyle');
+	const secondary = path('subStyle');
+	const stats = record(record(p.perks)?.statPerks);
 
 	return {
 		participantId,
@@ -193,9 +292,14 @@ function parseParticipant(value: unknown): Participant | undefined {
 		roleBoundItem: number(p.roleBoundItem),
 		summoner1Id: count('summoner1Id'),
 		summoner2Id: count('summoner2Id'),
-		perks: {
-			keystone: number(record(Array.isArray(primary) ? primary[0] : undefined)?.perk),
-			subStyle: number(style('subStyle')?.style)
+		perks: { keystone: primary.perks[0] ?? null, subStyle: secondary.style },
+		runePage: {
+			primary,
+			secondary,
+			shards: [stats?.offense, stats?.flex, stats?.defense].flatMap((v) => {
+				const id = number(v);
+				return id ? [id] : [];
+			})
 		},
 		win: p.win === true,
 		gameEndedInEarlySurrender: p.gameEndedInEarlySurrender === true
