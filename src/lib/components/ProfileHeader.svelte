@@ -11,7 +11,8 @@
 		summoner,
 		patch,
 		ageSeconds,
-		refreshAvailableIn
+		refreshAvailableIn,
+		refreshAction = '?/refresh'
 	}: {
 		riotId: RiotId;
 		regionLabel: string;
@@ -19,6 +20,8 @@
 		patch: string;
 		ageSeconds: number | null;
 		refreshAvailableIn: number;
+		/** The refresh action's URL, keeping the page's filter. */
+		refreshAction?: string;
 	} = $props();
 
 	// Counts the cooldown down in the browser; the server renders the starting value.
@@ -59,7 +62,7 @@
 		<!-- POST, so crawlers never spend Riot quota; works without JavaScript. -->
 		<form
 			method="POST"
-			action="?/refresh"
+			action={refreshAction}
 			use:enhance={() =>
 				({ update }) =>
 					update({ invalidateAll: false })}

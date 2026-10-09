@@ -136,3 +136,50 @@ test("the header search starts at the profile's region", async ({ page }) => {
 		'kr'
 	);
 });
+
+test.describe('match filters and pages', () => {
+	const PROFILE = '/summoner/oce/NinjaGoldfinch-OCENZ';
+	const firstMatch = (page: Page) =>
+		page.getByRole('region', { name: 'Recent matches' }).getByRole('article').first();
+
+	test('choosing a queue reloads with only that queue', async ({ page }) => {
+		await page.goto(PROFILE);
+		await page.getByRole('combobox', { name: 'Queue' }).selectOption({ label: 'Ranked Solo' });
+
+		await expect(page).toHaveURL(`${PROFILE}?queue=420`);
+		await expect(page.getByRole('combobox', { name: 'Queue' })).toHaveValue('420');
+		await expect(firstMatch(page)).toContainText('Ranked Solo');
+	});
+
+	test('Older and Newer move between pages, keeping the queue', async ({ page }) => {
+		await page.goto(`${PROFILE}?queue=420`);
+		await expect(page.getByRole('link', { name: 'Newer' })).toHaveCount(0);
+
+		await page.goto(PROFILE);
+		await page.getByRole('link', { name: 'Older' }).click();
+		await expect(page).toHaveURL(`${PROFILE}?page=2`);
+		await expect(page.getByRole('navigation', { name: 'Match pages' })).toContainText('Page 2');
+		await expect(firstMatch(page)).not.toHaveAccessibleName('Victory as Ahri');
+
+		await page.getByRole('link', { name: 'Newer' }).click();
+		await expect(page).toHaveURL(PROFILE);
+		await expect(firstMatch(page)).toHaveAccessibleName('Victory as Ahri');
+	});
+
+	test('refresh keeps the filter', async ({ page }) => {
+		await page.goto(`${PROFILE}?page=2`);
+		const form = page.locator('form', { has: page.getByRole('button', { name: 'Refresh' }) });
+		await expect(form).toHaveAttribute('action', '?page=2&/refresh');
+	});
+
+	test.describe('without JavaScript', () => {
+		test.use({ javaScriptEnabled: false });
+
+		test('the queue filter applies with its button', async ({ page }) => {
+			await page.goto(PROFILE);
+			await page.getByRole('combobox', { name: 'Queue' }).selectOption('420');
+			await page.getByRole('button', { name: 'Apply' }).click();
+			await expect(page).toHaveURL(`${PROFILE}?queue=420`);
+		});
+	});
+});

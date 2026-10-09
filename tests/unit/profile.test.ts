@@ -51,6 +51,16 @@ describe('loadProfile', () => {
 		expect(profile.matches).toHaveLength(10);
 	});
 
+	it('loads a later page and a single queue', async () => {
+		const page2 = await loadProfile(oce, me, mock.client, { filter: { queue: null, page: 2 } });
+		expect(page2.matches[0].matchId).toBe('OC1_712213427');
+		expect(page2.filter).toEqual({ queue: null, page: 2 });
+
+		const solo = await loadProfile(oce, me, mock.client, { filter: { queue: 420, page: 1 } });
+		expect(solo.matches.every((m) => m.queueId === 420)).toBe(true);
+		expect(solo.queueOptions[0]).toEqual({ id: 420, name: 'Ranked Solo' });
+	});
+
 	it('maps an unknown player to 404', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const missing = { gameName: 'NoSuchPlayer000', tagLine: 'XXXX' };

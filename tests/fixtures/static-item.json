@@ -9,7 +9,7 @@
 			"content-type": "application/json; charset=utf-8",
 			"x-cache": "HIT",
 			"x-cache-age": "0",
-			"x-request-id": "01M4FN13EKC7GNEDDPR3HB71Y8"
+			"x-request-id": "01M4FN88PP2FJAXN4MJCQMJPX2"
 		},
 		"body": {
 			"type": "item",
@@ -149,6 +149,50 @@
 					},
 					"stats": {
 						"FlatMovementSpeedMod": 25
+					}
+				},
+				"1018": {
+					"name": "Cloak of Agility",
+					"description": "<mainText><stats><attention>15%</attention> Critical Strike Chance</stats><br><br></mainText>",
+					"colloq": ";",
+					"plaintext": "Increases critical strike chance",
+					"into": [
+						"123430",
+						"667666",
+						"3031",
+						"3086",
+						"6670",
+						"3033",
+						"3039",
+						"3508",
+						"3095",
+						"6676"
+					],
+					"image": {
+						"full": "1018.png",
+						"sprite": "item0.png",
+						"group": "item",
+						"x": 192,
+						"y": 0,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 600,
+						"purchasable": true,
+						"total": 600,
+						"sell": 420
+					},
+					"tags": ["CriticalStrike"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatCritChanceMod": 0.15
 					}
 				},
 				"1028": {
@@ -546,6 +590,39 @@
 					"stats": {
 						"FlatHPPoolMod": 90,
 						"FlatMagicDamageMod": 18
+					}
+				},
+				"1058": {
+					"name": "Needlessly Large Rod",
+					"description": "<mainText><stats><attention>65</attention> Ability Power</stats><br><br></mainText>",
+					"colloq": ";nlr",
+					"plaintext": "Greatly increases Ability Power",
+					"into": ["3157", "4645", "3089", "3102", "3128", "4403"],
+					"image": {
+						"full": "1058.png",
+						"sprite": "item0.png",
+						"group": "item",
+						"x": 240,
+						"y": 96,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 1200,
+						"purchasable": true,
+						"total": 1200,
+						"sell": 840
+					},
+					"tags": ["SpellDamage"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatMagicDamageMod": 65
 					}
 				},
 				"1082": {
@@ -1025,6 +1102,49 @@
 					},
 					"depth": 2
 				},
+				"3116": {
+					"name": "Rylai's Crystal Scepter",
+					"description": "<mainText><stats><attention>65</attention> Ability Power<br><attention>400</attention> Health</stats><br><br><passive>Rimefrost</passive><br>Damaging Abilities <keyword>Slow</keyword> enemies by 30% for 1 second.</mainText>",
+					"colloq": ";",
+					"plaintext": "Abilities slow enemies",
+					"from": ["1026", "1011", "1052"],
+					"image": {
+						"full": "3116.png",
+						"sprite": "item3.png",
+						"group": "item",
+						"x": 96,
+						"y": 384,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 450,
+						"purchasable": true,
+						"total": 2600,
+						"sell": 1820
+					},
+					"tags": ["Health", "SpellDamage", "Slow"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatHPPoolMod": 400,
+						"FlatMagicDamageMod": 65
+					},
+					"effect": {
+						"Effect1Amount": "-0.3",
+						"Effect2Amount": "-0.3",
+						"Effect3Amount": "-0.3",
+						"Effect4Amount": "1",
+						"Effect5Amount": "1",
+						"Effect6Amount": "1"
+					},
+					"depth": 3
+				},
 				"3133": {
 					"name": "Caulfield's Warhammer",
 					"description": "<mainText><stats><attention>20</attention> Attack Damage<br><attention>10</attention> Ability Haste</stats><br><br></mainText>",
@@ -1314,6 +1434,41 @@
 						"Effect1Amount": "9"
 					},
 					"depth": 2
+				},
+				"6653": {
+					"name": "Liandry's Torment",
+					"description": "<mainText><stats><attention>60</attention> Ability Power<br><attention>300</attention> Health</stats><br><br><passive>Torment</passive><br>Damaging Abilities burn enemies for <magicDamage>2% max Health magic damage</magicDamage> per second for 3 seconds.<br><br><passive>Suffering</passive><br>For each second in combat with enemy champions, deal 2% bonus damage, up to 6%.</mainText>",
+					"colloq": "",
+					"plaintext": "Charge up in combat to deal high damage over time, especially against durable enemies",
+					"from": ["3147", "2508"],
+					"image": {
+						"full": "6653.png",
+						"sprite": "item6.png",
+						"group": "item",
+						"x": 432,
+						"y": 0,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 800,
+						"purchasable": true,
+						"total": 3000,
+						"sell": 2100
+					},
+					"tags": ["Health", "SpellDamage"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatHPPoolMod": 300,
+						"FlatMagicDamageMod": 60
+					},
+					"depth": 3
 				},
 				"6670": {
 					"name": "Noonquiver",
