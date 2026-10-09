@@ -154,10 +154,10 @@ describe('match formatting', () => {
 
 describe('isCustomGame', () => {
 	it('treats queue 0 and a missing queue as custom', () => {
-		expect(isCustomGame({ matchId: 'a', queueId: 0 })).toBe(true);
-		expect(isCustomGame({ matchId: 'b', queueId: null })).toBe(true);
-		expect(isCustomGame({ matchId: 'c' })).toBe(true);
-		expect(isCustomGame({ matchId: 'd', queueId: 420 })).toBe(false);
+		expect(isCustomGame({ queueId: 0 })).toBe(true);
+		expect(isCustomGame({ queueId: null })).toBe(true);
+		expect(isCustomGame({})).toBe(true);
+		expect(isCustomGame({ queueId: 420 })).toBe(false);
 	});
 });
 

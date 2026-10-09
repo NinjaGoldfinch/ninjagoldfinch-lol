@@ -1,21 +1,13 @@
 <script lang="ts">
-	import {
-		LANES,
-		itemIconUrl,
-		laneIconUrl,
-		runeIconUrl,
-		summonerSpellIconUrl
-	} from '#lib/assets.ts';
-	import {
-		csPerMinute,
-		formatDuration,
-		itemSlots,
-		kdaRatio,
-		type MatchRow
-	} from '#lib/domain/matches.ts';
+	import { LANES, laneIconUrl } from '#lib/assets.ts';
+	import { matchPath } from '#lib/domain/match-detail.ts';
+	import { csPerMinute, formatDuration, kdaRatio, type MatchRow } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
+	import ItemList from './ItemList.svelte';
+	import Loadout from './Loadout.svelte';
 
-	let { match, patch }: { match: MatchRow; patch: string } = $props();
+	/** `region` is the URL slug, for the link to the match page. */
+	let { match, patch, region }: { match: MatchRow; patch: string; region: string } = $props();
 
 	const RESULT = {
 		win: { label: 'Victory', border: 'border-l-win', text: 'text-win' },
@@ -25,7 +17,6 @@
 	const result = $derived(RESULT[match.result]);
 	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
 	const version = $derived(match.ddragonVersion ?? patch);
-	const slots = $derived(itemSlots(match));
 	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
 </script>
 
@@ -74,51 +65,7 @@
 				>
 			{/if}
 		</div>
-		<div class="flex flex-col gap-1">
-			{#each match.spells as spell, i (i)}
-				{#if spell}
-					<img
-						src={summonerSpellIconUrl(version, spell.id)}
-						alt={spell.name}
-						title={spell.name}
-						width="28"
-						height="28"
-						loading="lazy"
-						class="rounded-sm"
-					/>
-				{:else}
-					<span class="size-7 rounded-sm bg-bg"></span>
-				{/if}
-			{/each}
-		</div>
-		<div class="flex flex-col items-center gap-1">
-			{#if match.runes.keystone}
-				<img
-					src={runeIconUrl(match.runes.keystone.icon)}
-					alt={match.runes.keystone.name}
-					title={match.runes.keystone.name}
-					width="28"
-					height="28"
-					loading="lazy"
-					class="rounded-full bg-bg"
-				/>
-			{:else}
-				<span class="size-7 rounded-full bg-bg"></span>
-			{/if}
-			{#if match.runes.secondary}
-				<img
-					src={runeIconUrl(match.runes.secondary.icon)}
-					alt={match.runes.secondary.name}
-					title={match.runes.secondary.name}
-					width="20"
-					height="20"
-					loading="lazy"
-					class="m-1"
-				/>
-			{:else}
-				<span class="size-7"></span>
-			{/if}
-		</div>
+		<Loadout spells={match.spells} runes={match.runes} {version} />
 	</div>
 
 	<div class="w-28 text-sm">
@@ -131,24 +78,11 @@
 		</p>
 	</div>
 
-	<ul class="flex gap-1" aria-label="Items">
-		<!-- Inventory packed left, then the trinket, then the role quest slot. -->
-		{#each slots as item, i (i)}
-			<li>
-				{#if item}
-					<img
-						src={itemIconUrl(version, item.id)}
-						alt={item.name}
-						title={item.roleQuest ? `Role quest: ${item.name}` : item.name}
-						width="34"
-						height="34"
-						loading="lazy"
-						class="rounded-sm"
-					/>
-				{:else}
-					<span class="block size-[34px] rounded-sm bg-bg"></span>
-				{/if}
-			</li>
-		{/each}
-	</ul>
+	<ItemList items={match.items} roleBoundItem={match.roleBoundItem} {version} />
+
+	<a
+		href={matchPath(region, match.matchId)}
+		class="ml-auto text-sm text-muted underline-offset-4 hover:text-text hover:underline"
+		>Details<span class="sr-only"> of this match</span></a
+	>
 </article>

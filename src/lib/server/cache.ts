@@ -5,6 +5,8 @@
 export const CACHE_POLICIES = {
 	/** Profile pages: 60 s at the edge, then stale for up to 5 min while refreshing. */
 	profile: 'public, s-maxage=60, stale-while-revalidate=300',
+	/** Match pages: a finished match never changes, so a day at the edge, then stale for another. */
+	match: 'public, s-maxage=86400, stale-while-revalidate=86400',
 	/** Not-found pages: briefly, so repeated misses do not all reach riot-proxy. */
 	notFound: 'public, s-maxage=60',
 	/** Never cached: redirects, health checks, errors, anything per-request. */
