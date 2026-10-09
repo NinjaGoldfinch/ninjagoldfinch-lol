@@ -37,7 +37,7 @@
 	</div>
 
 	<div class="flex items-center gap-1.5">
-		<!-- Champion with the lane as a badge on its lower-left corner. -->
+		<!-- Champion with the lane on its lower-left corner and the level on its lower-right. -->
 		<div class="relative">
 			{#if match.champion.key}
 				<ChampionIcon
@@ -58,6 +58,13 @@
 					height="24"
 					class="absolute -bottom-2 -left-2 size-6 rounded-full border border-border bg-bg p-0.5 brightness-110 grayscale"
 				/>
+			{/if}
+			{#if match.champion.level !== null}
+				<span
+					title="Champion level {match.champion.level}"
+					class="absolute -right-1.5 -bottom-1.5 min-w-5 rounded-full border border-border bg-bg px-1 text-center text-[11px] leading-[18px] font-semibold"
+					><span class="sr-only">Level&nbsp;</span>{match.champion.level}</span
+				>
 			{/if}
 		</div>
 		<div class="flex flex-col gap-1">
