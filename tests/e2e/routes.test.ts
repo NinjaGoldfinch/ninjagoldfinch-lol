@@ -177,6 +177,30 @@ test.describe('match filters and pages', () => {
 		await expect(firstMatch(page)).toContainText('Ranked Solo');
 	});
 
+	test("choosing a champion shows only that champion's games", async ({ page }) => {
+		await page.goto(PROFILE);
+		await page.getByRole('combobox', { name: 'Champion' }).selectOption({ label: 'Viego' });
+
+		await expect(page).toHaveURL(`${PROFILE}?champion=234`);
+		const rows = page.getByRole('region', { name: 'Recent matches' }).getByRole('article');
+		await expect(rows).toHaveCount(10);
+		for (const name of await rows.evaluateAll((els) =>
+			els.map((e) => e.getAttribute('aria-label'))
+		)) {
+			expect(name).toMatch(/ as Viego$/);
+		}
+		// riot-proxy reports the archive complete, so no "still loading" note.
+		await expect(page.getByText('older games are still loading')).toHaveCount(0);
+	});
+
+	test('a messy filter URL redirects to its clean form', async ({ request }) => {
+		const response = await request.get(`${PROFILE}?page=1&queue=&champion=234&junk=1`, {
+			maxRedirects: 0
+		});
+		expect(response.status()).toBe(307);
+		expect(response.headers()['location']).toBe(`${PROFILE}?champion=234`);
+	});
+
 	test('Older and Newer move between pages, keeping the queue', async ({ page }) => {
 		await page.goto(`${PROFILE}?queue=420`);
 		await expect(page.getByRole('link', { name: 'Newer' })).toHaveCount(0);

@@ -1,22 +1,37 @@
 <script lang="ts">
 	import type { MatchFilter } from '#lib/domain/match-filters.ts';
 
-	let { filter, options }: { filter: MatchFilter; options: { id: number; name: string }[] } =
-		$props();
+	type Option = { id: number; name: string };
+
+	let {
+		filter,
+		queues,
+		champions
+	}: { filter: MatchFilter; queues: Option[]; champions: Option[] } = $props();
+
+	const select =
+		'h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none';
+	const submit = (event: Event & { currentTarget: HTMLSelectElement }) =>
+		event.currentTarget.form?.requestSubmit();
 </script>
 
-<!-- GET, so every filtered view has its own URL. Changing the queue resets to page 1. -->
-<form method="GET" class="flex items-center gap-2">
+<!-- GET, so every filtered view has its own URL. Changing a filter resets to page 1. -->
+<form method="GET" class="flex flex-wrap items-center gap-2">
 	<label>
 		<span class="sr-only">Queue</span>
-		<select
-			name="queue"
-			class="h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none"
-			onchange={(event) => event.currentTarget.form?.requestSubmit()}
-		>
+		<select name="queue" class={select} onchange={submit}>
 			<option value="" selected={filter.queue === null}>All queues</option>
-			{#each options as option (option.id)}
+			{#each queues as option (option.id)}
 				<option value={option.id} selected={filter.queue === option.id}>{option.name}</option>
+			{/each}
+		</select>
+	</label>
+	<label>
+		<span class="sr-only">Champion</span>
+		<select name="champion" class="{select} max-w-40" onchange={submit}>
+			<option value="" selected={filter.champion === null}>All champions</option>
+			{#each champions as option (option.id)}
+				<option value={option.id} selected={filter.champion === option.id}>{option.name}</option>
 			{/each}
 		</select>
 	</label>
