@@ -112,7 +112,8 @@
 
 	<ul class="flex gap-1" aria-label="Items">
 		{#each match.items as item, i (i)}
-			<li>
+			<!-- Slot 6 is the trinket; set apart so an empty slot 5 doesn't make it look like an item. -->
+			<li class={i === 6 ? 'ml-2' : undefined}>
 				{#if item}
 					<img
 						src={itemIconUrl(patch, item.id)}
