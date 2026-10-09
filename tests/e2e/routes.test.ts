@@ -22,13 +22,31 @@ test.describe('without JavaScript', () => {
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 
-	test('a profile shows rank and the first page of matches', async ({ page }) => {
+	test('a profile shows its header, rank and the first page of matches', async ({ page }) => {
 		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
 
-		await expect(page.getByRole('region', { name: 'Rank' })).toContainText('EMERALD III, 67 LP');
+		const main = page.getByRole('main');
+		await expect(main.locator('img').first()).toHaveAttribute(
+			'src',
+			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/profileicon/7173.png'
+		);
+		await expect(main).toContainText('Updated 3 minutes ago');
+		const rank = page.getByRole('region', { name: 'Rank' });
+		await expect(rank).toContainText('Ranked Solo/Duo');
+		await expect(rank).toContainText('Emerald III 67 LP');
+		await expect(rank).toContainText('475W 464L · 51%');
 		const matches = page.getByRole('region', { name: 'Recent matches' }).getByRole('listitem');
 		await expect(matches).toHaveCount(10);
 		await expect(matches.first()).toContainText('win · Ahri · 8/8/10');
+	});
+
+	test('refresh re-reads the profile and starts the cooldown', async ({ page }) => {
+		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await page.getByRole('button', { name: 'Refresh' }).click();
+
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
+		await expect(page.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+		await expect(page.getByRole('main')).toContainText('Refresh available in 60s');
 	});
 
 	test('a Riot ID without a tag asks for one', async ({ page }) => {
@@ -83,4 +101,25 @@ test('/healthz answers without touching the proxy', async ({ request }) => {
 	expect(response.status()).toBe(200);
 	expect(await response.json()).toEqual({ ok: true });
 	expect(response.headers()['cache-control']).toBe('no-store');
+});
+
+test('with JavaScript, refresh counts the cooldown down', async ({ page }) => {
+	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+	const button = page.getByRole('button', { name: 'Refresh' });
+	await expect(button).toBeEnabled();
+	await button.click();
+
+	await expect(button).toBeDisabled();
+	await expect(page.getByRole('main')).toContainText(/Refresh available in (59|60)s/);
+	await expect(page.getByRole('main')).toContainText(/Refresh available in 5[0-8]s/, {
+		timeout: 4000
+	});
+});
+
+test("the header search starts at the profile's region", async ({ page }) => {
+	// No fixture exists for this player, so the page fails; the header still follows the URL.
+	await page.goto('/summoner/kr/Somebody-KR1');
+	await expect(page.getByRole('banner').getByRole('combobox', { name: 'Region' })).toHaveValue(
+		'kr'
+	);
 });

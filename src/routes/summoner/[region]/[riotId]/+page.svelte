@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import ProfileHeader from '#lib/components/ProfileHeader.svelte';
+	import RankBadge from '#lib/components/RankBadge.svelte';
+	import { describeRanks } from '#lib/domain/ranks.ts';
 	import { rememberSearch } from '#lib/recent-storage.ts';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
+
+	// After a refresh, the action's result is the freshest copy.
+	const profile = $derived(form?.profile ?? data);
+	const ranks = $derived(profile.ranks && describeRanks(profile.ranks));
 
 	onMount(() => {
 		rememberSearch({ region: data.region.slug, ...data.riotId });
@@ -11,39 +18,39 @@
 </script>
 
 <svelte:head>
-	<title>{data.riotId.gameName}#{data.riotId.tagLine} · {data.region.label}</title>
+	<title>{profile.riotId.gameName}#{profile.riotId.tagLine} · {profile.region.label}</title>
 </svelte:head>
 
-<h1 class="text-2xl font-semibold">
-	{data.riotId.gameName}<span class="text-muted">#{data.riotId.tagLine}</span>
-</h1>
-<p class="mt-1 text-sm text-muted">
-	{[data.region.label, data.summoner && `Level ${data.summoner.summonerLevel}`]
-		.filter(Boolean)
-		.join(' · ')}
-</p>
+<ProfileHeader
+	riotId={profile.riotId}
+	regionLabel={profile.region.label}
+	summoner={profile.summoner}
+	patch={profile.patch}
+	ageSeconds={profile.ageSeconds}
+	refreshAvailableIn={profile.refreshAvailableIn}
+/>
 
-<section class="mt-6" aria-labelledby="ranks">
+<section class="mt-8" aria-labelledby="ranks">
 	<h2 id="ranks" class="text-sm font-medium tracking-wide text-muted uppercase">Rank</h2>
-	{#if data.ranks === null}
+	{#if ranks === null}
 		<p class="mt-2 text-muted">Rank is unavailable right now.</p>
-	{:else if data.ranks.length === 0}
+	{:else if ranks.length === 0}
 		<p class="mt-2 text-muted">Unranked.</p>
 	{:else}
-		<ul class="mt-2 space-y-1">
-			{#each data.ranks as r (r.queueType)}
-				<li>{r.queueType}: {r.tier} {r.rank}, {r.leaguePoints} LP ({r.wins}W {r.losses}L)</li>
+		<div class="mt-2 grid gap-3 sm:grid-cols-2">
+			{#each ranks as rank (rank.queue)}
+				<RankBadge {rank} />
 			{/each}
-		</ul>
+		</div>
 	{/if}
 </section>
 
-<section class="mt-6" aria-labelledby="matches">
+<section class="mt-8" aria-labelledby="matches">
 	<h2 id="matches" class="text-sm font-medium tracking-wide text-muted uppercase">
 		Recent matches
 	</h2>
 	<ul class="mt-2 space-y-1">
-		{#each data.matches as m (m.matchId)}
+		{#each profile.matches as m (m.matchId)}
 			<li data-result={m.result}>
 				{m.result} · {m.champion.name} · {m.kills}/{m.deaths}/{m.assists}
 			</li>

@@ -24,7 +24,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 Exit check (amended in ADR-011): a profile with a page of matches (10) renders in one server response, works without JavaScript, and sends the profile `Cache-Control`. That Cloudflare serves the second request is checked in P5-02.
 
 - [x] P2-01 Profile load: composite profile (account, summoner, rank), first page of 10 matches, current patch; test data from NinjaGoldfinch#OCENZ — #15
-- [ ] P2-02 `RankBadge` and profile header with data age and refresh cooldown
+- [x] P2-02 `RankBadge` and profile header with data age and refresh cooldown; header search follows the profile's region — #16
 - [ ] P2-03 `MatchRow`: champion, KDA, items, result, duration, queue
 - [ ] P2-04 Queue and champion filters as query parameters; pagination
 - [ ] P2-05 Champion summary panel from the loaded matches

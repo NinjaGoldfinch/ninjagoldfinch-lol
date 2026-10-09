@@ -35,14 +35,19 @@ export interface ProfileData {
 /**
  * One profile call by Riot ID, then the first page of matches and the patch.
  * Two round trips: the match page needs the puuid from the profile.
+ *
+ * `refresh` asks riot-proxy to re-read both from Riot, spending quota; it
+ * allows that once a minute per player and otherwise answers from cache.
  */
 export async function loadProfile(
 	region: Region,
 	id: RiotId,
-	client: ProxyClient = proxy
+	client: ProxyClient = proxy,
+	{ refresh = false }: { refresh?: boolean } = {}
 ): Promise<ProfileData> {
+	const refreshQuery = refresh ? { refresh: true } : {};
 	const profile = await client.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
-		params: { path: id, query: { platform: region.platform } }
+		params: { path: id, query: { platform: region.platform, ...refreshQuery } }
 	});
 	if (!profile.response.ok || !profile.data) toHttpError(profile.response, profile.error);
 	const body = profile.data;
@@ -51,7 +56,7 @@ export async function loadProfile(
 		client.GET('/v1/players/{puuid}/matches', {
 			params: {
 				path: { puuid: body.puuid },
-				query: { platform: region.platform, count: MATCHES_PER_PAGE }
+				query: { platform: region.platform, count: MATCHES_PER_PAGE, ...refreshQuery }
 			}
 		}),
 		currentPatch(client)
@@ -74,7 +79,7 @@ export async function loadProfile(
 		summoner: parseSummoner(body.summoner) ?? null,
 		ranks: parseLeagueEntries(body.league) ?? null,
 		ageSeconds: stalest(Object.values(body.ageSeconds)),
-		refreshAvailableIn: body.refreshAvailableIn,
+		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches.data.refreshAvailableIn),
 		matches: toMatchRows(matches.data.matches),
 		hasMore: matches.data.hasMore,
 		patch
