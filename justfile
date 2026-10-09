@@ -12,9 +12,14 @@ setup:
 dev:
     pnpm dev
 
+# Regenerate API types from the committed spec
+gen:
+    pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts
+
 # The one gate: everything a pipeline would run
 check:
     pnpm prettier --check .
+    pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts --check
     pnpm eslint .
     pnpm svelte-kit sync
     pnpm svelte-check --tsconfig ./tsconfig.json
