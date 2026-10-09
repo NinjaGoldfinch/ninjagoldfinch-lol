@@ -14,6 +14,12 @@ export const variables = defineEnvVars({
 		description: 'Base URL of riot-proxy.',
 		schema: atStartup(parseProxyUrl)
 	},
+	PUBLIC_SITE_NAME: {
+		description: 'Site name shown in the header and legal notice. Public.',
+		public: true,
+		static: true,
+		schema: (value) => value || 'ninjagoldfinch.lol'
+	},
 	PROXY_KEY: {
 		description: 'riot-proxy consumer key. Secret. Required when NODE_ENV=production.',
 		schema: atStartup((value) => parseProxyKey(value, process.env.NODE_ENV === 'production'))

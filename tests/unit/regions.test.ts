@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_REGION, REGIONS, findRegion } from '#lib/domain/regions.ts';
+
+describe('REGIONS', () => {
+	it('has unique lower-case slugs and unique platforms', () => {
+		const slugs = REGIONS.map((r) => r.slug);
+		expect(new Set(slugs).size).toBe(slugs.length);
+		expect(slugs.every((s) => /^[a-z]+$/.test(s))).toBe(true);
+		expect(new Set(REGIONS.map((r) => r.platform)).size).toBe(REGIONS.length);
+	});
+
+	it('maps every platform to a regional route the proxy documents', () => {
+		for (const r of REGIONS) {
+			expect(['americas', 'europe', 'asia', 'sea']).toContain(r.route);
+		}
+	});
+
+	it('includes the default region', () => {
+		expect(findRegion(DEFAULT_REGION)).toMatchObject({ platform: 'oc1', route: 'sea' });
+	});
+});
+
+describe('findRegion', () => {
+	it('finds a region by slug, ignoring case', () => {
+		expect(findRegion('kr')).toMatchObject({ platform: 'kr', route: 'asia' });
+		expect(findRegion('EUW')?.platform).toBe('euw1');
+	});
+
+	it('returns undefined for an unknown slug', () => {
+		expect(findRegion('mars')).toBeUndefined();
+		expect(findRegion('')).toBeUndefined();
+	});
+});
