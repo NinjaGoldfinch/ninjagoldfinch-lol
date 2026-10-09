@@ -15,7 +15,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - [x] P1-01 `openapi/riot-proxy.json` (landed in #2), `just gen`, generated types, drift check in `just check` — #6
 - [x] P1-02 `src/lib/server/proxy.ts`, `toHttpError`, request-id logging, `hooks.server.ts` error handling — #7
 - [x] P1-03 Mock proxy server, fixture recorder (`just fixture`) and first redacted fixtures — #8
-- [x] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`, design tokens; region table moved here from P1-05 — #9
+- [x] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`, design tokens; region table moved here from P1-05 — #9; light purple accent in place of yellow — #44
 - [x] P1-05 `/`, `/about`, `/healthz`; `parseRiotId` with unit tests; `/search` redirect and minimal profile page for the exit check — #10
 - [x] P1-06 `src/lib/assets.ts`, `ChampionIcon`, and `currentPatch` from the proxy's versions route — #11
 
