@@ -73,4 +73,12 @@ grep -q 'running v0.0.2 on http://10.0.0.5:3000' "$tmp/out" || fail "unexpected 
 "$update" "$first" >/dev/null 2>&1 || fail "deploying a commit failed"
 [ "$(git -C "$tmp/site" rev-parse HEAD)" = "$first" ] || fail "commit not checked out"
 
+# A tag moved or deleted upstream must follow upstream, not stop the deploy.
+git -C "$tmp/src" commit -q --allow-empty -m three
+git -C "$tmp/src" tag -f -a -m v0.0.2 v0.0.2 >/dev/null
+git -C "$tmp/src" tag -a -m gone gone "$first" && "$update" >/dev/null 2>&1 && git -C "$tmp/src" tag -d gone >/dev/null
+"$update" v0.0.2 >"$tmp/out" 2>&1 || { cat "$tmp/out"; fail "deploy after a moved tag failed"; }
+[ "$(git -C "$tmp/site" rev-parse HEAD)" = "$(git -C "$tmp/src" rev-parse HEAD)" ] || fail "moved tag not followed"
+! git -C "$tmp/site" rev-parse -q --verify refs/tags/gone >/dev/null || fail "deleted tag not pruned"
+
 echo "deploy test: ok"

@@ -23,7 +23,10 @@ if [ ! -d .git ]; then
 	git clone -q "$repo" .
 fi
 
-git fetch -q --prune --tags origin
+# Tags follow GitHub: a moved tag is overwritten and a deleted one pruned.
+# -q hides git's own rejection messages, so say something if it still fails.
+git fetch -q --prune --prune-tags --tags --force origin ||
+	{ echo "ninjagoldfinch-update: git fetch from origin failed" >&2; exit 1; }
 if git rev-parse -q --verify "origin/$ref^{commit}" >/dev/null; then
 	target=origin/$ref
 else

@@ -34,6 +34,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Remaining for P5-01: `cloudflared`, no published port, and the 200 MB image check.
   - Checked on the Proxmox node, 2026-10-09: `create-vm.sh` made VM 104 (`ninjagoldfinch-web`, 192.168.68.47), cloud-init finished, `ninjagoldfinch-update` built the image on the VM, and `http://192.168.68.47:3000` served a profile (NinjaGoldfinch#OCENZ, Oceania) from the dev riot-proxy. Follow-up: `--generate-key`, and README steps using `gh`.
+  - `ninjagoldfinch-update` stopped silently on VM 104 after `phase-P2` was moved: `git fetch --tags` refused to clobber the old tag and `-q` hid the message. It now forces and prunes tags, and says when the fetch fails — #37.
 
 ## Open decisions resolved
 
