@@ -61,17 +61,24 @@ test.describe('without JavaScript', () => {
 		await expect(lane).toHaveCSS('filter', /brightness\(1\.1\)/);
 		await expect(first.getByTitle('Champion level 16')).toHaveText('Level 16');
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
-		// Two rows of four, the trinket last on the first. A mid laner has no
-		// role quest slot under it: only bot laners' (their boots) is shown.
+		// One line: six items then the trinket. A mid laner has no role quest
+		// slot after it: only bot laners' (their boots) is shown.
 		const items = first.getByRole('list', { name: 'Items' });
-		await expect(items).toHaveCSS('grid-template-columns', /^(\S+ ){3}\S+$/);
+		await expect(items).toHaveCSS('display', 'flex');
+		await expect(items).toHaveCSS('flex-wrap', 'nowrap');
 		await expect(items.getByRole('img')).toHaveCount(7);
-		await expect(items.getByRole('listitem').nth(3).getByRole('img')).toHaveAttribute(
+		await expect(items.getByRole('listitem').nth(6).getByRole('img')).toHaveAttribute(
 			'alt',
 			'Farsight Alteration'
 		);
 		await expect(first.getByRole('img', { name: 'Mid Lane Quest Reward' })).toHaveCount(0);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
+		// A game with slot 4 empty draws its items packed left, the gap moved to the end.
+		const slots = matches.nth(6).getByRole('list', { name: 'Items' }).getByRole('listitem');
+		await expect(slots).toHaveCount(7);
+		await expect(slots.nth(4).getByRole('img')).toHaveAccessibleName("Lord Dominik's Regards");
+		await expect(slots.nth(5).getByRole('img')).toBeVisible();
+		await expect(slots.nth(6).getByRole('img')).toHaveCount(0);
 	});
 
 	test('refresh re-reads the profile and starts the cooldown', async ({ page }) => {

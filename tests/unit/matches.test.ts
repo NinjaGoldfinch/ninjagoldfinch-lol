@@ -4,6 +4,7 @@ import {
 	csPerMinute,
 	formatDuration,
 	isCustomGame,
+	itemSlots,
 	kdaRatio,
 	patchOf,
 	toMatchRows
@@ -157,5 +158,47 @@ describe('isCustomGame', () => {
 		expect(isCustomGame({ matchId: 'b', queueId: null })).toBe(true);
 		expect(isCustomGame({ matchId: 'c' })).toBe(true);
 		expect(isCustomGame({ matchId: 'd', queueId: 420 })).toBe(false);
+	});
+});
+
+describe('itemSlots', () => {
+	const item = (id: number) => ({ id, name: `Item ${id}` });
+	const held = (id: number, roleQuest = false) => ({ ...item(id), roleQuest });
+
+	it('packs items left, with the trinket and role quest item before the empty slots', () => {
+		const items = [item(1), null, item(2), null, null, null, item(3340)];
+		expect(itemSlots({ items, roleBoundItem: item(3006) })).toEqual([
+			held(1),
+			held(2),
+			held(3340),
+			held(3006, true),
+			null,
+			null,
+			null,
+			null
+		]);
+	});
+
+	it('keeps eight slots when the role quest slot is empty', () => {
+		const items = [item(1), item(2), item(3), item(4), item(5), item(6), item(3340)];
+		const slots = itemSlots({ items, roleBoundItem: null });
+		expect(slots).toHaveLength(8);
+		expect(slots.at(-1)).toBeNull();
+	});
+
+	it('draws seven slots for a game that predates role quests', () => {
+		const items = [null, item(1), null, null, null, null, null];
+		expect(itemSlots({ items })).toEqual([held(1), null, null, null, null, null, null]);
+	});
+
+	it('packs the recorded game that sold an item mid-build', () => {
+		const rows = toMatchRows(matches, names, now);
+		const gapped = rows.find((r) => r.items[4] === null && r.items[5] !== null);
+		expect(gapped).toBeDefined();
+		const slots = gapped ? itemSlots(gapped) : [];
+		// A jungler: no role quest slot, so seven slots with the gap last.
+		expect(slots).toHaveLength(7);
+		expect(slots.slice(0, 6).every(Boolean)).toBe(true);
+		expect(slots.at(-1)).toBeNull();
 	});
 });

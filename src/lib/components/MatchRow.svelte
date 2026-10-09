@@ -6,7 +6,13 @@
 		runeIconUrl,
 		summonerSpellIconUrl
 	} from '#lib/assets.ts';
-	import { csPerMinute, formatDuration, kdaRatio, type MatchRow } from '#lib/domain/matches.ts';
+	import {
+		csPerMinute,
+		formatDuration,
+		itemSlots,
+		kdaRatio,
+		type MatchRow
+	} from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 
 	let { match, patch }: { match: MatchRow; patch: string } = $props();
@@ -19,11 +25,8 @@
 	const result = $derived(RESULT[match.result]);
 	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
 	const version = $derived(match.ddragonVersion ?? patch);
+	const slots = $derived(itemSlots(match));
 	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
-	// Two rows of four: three items then the trinket (slot 6), three items then
-	// the role quest slot.
-	const SLOT_ORDER = [0, 1, 2, 6, 3, 4, 5];
-	const items = $derived(SLOT_ORDER.map((slot) => match.items[slot] ?? null));
 </script>
 
 <article
@@ -128,14 +131,15 @@
 		</p>
 	</div>
 
-	<ul class="grid grid-cols-4 gap-1" aria-label="Items">
-		{#each items as item, i (i)}
+	<ul class="flex gap-1" aria-label="Items">
+		<!-- Packed left: inventory, trinket, role quest item, then the empty slots. -->
+		{#each slots as item, i (i)}
 			<li>
 				{#if item}
 					<img
 						src={itemIconUrl(version, item.id)}
 						alt={item.name}
-						title={item.name}
+						title={item.roleQuest ? `Role quest: ${item.name}` : item.name}
 						width="34"
 						height="34"
 						loading="lazy"
@@ -146,23 +150,5 @@
 				{/if}
 			</li>
 		{/each}
-		{#if match.roleBoundItem !== undefined}
-			<!-- The role quest slot, under the trinket. -->
-			<li>
-				{#if match.roleBoundItem}
-					<img
-						src={itemIconUrl(version, match.roleBoundItem.id)}
-						alt={match.roleBoundItem.name}
-						title="Role quest: {match.roleBoundItem.name}"
-						width="34"
-						height="34"
-						loading="lazy"
-						class="rounded-sm"
-					/>
-				{:else}
-					<span class="block size-[34px] rounded-sm bg-bg" title="Role quest: empty"></span>
-				{/if}
-			</li>
-		{/if}
 	</ul>
 </article>
