@@ -87,7 +87,14 @@
 		{:else}
 			<ul class="mt-2 space-y-2">
 				{#each profile.matches as match (match.matchId)}
-					<li><MatchRow {match} patch={profile.patch} region={profile.region.slug} /></li>
+					<li>
+						<MatchRow
+							{match}
+							patch={profile.patch}
+							region={profile.region.slug}
+							player={profile.riotId}
+						/>
+					</li>
 				{:else}
 					<li class="text-muted">
 						{queueName ? `No ${queueName} matches here.` : 'No matches here.'}

@@ -22,6 +22,12 @@ export function profilePath(region: string, id: RiotId): string {
 	return `/summoner/${region}/${encodeURIComponent(`${id.gameName}-${id.tagLine}`)}`;
 }
 
+/** Riot IDs compare without regard to case, as Riot looks them up. */
+export function sameRiotId(a: RiotId, b: RiotId): boolean {
+	const key = (id: RiotId) => `${id.gameName}#${id.tagLine}`.toLowerCase();
+	return key(a) === key(b);
+}
+
 function split(value: string, separator: string): RiotId | undefined {
 	const at = value.lastIndexOf(separator);
 	if (at === -1) return undefined;

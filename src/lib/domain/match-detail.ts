@@ -184,9 +184,15 @@ export function isMatchIdFor(region: Region, matchId: string): boolean {
 	return match !== null && match[1] === region.platform.toUpperCase();
 }
 
-/** The match page URL. */
-export function matchPath(region: string, matchId: string): string {
-	return `/match/${region}/${encodeURIComponent(matchId)}`;
+/**
+ * The match page URL. `player` is whose champion to highlight: the profile the
+ * visitor came from, written `GameName-TAG` as in profile URLs.
+ */
+export function matchPath(region: string, matchId: string, player?: RiotId): string {
+	const query = player
+		? `?${new URLSearchParams({ player: `${player.gameName}-${player.tagLine}` })}`
+		: '';
+	return `/match/${region}/${encodeURIComponent(matchId)}${query}`;
 }
 
 /** `9 Oct 2026, 09:12 UTC`: the page is cached for a day, so no "N hours ago". */

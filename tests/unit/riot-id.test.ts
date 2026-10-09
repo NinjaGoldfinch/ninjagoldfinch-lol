@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRiotId, parseRiotIdInput, profilePath } from '#lib/domain/riot-id.ts';
+import { parseRiotId, parseRiotIdInput, profilePath, sameRiotId } from '#lib/domain/riot-id.ts';
 
 describe('parseRiotIdInput', () => {
 	it('splits Name#TAG and trims both parts', () => {
@@ -43,5 +43,14 @@ describe('profilePath', () => {
 		const id = { gameName: 'Some-Name ñ', tagLine: 'OCE' };
 		const segment = decodeURIComponent(profilePath('oce', id).split('/').at(-1) ?? '');
 		expect(parseRiotId(segment)).toEqual(id);
+	});
+});
+
+describe('sameRiotId', () => {
+	it('compares game name and tag line without regard to case', () => {
+		const me = { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' };
+		expect(sameRiotId(me, { gameName: 'ninjagoldfinch', tagLine: 'ocenz' })).toBe(true);
+		expect(sameRiotId(me, { gameName: 'NinjaGoldfinch', tagLine: 'OCE' })).toBe(false);
+		expect(sameRiotId(me, { gameName: 'Ninja', tagLine: 'GoldfinchOCENZ' })).toBe(false);
 	});
 });

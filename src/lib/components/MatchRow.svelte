@@ -6,8 +6,18 @@
 	import ItemList from './ItemList.svelte';
 	import Loadout from './Loadout.svelte';
 
-	/** `region` is the URL slug, for the link to the match page. */
-	let { match, patch, region }: { match: MatchRow; patch: string; region: string } = $props();
+	import type { RiotId } from '#lib/domain/riot-id.ts';
+
+	/**
+	 * `region` is the URL slug and `player` the profile's Riot ID, for the link
+	 * to the match page, which highlights that player.
+	 */
+	let {
+		match,
+		patch,
+		region,
+		player
+	}: { match: MatchRow; patch: string; region: string; player: RiotId } = $props();
 
 	const RESULT = {
 		win: { label: 'Victory', border: 'border-l-win', text: 'text-win' },
@@ -81,7 +91,7 @@
 	<ItemList items={match.items} roleBoundItem={match.roleBoundItem} {version} />
 
 	<a
-		href={matchPath(region, match.matchId)}
+		href={matchPath(region, match.matchId, player)}
 		class="ml-auto text-sm text-muted underline-offset-4 hover:text-text hover:underline"
 		>Details<span class="sr-only"> of this match</span></a
 	>
