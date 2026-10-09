@@ -25,6 +25,7 @@ check:
     pnpm svelte-check --tsconfig ./tsconfig.json
     pnpm vitest run
     pnpm build
+    bash deploy/proxmox/test.sh
 
 # Browser smoke tests against the mock proxy
 e2e:

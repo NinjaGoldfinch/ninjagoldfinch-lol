@@ -75,3 +75,7 @@ just fixture account-hide-on-bush '/v1/riot/accounts/by-riot-id/asia/Hide%20on%2
 ```
 
 Use the path exactly as the client sends it, URL-encoded. The recorder keeps only the headers the site reads, and replaces every `puuid` with a stable placeholder.
+
+## Deploying
+
+The site runs as one Docker container built from the `Dockerfile`, with `deploy/compose.yaml`. To run it on a VM on your Proxmox node, see [deploy/proxmox/README.md](deploy/proxmox/README.md).
