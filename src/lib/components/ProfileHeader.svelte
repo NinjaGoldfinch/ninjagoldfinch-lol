@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import type { Summoner } from '#lib/api/riot.ts';
 	import { profileIconUrl } from '#lib/assets.ts';
-	import { formatAge } from '#lib/domain/age.ts';
 	import type { RiotId } from '#lib/domain/riot-id.ts';
 
 	let {
@@ -10,7 +9,7 @@
 		regionLabel,
 		summoner,
 		patch,
-		ageSeconds,
+		refreshed,
 		refreshAvailableIn,
 		refreshAction = '?/refresh'
 	}: {
@@ -18,7 +17,8 @@
 		regionLabel: string;
 		summoner: Summoner | null;
 		patch: string;
-		ageSeconds: number | null;
+		/** This page's data was just fetched from Riot. */
+		refreshed: boolean;
 		refreshAvailableIn: number;
 		/** The refresh action's URL, keeping the page's filter. */
 		refreshAction?: string;
@@ -76,11 +76,9 @@
 			</button>
 		</form>
 		<p class="text-xs text-muted">
-			{#if remaining > 0}
-				Refresh available in {remaining}s
-			{:else if ageSeconds !== null}
-				Updated {formatAge(ageSeconds)}
-			{/if}
+			{[refreshed && 'Updated just now', remaining > 0 && `Refresh available in ${remaining}s`]
+				.filter(Boolean)
+				.join(' · ')}
 		</p>
 	</div>
 </header>

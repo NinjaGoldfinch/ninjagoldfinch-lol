@@ -23,8 +23,12 @@ export interface ProfileData {
 	/** null when riot-proxy could not fetch that part (see its `warnings`). */
 	summoner: Summoner | null;
 	ranks: LeagueEntry[] | null;
-	/** Age of the stalest part, in seconds. */
-	ageSeconds: number | null;
+	/**
+	 * Whether this load went to Riot (a refresh riot-proxy accepted). riot-proxy
+	 * reports how long content has been unchanged, not when it last fetched it,
+	 * so there is no honest "updated N minutes ago" otherwise. ADR-016.
+	 */
+	refreshed: boolean;
 	refreshAvailableIn: number;
 	matches: MatchRow[];
 	hasMore: boolean;
@@ -92,7 +96,7 @@ export async function loadProfile(
 		},
 		summoner: parseSummoner(body.summoner) ?? null,
 		ranks: parseLeagueEntries(body.league) ?? null,
-		ageSeconds: stalest(Object.values(body.ageSeconds)),
+		refreshed: body.refreshed || matches.data.refreshed,
 		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches.data.refreshAvailableIn),
 		matches: toMatchRows(matches.data.matches, names),
 		hasMore: matches.data.hasMore,
@@ -100,9 +104,4 @@ export async function loadProfile(
 		queueOptions: FILTER_QUEUES.map((id) => ({ id, name: names.queues[id] ?? `Queue ${id}` })),
 		patch
 	};
-}
-
-function stalest(ages: (number | null)[]): number | null {
-	const known = ages.filter((age): age is number => age !== null);
-	return known.length > 0 ? Math.max(...known) : null;
 }

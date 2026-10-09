@@ -192,3 +192,13 @@ Date: 2026-10-09 · Task: P2-03 (follow-up, owner request)
 - Lanes: Data Dragon has no position icons, so they come from CommunityDragon's copy of the client's own, pinned to the patch's `major.minor` (`raw.communitydragon.org/16.20/…/icon-position-middle.png`), as ADR-009 allows for what Data Dragon lacks. Riot's `teamPosition` maps to Top, Jungle, Mid, Bot and Support for the `alt` text. Games without a lane (ARAM, Arena) show no badge.
 
 **Consequences.** The P5-03 Content Security Policy must also allow `img-src https://raw.communitydragon.org`.
+
+## ADR-016: No "updated N minutes ago" until riot-proxy reports fetch time
+
+Date: 2026-10-09 · Task: P2-02 (fix)
+
+**Context.** P2-02 showed "Updated N minutes ago" from the stalest of the profile's `ageSeconds`, as the plan suggested (via `X-Cache-Age`). riot-proxy defines both as how long the **content** has been unchanged, not when it was last fetched. The account part (the Riot ID) almost never changes, so the label climbed forever, even straight after a refresh. The owner saw "Updated 30 minutes ago" on a just-refreshed page; the live proxy reported `account: 1902` seconds.
+
+**Decision.** The profile shows "Updated just now" only when this response's data came from Riot (`refreshed: true` on the profile or the match page, which only a refresh can cause), and otherwise no age. The cooldown is still shown.
+
+**Needed from riot-proxy (not changed here).** A per-part time since the proxy last read that part from Riot, whether or not it changed. For example, `fetchedAgeSeconds` with the same shape as `ageSeconds` on `ProfileBody`, and the equivalent for `MatchPage`'s id list. With that, the header can say "Updated N minutes ago" truthfully, and the plan's data-age requirement can be met.
