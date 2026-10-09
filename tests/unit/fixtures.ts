@@ -17,6 +17,8 @@ export function fixtureBody(path: string): unknown {
 export const PROFILE_PATH = '/v1/players/by-riot-id/NinjaGoldfinch/OCENZ/profile?platform=oc1';
 export const MATCHES_PATH =
 	'/v1/players/fixture-puuid-4f3f29f89c01d123/matches?platform=oc1&count=10';
+export const MATCH_PATH = '/v1/lol/matches/sea/OC1_712351051';
+export const TIMELINE_PATH = '/v1/lol/matches/sea/OC1_712351051/timeline';
 
 /** The static lookups for patch 16.20.1, from the recorded (trimmed) Data Dragon files. */
 export function recordedNames(): StaticNames {

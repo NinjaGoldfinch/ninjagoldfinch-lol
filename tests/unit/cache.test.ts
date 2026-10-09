@@ -8,6 +8,12 @@ describe('cacheControl', () => {
 		});
 	});
 
+	it('lets the edge cache a finished match for a day, stale for another', () => {
+		expect(cacheControl('match')).toEqual({
+			'cache-control': 'public, s-maxage=86400, stale-while-revalidate=86400'
+		});
+	});
+
 	it('marks per-request responses as not cacheable', () => {
 		expect(cacheControl('none')).toEqual({ 'cache-control': 'no-store' });
 	});

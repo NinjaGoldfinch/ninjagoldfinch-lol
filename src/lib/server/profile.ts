@@ -1,5 +1,4 @@
 import { toLeagueEntries, toSummoner, type LeagueEntry, type Summoner } from '#lib/api/riot.ts';
-import type { StaticNames } from '#lib/api/ddragon.ts';
 import {
 	FILTER_QUEUES,
 	MATCHES_PER_PAGE,
@@ -12,7 +11,7 @@ import type { RiotId } from '#lib/domain/riot-id.ts';
 import { classifyProxyError, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
-import { staticNames } from './static-data.ts';
+import { NO_NAMES, staticNames } from './static-data.ts';
 
 type ProxyClient = typeof proxy;
 
@@ -51,8 +50,6 @@ export interface ProfileData {
 	/** Data Dragon patch for icons. */
 	patch: string;
 }
-
-const NO_NAMES: StaticNames = { champions: {}, items: {}, spells: {}, queues: {}, runes: {} };
 
 /**
  * One profile call by Riot ID, then the page of matches and the patch.

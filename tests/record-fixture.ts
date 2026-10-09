@@ -7,14 +7,13 @@
 // whose own `key` field, is in the comma-separated list are kept. Use it for
 // /v1/static/{champion,item,summoner}, which are hundreds of kB in full.
 //
-// Redaction: every `puuid` value, in the body and in the path, is replaced by
-// a stable placeholder derived from it, so fixtures recorded separately still
-// agree with each other. Only the headers the site reads are kept.
+// Redaction: Riot's player ids, in the body and in the path, are replaced by
+// stable placeholders (see redact.ts). Only the headers the site reads are kept.
 
-import { createHash } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Fixture } from './mock-proxy/mock.ts';
+import { createRedactor } from './redact.ts';
 
 const [name, path, flag, keepList] = process.argv.slice(2);
 if (!name || !path?.startsWith('/') || (flag !== undefined && (flag !== '--keep' || !keepList))) {
@@ -28,25 +27,7 @@ const { PROXY_URL, PROXY_KEY } = process.env;
 if (!PROXY_URL) throw new Error('PROXY_URL is not set');
 
 const KEEP_HEADERS = ['content-type', 'x-cache', 'x-cache-age', 'x-request-id', 'retry-after'];
-const placeholders = new Map<string, string>();
-
-function placeholder(puuid: string): string {
-	const hash = createHash('sha256').update(puuid).digest('hex').slice(0, 16);
-	const value = `fixture-puuid-${hash}`;
-	placeholders.set(puuid, value);
-	return value;
-}
-
-function redact(value: unknown): unknown {
-	if (Array.isArray(value)) return value.map(redact);
-	if (typeof value !== 'object' || value === null) return value;
-	return Object.fromEntries(
-		Object.entries(value).map(([k, v]) => [
-			k,
-			k === 'puuid' && typeof v === 'string' ? placeholder(v) : redact(v)
-		])
-	);
-}
+const { redact, placeholders } = createRedactor();
 
 const response = await fetch(new URL(path, PROXY_URL), {
 	headers: PROXY_KEY ? { Authorization: `Bearer ${PROXY_KEY}` } : {}

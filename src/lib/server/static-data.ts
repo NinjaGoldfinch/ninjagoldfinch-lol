@@ -10,6 +10,15 @@ import { proxy } from './proxy.ts';
 
 type ProxyClient = typeof proxy;
 
+/** Plain fallbacks for when the lookups are unavailable: ids and names from the match. */
+export const NO_NAMES: StaticNames = {
+	champions: {},
+	items: {},
+	spells: {},
+	queues: {},
+	runes: {}
+};
+
 // Data Dragon files cannot change within a patch, and item.json alone is
 // ~700 kB, so the reduced lookups for the current patch are kept in memory.
 // Only one patch is held; a new patch replaces it. ADR-013.

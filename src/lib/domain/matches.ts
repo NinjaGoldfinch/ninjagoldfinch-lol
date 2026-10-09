@@ -75,30 +75,48 @@ export function toMatchRows(
 				deaths: p.deaths ?? 0,
 				assists: p.assists ?? 0,
 				cs: (p.totalMinionsKilled ?? 0) + (p.neutralMinionsKilled ?? 0),
-				items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((id) =>
-					id ? { id, name: names.items[id] ?? `Item ${id}` } : null
-				),
-				...(p.roleBoundItem == null || p.teamPosition !== 'BOTTOM'
-					? {}
-					: {
-							roleBoundItem: p.roleBoundItem
-								? {
-										id: p.roleBoundItem,
-										name: names.items[p.roleBoundItem] ?? `Item ${p.roleBoundItem}`
-									}
-								: null
-						}),
-				spells: [p.summoner1Id, p.summoner2Id].map((id) =>
-					id ? (names.spells[id] ?? null) : null
-				),
-				runes: {
-					keystone: (p.perks?.keystone && names.runes[p.perks.keystone]) || null,
-					secondary: (p.perks?.subStyle && names.runes[p.perks.subStyle]) || null
-				},
+				...loadoutOf(p, names),
 				position: p.teamPosition || null
 			}
 		];
 	});
+}
+
+/** The item, spell and rune fields riot-proxy's summaries and Riot's matches share. */
+export interface LoadoutFields {
+	item0?: number | null;
+	item1?: number | null;
+	item2?: number | null;
+	item3?: number | null;
+	item4?: number | null;
+	item5?: number | null;
+	item6?: number | null;
+	roleBoundItem?: number | null;
+	teamPosition?: string | null;
+	summoner1Id?: number | null;
+	summoner2Id?: number | null;
+	perks?: { keystone?: number | null; subStyle?: number | null } | null;
+}
+
+/** A player's items, summoner spells and runes, named for the page. */
+export function loadoutOf(
+	p: LoadoutFields,
+	names: StaticNames
+): Pick<MatchRow, 'items' | 'roleBoundItem' | 'spells' | 'runes'> {
+	const item = (id: number) => ({ id, name: names.items[id] ?? `Item ${id}` });
+	return {
+		items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((id) =>
+			id ? item(id) : null
+		),
+		...(p.roleBoundItem == null || p.teamPosition !== 'BOTTOM'
+			? {}
+			: { roleBoundItem: p.roleBoundItem ? item(p.roleBoundItem) : null }),
+		spells: [p.summoner1Id, p.summoner2Id].map((id) => (id ? (names.spells[id] ?? null) : null)),
+		runes: {
+			keystone: (p.perks?.keystone && names.runes[p.perks.keystone]) || null,
+			secondary: (p.perks?.subStyle && names.runes[p.perks.subStyle]) || null
+		}
+	};
 }
 
 /** One drawn item; `roleQuest` marks the item from the role quest slot. */
@@ -134,8 +152,8 @@ export function itemSlots(row: Pick<MatchRow, 'items' | 'roleBoundItem'>): (Item
  * history private without the player's opt-in. A game with no queue id is
  * treated the same, since it cannot be shown not to be custom.
  */
-export function isCustomGame(summary: MatchSummary): boolean {
-	return summary.queueId == null || summary.queueId === 0;
+export function isCustomGame(match: { queueId?: number | null }): boolean {
+	return match.queueId == null || match.queueId === 0;
 }
 
 /**

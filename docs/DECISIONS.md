@@ -257,3 +257,25 @@ Date: 2026-10-09 · Task: P2-03 (follow-up; supersedes the trinket position in A
 **Decision.** Only the six inventory items are packed left, with their empty slots after them. The trinket comes next, then the role quest slot when the game has one. So the trinket is always the last slot, or second last for a bot laner, whose boots take the last.
 
 **Consequences.** The trinket lines up down the match list, with any inventory gaps just before it. A game with no trinket shows that slot empty rather than moving an item into it.
+
+## ADR-023: Match page: the match and its timeline, typed by hand, cached for a day
+
+Date: 2026-10-09 · Task: P3-01
+
+**Context.** riot-proxy's match and timeline routes say they pass Riot's match-v5 payloads through unmodified, but give them no schema, so their generated type is `unknown` (ADR-018 left them untyped).
+
+**Decision.**
+
+- `/match/{region}/{matchId}` takes the region's URL slug, as profiles do. A match id must name that region's platform (`OC1_…` for `oce`); anything else is not found without asking riot-proxy, which would answer `BAD_REGION`.
+- The load fetches the match, its timeline and `/v1/static/versions` in parallel. `src/lib/api/match.ts` types the fields the site reads from Riot's `MatchDto` and `TimelineDto` and checks them when parsing, as ADR-006 did for the other Riot payloads. A match it can't read fails the page with 503 and a log line. Missing counts read as 0.
+- **Custom games** (queue 0, or no queue) are not found, as on the profile (ADR-017).
+- **Only the match is essential.** If the timeline fails, the scoreboard still renders, and the page is sent with `no-store` so the gap isn't kept at the edge for a day. The timeline is reduced to each team's gold per frame, about 70 numbers instead of 1.6 MB. Nothing draws it yet: the chart is P3-03.
+- Icons use the Data Dragon version for the game's patch: the newest in Riot's version list with the same `major.minor`, the rule riot-proxy documents for `MatchSummary.ddragonVersion`. Names come from the current patch's lookups (ADR-013).
+- **Cache:** `public, s-maxage=86400, stale-while-revalidate=86400`. A finished match never changes. So the page shows the start time as a UTC date, not "N hours ago".
+- The scoreboard groups players by Riot's `teamId`, 100 as Blue and 200 as Red, and anything else as `Team <id>`. Riot ID links go to that player's profile. Each profile match row links to its match page ("Details"); P3-04 replaces that with an inline view.
+- The scoreboard and the profile row share `ItemList` and `Loadout` (spells and runes) and the `loadoutOf` shaping, so ADR-021 and ADR-022's item rules apply on both.
+- The fixture recorder now also redacts `summonerId` and a match's `metadata.participants` (a list of puuids). The recorded timeline fixture is 1.6 MB and kept unedited, so P3-03's charts can be checked against it.
+
+**Consequences.** Each match nobody has opened before costs riot-proxy up to two Riot calls (match and timeline), both archived afterwards. Arena's teams of two are untested: there's no recorded Arena match, so how its `teamId`s group is unverified.
+
+**Noted for riot-proxy (not changed here).** Schemas for match-v5's `MatchDto` and `TimelineDto` on the two match routes would replace `src/lib/api/match.ts`'s hand-typing, as #133 did for the account, summoner and league payloads.
