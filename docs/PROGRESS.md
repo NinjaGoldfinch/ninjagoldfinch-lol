@@ -103,10 +103,12 @@ GET /summoner/oce/NinjaGoldfinch-OCENZ
 
 Gates at the same commit: `just check` passes (106 unit tests); `just e2e` 22 passed against the mock.
 
-Still open for P2, waiting on riot-proxy (see `riot-proxy-requests.md`, given to that project):
+Items that waited on riot-proxy, closed after its changes (ADR-018):
 
-- P2-04 champion filter: needs a `champion` parameter on `/v1/players/{puuid}/matches`.
-- P2-02 "Updated N minutes ago": needs per-part fetch age (ADR-016).
-- Cloudflare serving the second request: checked in P5-02.
+- P2-04 champion filter: riot-proxy's new `champion` parameter — #33.
+- P2-02 "Updated N minutes ago": riot-proxy's `fetchedAgeSeconds` — #32 (ADR-019).
+- Also from riot-proxy's changes: its schemas for Riot's payloads, and fixtures re-recorded (#31); per-match `ddragonVersion` and the role quest slot (#34).
 
-Tagged `phase-P2` on 2026-10-09 with the open items above, at the owner's request. The tag moves to the commit that closes the champion filter and the fetch-age items, once riot-proxy ships them.
+Still for later: Cloudflare serving the second request is checked in P5-02.
+
+`phase-P2` was first tagged on 2026-10-09 with the two riot-proxy items open, at the owner's request. It was moved on the same day to the commit that closes them.
