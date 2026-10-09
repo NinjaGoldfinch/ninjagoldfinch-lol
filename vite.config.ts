@@ -12,7 +12,11 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			// adapter-node 6 no longer reads ORIGIN at runtime; without this it guesses
+			// the origin from the Host header and assumes https. Set at build time.
+			// ADR-014.
+			...(process.env.ORIGIN ? { paths: { origin: process.env.ORIGIN } } : {})
 		})
 	],
 	test: {

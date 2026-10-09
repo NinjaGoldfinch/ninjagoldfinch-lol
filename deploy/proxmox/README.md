@@ -50,6 +50,8 @@ ninjagoldfinch-update                      # builds the image on the VM and star
 curl -s http://localhost:3000/healthz      # {"ok":true}
 ```
 
+`ORIGIN` is baked into the image at build time (ADR-014). If the VM's address changes, edit it and run `ninjagoldfinch-update` to rebuild; otherwise the Refresh button is refused as a cross-site request.
+
 The image runs with `NODE_ENV=production`, so the site refuses to start without `PROXY_KEY`. The dev riot-proxy runs with auth disabled and ignores the key, so any value works against it. Production needs a real read key: `riot-proxy key create --name ninjagoldfinch-web`.
 
 Open `http://<vm-ip>:3000`.

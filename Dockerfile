@@ -6,6 +6,9 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 COPY . .
+# The site's public origin (e.g. http://192.168.68.47:3000), baked in at build
+# time for form CSRF checks; adapter-node 6 does not read it at runtime.
+ARG ORIGIN
 RUN pnpm build && pnpm prune --prod
 
 FROM node:22-alpine
