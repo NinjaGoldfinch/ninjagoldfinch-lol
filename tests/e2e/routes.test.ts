@@ -30,7 +30,9 @@ test.describe('without JavaScript', () => {
 			'src',
 			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/profileicon/7173.png'
 		);
-		await expect(main).toContainText('Updated 3 minutes ago');
+		// riot-proxy's part ages say how long content has been unchanged, not when it
+		// was fetched, so a normal view shows no "updated" time (ADR-016).
+		await expect(main).not.toContainText('Updated');
 		const rank = page.getByRole('region', { name: 'Rank' });
 		await expect(rank).toContainText('Ranked Solo/Duo');
 		await expect(rank).toContainText('Emerald III 67 LP');
@@ -64,7 +66,9 @@ test.describe('without JavaScript', () => {
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
 		await expect(page.getByRole('button', { name: 'Refresh' })).toBeDisabled();
-		await expect(page.getByRole('main')).toContainText('Refresh available in 60s');
+		await expect(page.getByRole('main')).toContainText(
+			'Updated just now · Refresh available in 60s'
+		);
 	});
 
 	test('a Riot ID without a tag asks for one', async ({ page }) => {
