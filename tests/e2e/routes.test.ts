@@ -59,6 +59,7 @@ test.describe('without JavaScript', () => {
 		const lane = first.getByRole('img', { name: 'Mid', exact: true });
 		await expect(lane).toHaveCSS('opacity', '1');
 		await expect(lane).toHaveCSS('filter', /brightness\(1\.1\)/);
+		await expect(first.getByTitle('Champion level 16')).toHaveText('Level 16');
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
 		// Seven inventory slots, then the role quest slot.
 		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(8);
