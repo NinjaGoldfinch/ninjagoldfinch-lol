@@ -1,0 +1,10 @@
+# The site on a LAN VM, published on port 3000. riot-proxy runs elsewhere;
+# PROXY_URL in deploy/.env points at it. P5 adds cloudflared and stops
+# publishing the port.
+services:
+  web:
+    build: ..
+    image: ninjagoldfinch-web:local
+    restart: unless-stopped
+    env_file: .env
+    ports: ['3000:3000']

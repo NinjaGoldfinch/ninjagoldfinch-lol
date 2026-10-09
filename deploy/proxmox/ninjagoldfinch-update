@@ -1,0 +1,45 @@
+#!/bin/sh
+# Deploys a ref of ninjagoldfinch-lol on this VM: fetch, check out, rebuild the
+# image here, restart. Run it as the VM's login user (in the docker group).
+#
+#   ninjagoldfinch-update            latest main
+#   ninjagoldfinch-update v1.2.0     a tag, branch or commit
+#
+# The first run clones the repo and creates deploy/.env, then stops so you can
+# fill it in.
+set -eu
+
+repo=${NINJAGOLDFINCH_REPO:-git@github.com:NinjaGoldfinch/ninjagoldfinch-lol.git}
+dir=${NINJAGOLDFINCH_DIR:-/opt/ninjagoldfinch}
+key=${NINJAGOLDFINCH_DEPLOY_KEY:-$HOME/.ssh/ninjagoldfinch-deploy}
+ref=${1:-main}
+
+# Read-only deploy key; GitHub's host keys are pinned in /etc/ssh/ssh_known_hosts.
+export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes"
+
+cd "$dir"
+if [ ! -d .git ]; then
+	echo "ninjagoldfinch-update: cloning $repo into $dir"
+	git clone -q "$repo" .
+fi
+
+git fetch -q --prune --tags origin
+if git rev-parse -q --verify "origin/$ref^{commit}" >/dev/null; then
+	target=origin/$ref
+else
+	target=$ref
+fi
+git checkout -q --detach "$target"
+
+if [ ! -f deploy/.env ]; then
+	addr=$(hostname -I | awk '{print $1}')
+	sed "s|^ORIGIN=.*|ORIGIN=http://$addr:3000|" .env.example > deploy/.env
+	chmod 600 deploy/.env
+	echo "ninjagoldfinch-update: created $dir/deploy/.env"
+	echo "  Set PROXY_KEY (required: the image runs with NODE_ENV=production), check PROXY_URL, then run me again."
+	exit 1
+fi
+
+docker compose -f deploy/compose.yaml up -d --build
+docker image prune -f >/dev/null
+echo "ninjagoldfinch-update: running $(git describe --tags --always) on http://$(hostname -I | awk '{print $1}'):3000"

@@ -109,3 +109,18 @@ Date: 2026-10-09 · Task: P1-06
 **Decision.** The browser loads champion, item, profile-icon and summoner-spell images directly from `ddragon.leagueoflegends.com/cdn/{patch}/img/…`. `src/lib/assets.ts` is the only place these URLs are built. The patch comes from riot-proxy's `/v1/static/versions` (`current`, or Riot's newest before the first mirror sync), which the proxy answers from its mirror, so it costs no Riot rate limit.
 
 **Consequences.** No image traffic through the VM and no proxy change. The Content Security Policy in P5-03 must allow `img-src https://ddragon.leagueoflegends.com`. CommunityDragon is added to `assets.ts` only when something needs an image Data Dragon lacks.
+
+## ADR-010: A LAN preview VM, built on the VM from a git checkout
+
+Date: 2026-10-09 · Task: P5-01 (part, brought forward)
+
+**Context.** The owner wanted to see P1 running on the Proxmox node before P2, in a VM made the way riot-proxy's is. riot-proxy's VM pulls an image that GitHub Actions publishes. This repo has no CI and no registry.
+
+**Decision.**
+
+- A `Dockerfile` (the plan's, plus `pnpm-workspace.yaml` and `.npmrc` in the install layer and a `/healthz` health check). `deploy/compose.yaml` runs only `web`, publishing port 3000 on the LAN. P5 adds `cloudflared` and stops publishing the port.
+- `deploy/proxmox/create-vm.sh`, adapted from riot-proxy's: a Debian 13 cloud image and a cloud-init vendor-data snippet that installs Docker and git, pins GitHub's SSH host keys, makes a deploy key for the VM user, and installs `ninjagoldfinch-update`. The auto-update timer and `--generate-key` are left out.
+- The VM clones the private repo with a read-only deploy key (the plan's P5 method) and builds the image itself. `ninjagoldfinch-update [ref]` deploys a branch, tag or commit, so it covers both releases and rollback.
+- `.dockerignore` ignores `.env` at any depth, so `deploy/.env` never enters the build context.
+
+**Consequences.** riot-proxy stays on its own VM for now, and `PROXY_URL` points across the LAN. The scripts are covered by `deploy/proxmox/test.sh` in `just check`, but nothing here can exercise Proxmox or Docker. The first real run of the script is on the owner's node.
