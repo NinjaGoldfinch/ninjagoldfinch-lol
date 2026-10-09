@@ -17,7 +17,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - [x] P1-03 Mock proxy server, fixture recorder (`just fixture`) and first redacted fixtures — #8
 - [x] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`, design tokens; region table moved here from P1-05 — #9
 - [x] P1-05 `/`, `/about`, `/healthz`; `parseRiotId` with unit tests; `/search` redirect and minimal profile page for the exit check — #10
-- [x] P1-06 `src/lib/assets.ts`, `ChampionIcon`, and `currentPatch` from the proxy'''s versions route — #11
+- [x] P1-06 `src/lib/assets.ts`, `ChampionIcon`, and `currentPatch` from the proxy's versions route — #11
 
 ## Open decisions resolved
 
@@ -49,3 +49,22 @@ $ git commit   # staging a file with a test key (`rpx_` followed by `test`)
 ```
 
 Tagged `phase-P0`. Paused for owner review before P1.
+
+### P1 exit check — passed 2026-10-09
+
+Production build of `main` at 6805e92 (`node build`), with `PROXY_URL=http://192.168.68.46:8080`, no `PROXY_KEY` and no mock running. Driven in Chromium through Playwright, using one live account lookup.
+
+```text
+home page → region "Korea", Riot ID "Hide on bush#KR1" → Search
+  final URL   /summoner/kr/Hide%20on%20bush-KR1
+  h1          Hide on bush#KR1        (account name from the real dev proxy)
+  region      Korea
+  direct GET  200, cache-control: public, s-maxage=60, stale-while-revalidate=300
+  server log  no proxy failures
+```
+
+Gates at the same commit: `just check` passes (53 unit tests); `just e2e` 11 passed against the mock.
+
+Tagged `phase-P1`. Paused for owner review before P2.
+
+Noted for P2: the header's region picker always starts at the default (Oceania) rather than the region of the profile being viewed.
