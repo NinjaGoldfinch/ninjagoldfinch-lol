@@ -24,6 +24,7 @@ test.describe('without JavaScript', () => {
 		await expect(blue.getByRole('list', { name: 'Objectives' })).toContainText('Herald 0');
 		// Opened by URL alone, nobody's line is highlighted.
 		await expect(page.locator('tr[aria-current]')).toHaveCount(0);
+		await expect(page.getByRole('link', { name: /^← Back/ })).toHaveCount(0);
 
 		const ahri = red.getByRole('row', { name: 'Ahri' });
 		await expect(ahri).toContainText('NinjaGoldfinch#OCENZ');
@@ -58,6 +59,10 @@ test.describe('without JavaScript', () => {
 		await expect(highlighted).toHaveCount(1);
 		await expect(highlighted).toHaveAccessibleName('Ahri');
 		await expect(highlighted).toHaveCSS('box-shadow', /inset/);
+
+		// Without JavaScript, back goes to the player's profile.
+		await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
+		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ');
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 });
@@ -79,6 +84,19 @@ test('with JavaScript, a profile row opens its match page', async ({ page }) => 
 	await expect(page.getByRole('banner').getByRole('combobox', { name: 'Region' })).toHaveValue(
 		'oce'
 	);
+});
+
+test('with JavaScript, back returns to the profile page the match was opened from', async ({
+	page
+}) => {
+	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await page.getByRole('link', { name: 'Details of this match' }).first().click();
+	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+
+	await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
+	// The filter is kept, because this is the browser's own back.
+	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await expect(page.getByRole('combobox', { name: 'Queue' })).toHaveValue('420');
 });
 
 test('a player link names the line to highlight, whatever its case', async ({ page }) => {

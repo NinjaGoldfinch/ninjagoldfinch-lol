@@ -288,6 +288,7 @@ Date: 2026-10-09 · Task: P3-01 (follow-up, owner request)
 
 - A profile's match rows link to `/match/{region}/{matchId}?player=GameName-TAG`, the Riot ID written as in profile URLs. The match page tints that player's line and marks it with an accent bar on the left and `aria-current`. Riot IDs match without regard to case. A link without `player`, or one naming nobody in the game, highlights nothing.
 - The page reads `player` from the URL itself, not in the load, so the load's data is the same for every link to a match. The edge caches each URL separately, so each player's link is a separate cache entry.
+- A back link above the heading returns to that profile. Without JavaScript it links to the `player`'s profile, first page and no filter. With JavaScript, a match opened from a profile page goes back through the browser's history instead, so that page's filters, page number and scroll position come back. With no `player` and no profile page before it, there is no back link.
 - The objective label reads "Herald", not "Heralds": a team can take only one Rift Herald a game at present.
 
 **Consequences.** The match is found by the Riot ID it recorded. A player who has changed their Riot ID since the game isn't highlighted in it.
