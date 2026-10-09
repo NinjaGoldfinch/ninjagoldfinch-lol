@@ -4,7 +4,7 @@ const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 
 test('every page has the search form and the Riot legal notice', async ({ page }) => {
 	await page.goto('/');
-	const search = page.getByRole('search');
+	const search = page.getByRole('banner').getByRole('search');
 	await expect(search.getByRole('combobox', { name: 'Region' })).toHaveValue('oce');
 	await expect(search.getByRole('textbox', { name: 'Riot ID' })).toBeVisible();
 	await expect(page.locator('footer')).toContainText(LEGAL);
@@ -22,7 +22,7 @@ test.describe('without JavaScript', () => {
 
 	test('the layout still renders', async ({ page }) => {
 		await page.goto('/');
-		await expect(page.getByRole('search')).toBeVisible();
+		await expect(page.getByRole('banner').getByRole('search')).toBeVisible();
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 });
