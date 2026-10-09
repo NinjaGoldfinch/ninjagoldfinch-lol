@@ -13,6 +13,8 @@ A server-rendered League of Legends stats site. It is a SvelteKit app that sits 
 - pnpm (version pinned in `package.json`; `corepack enable` provides it)
 - [just](https://github.com/casey/just)
 - A riot-proxy to talk to (see below)
+- For `just e2e` only: Playwright's Chromium and its system packages, once per machine:
+  `pnpm exec playwright install chromium` and `sudo "$(command -v pnpm)" exec playwright install-deps chromium`. The system packages include fonts; without them Chromium lays out text at zero height and visibility checks fail.
 
 ## Getting started
 
@@ -31,7 +33,7 @@ just dev     # dev server
 | `just dev`   | Dev server with hot reload                                          |
 | `just gen`   | Regenerate `src/lib/api/schema.d.ts` from `openapi/riot-proxy.json` |
 | `just check` | Format check, lint, svelte-check, unit tests, build. The only gate. |
-| `just e2e`   | Playwright smoke tests                                              |
+| `just e2e`   | Playwright smoke tests against the mock proxy                       |
 | `just image` | Build the production Docker image                                   |
 
 There is no CI. The pre-push hook runs `just check`, and the pre-commit hook refuses commits on `main` and staged content that looks like a riot-proxy or Riot API key.
@@ -61,3 +63,15 @@ just gen
 ```
 
 The committed copy is riot-proxy `2.0.0-rc.3`. It is excluded from Prettier so it stays byte-identical to what the proxy serves. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
+
+## Tests and fixtures
+
+Unit tests (`tests/unit/`) run in `just check`. Browser tests (`tests/e2e/`) run with `just e2e`. Playwright starts a production build pointed at a mock riot-proxy (`tests/mock-proxy/`), which replays the recorded responses in `tests/fixtures/`. A request with no recorded response gets a 500, so it fails loudly. Nothing reaches the real proxy or Riot.
+
+To record a new fixture from `PROXY_URL` (one live call, so it spends Riot rate limit):
+
+```sh
+just fixture account-hide-on-bush '/v1/riot/accounts/by-riot-id/asia/Hide%20on%20bush/KR1'
+```
+
+Use the path exactly as the client sends it, URL-encoded. The recorder keeps only the headers the site reads, and replaces every `puuid` with a stable placeholder.
