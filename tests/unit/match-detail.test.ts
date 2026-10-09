@@ -4,6 +4,7 @@ import {
 	formatMatchDate,
 	isMatchIdFor,
 	matchPath,
+	matchTab,
 	openBuildId,
 	selectBuild,
 	teamGold,
@@ -112,6 +113,7 @@ describe('toMatchDetail', () => {
 		const view = toMatchDetail(remade, names, { region: oce, ddragonVersion: '16.20.1' });
 		expect(view.teams.map((t) => t.result)).toEqual(['remake', 'remake']);
 		expect(view.gold).toBeNull();
+		expect(view.objectives).toBeNull();
 	});
 });
 
@@ -190,6 +192,30 @@ describe('matchPath', () => {
 		expect(matchPath('kr', 'KR_1', { player: { gameName: 'Hide on bush', tagLine: 'KR1' } })).toBe(
 			'/match/kr/KR_1?player=Hide+on+bush-KR1'
 		);
+	});
+});
+
+describe('matchPath tabs', () => {
+	it('names the tab, leaving out the default scoreboard', () => {
+		expect(matchPath('oce', 'OC1_1', { tab: 'timeline' })).toBe('/match/oce/OC1_1?tab=timeline');
+		expect(matchPath('oce', 'OC1_1', { tab: 'scoreboard' })).toBe('/match/oce/OC1_1');
+		expect(
+			matchPath('oce', 'OC1_1', {
+				player: { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' },
+				tab: 'timeline',
+				build: 8
+			})
+		).toBe('/match/oce/OC1_1?player=NinjaGoldfinch-OCENZ&tab=timeline&build=8');
+	});
+});
+
+describe('matchTab', () => {
+	it('reads ?tab=, anything else being the scoreboard', () => {
+		expect(matchTab('timeline')).toBe('timeline');
+		expect(matchTab('scoreboard')).toBe('scoreboard');
+		expect(matchTab(null)).toBe('scoreboard');
+		expect(matchTab('Timeline')).toBe('scoreboard');
+		expect(matchTab('constructor')).toBe('scoreboard');
 	});
 });
 

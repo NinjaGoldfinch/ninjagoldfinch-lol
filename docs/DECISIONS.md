@@ -342,3 +342,20 @@ Date: 2026-10-10 · Task: P3-02 (follow-up, owner request; supersedes where ADR-
 - **Without JavaScript**, the server renders the build as an open, non-modal dialog styled into the page below the scoreboards, as before. The × is a link to the page without the build. In the browser the same element is reopened with `showModal()`, and its `:modal` styles make it a popup.
 
 **Consequences.** On a 900 px window the page now ends just below Red's fourth player (1,068 px) instead of 1,230 px. A link to a match no longer shows a build by default.
+
+## ADR-029: Timeline charts in a tab: gold difference and objectives
+
+Date: 2026-10-10 · Task: P3-03
+
+**Context.** The match page fits on about one screen since ADR-028, and the charts needed a place (`docs/notes/match-layouts.md`). The owner chose tabs over a popup or putting the charts below the scoreboards.
+
+**Decision.**
+
+- **Tabs.** Two links under the match header, Scoreboard and Timeline. `?tab=timeline` shows the charts in place of both team tables, and anything else shows the scoreboard. The page reads the tab from the URL, not the load, so the load is the same for every tab, as with `player` (ADR-024). They are plain links, so they work without JavaScript. With it, SvelteKit switches tab without asking the server for anything, because the load doesn't read the URL. The switch replaces the history entry, so the back link's `history.back()` (ADR-025) still leaves the match. Build links and the build's close link keep the tab.
+- **Gold difference.** Blue's gold minus Red's at every timeline frame, from the per-team totals ADR-023 kept. It is drawn as a line with the area to zero filled, Blue's colour above zero and Red's below. The y-axis is symmetric, with grid lines every 1k, 2k, 5k, 10k, 20k or 50k: the smallest step that fits the largest lead in three steps. Each side's largest lead and when it was are written above the chart. Hovering a minute shows its lead through SVG `<title>`s, which works without JavaScript. Two tokens, `team-blue` and `team-red`, colour the sides, because `win` and `loss` mean the result, not the side.
+- **Objectives** come from the timeline's `ELITE_MONSTER_KILL` (credited to `killerTeamId`) and `BUILDING_KILL` events. A building kill's `teamId` is the team that lost the building, so it is credited to the other team. The kinds are the scoreboard's: towers, inhibitors, dragons, Barons, Herald and voidgrubs. For the recorded match the counts per team equal the scoreboard's, which a unit test checks against the raw fixtures. Other monsters (Atakhan, anything new), turret plates, dragon souls and first blood are not drawn. Names are Riot's in-game ones (`Hextech Drake`, `Mid inner tower`).
+- Each team's objectives sit in a lane under the chart, on the same time axis, as a letter (T, I, D, B, H, V). One team's kills of one kind within a minute of the first are one marker with a count, such as three voidgrubs. Markers within 5% of the game's length of each other go on separate rows, so they don't overlap even on a phone. The lanes are hidden from screen readers. Instead, the full list of objectives is a table in a `<details>` below the chart.
+- With other than two teams there is no gold difference ("needs two teams") and no building kills, since the team that took a building is unknown. Without a timeline the tab says it is unavailable.
+- Hand-written SVG and HTML, with no chart library, as the plan says.
+
+**Consequences.** The page's data gains the objective list, about 24 entries (2 kB) for a 32-minute game. Arena is still untested: there is no recorded Arena match.

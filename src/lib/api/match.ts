@@ -113,11 +113,41 @@ export interface SkillEvent {
 
 export type TimelineEvent = ItemEvent | ItemUndoEvent | SkillEvent;
 
+/** An epic monster killed: dragon, Baron, Rift Herald, voidgrub and the like. */
+export interface MonsterKillEvent {
+	type: 'ELITE_MONSTER_KILL';
+	timestamp: number;
+	/** The team that took it. */
+	killerTeamId: number;
+	/** DRAGON, BARON_NASHOR, RIFTHERALD, HORDE, ... */
+	monsterType: string;
+	/** For a dragon, which one: FIRE_DRAGON, ELDER_DRAGON, ... */
+	monsterSubType: string | null;
+}
+
+/** A tower or inhibitor destroyed. */
+export interface BuildingKillEvent {
+	type: 'BUILDING_KILL';
+	timestamp: number;
+	/** The team whose building it was, not the team that destroyed it. */
+	teamId: number;
+	/** TOWER_BUILDING or INHIBITOR_BUILDING. */
+	buildingType: string;
+	/** TOP_LANE, MID_LANE or BOT_LANE. */
+	laneType: string | null;
+	/** For a tower: OUTER_TURRET, INNER_TURRET, BASE_TURRET or NEXUS_TURRET. */
+	towerType: string | null;
+}
+
+export type ObjectiveEvent = MonsterKillEvent | BuildingKillEvent;
+
 export interface Timeline {
 	matchId: string;
 	frames: TimelineFrame[];
 	/** The item and skill events the site reads, in game order. */
 	events: TimelineEvent[];
+	/** Monster and building kills, in game order. */
+	objectives: ObjectiveEvent[];
 }
 
 /**
@@ -172,21 +202,23 @@ export function parseMatch(body: unknown): Match | undefined {
 }
 
 /**
- * Projects a match-v5 timeline to its frames' gold and its item and skill
- * events. undefined without a match id or a list of frames; a frame or event
- * missing a field the site reads is dropped.
+ * Projects a match-v5 timeline to its frames' gold, its item and skill events
+ * and its objective kills. undefined without a match id or a list of frames;
+ * a frame or event missing a field the site reads is dropped.
  */
 export function parseTimeline(body: unknown): Timeline | undefined {
 	const matchId = string(record(record(body)?.metadata)?.matchId);
 	const frames = record(record(body)?.info)?.frames;
 	if (!matchId || !Array.isArray(frames)) return undefined;
+	const allEvents = frames.flatMap((frame) => {
+		const events = record(frame)?.events;
+		return Array.isArray(events) ? events : [];
+	});
 
 	return {
 		matchId,
-		events: frames.flatMap((frame) => {
-			const events = record(frame)?.events;
-			return (Array.isArray(events) ? events : []).flatMap(parseEvent);
-		}),
+		events: allEvents.flatMap(parseEvent),
+		objectives: allEvents.flatMap(parseObjective),
 		frames: frames.flatMap((value): TimelineFrame[] => {
 			const frame = record(value);
 			const timestamp = number(frame?.timestamp);
@@ -230,6 +262,48 @@ function parseEvent(value: unknown): TimelineEvent[] {
 							timestamp,
 							skillSlot,
 							levelUpType: string(e.levelUpType)
+						}
+					]
+				: [];
+		}
+		default:
+			return [];
+	}
+}
+
+function parseObjective(value: unknown): ObjectiveEvent[] {
+	const e = record(value);
+	const timestamp = number(e?.timestamp);
+	if (!e || timestamp === null) return [];
+
+	switch (e.type) {
+		case 'ELITE_MONSTER_KILL': {
+			const killerTeamId = number(e.killerTeamId);
+			const monsterType = string(e.monsterType);
+			return killerTeamId !== null && monsterType
+				? [
+						{
+							type: 'ELITE_MONSTER_KILL',
+							timestamp,
+							killerTeamId,
+							monsterType,
+							monsterSubType: string(e.monsterSubType)
+						}
+					]
+				: [];
+		}
+		case 'BUILDING_KILL': {
+			const teamId = number(e.teamId);
+			const buildingType = string(e.buildingType);
+			return teamId !== null && buildingType
+				? [
+						{
+							type: 'BUILDING_KILL',
+							timestamp,
+							teamId,
+							buildingType,
+							laneType: string(e.laneType),
+							towerType: string(e.towerType)
 						}
 					]
 				: [];
