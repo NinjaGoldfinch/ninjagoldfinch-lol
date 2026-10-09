@@ -226,6 +226,84 @@ test.describe('build popup', () => {
 	});
 });
 
+test.describe('timeline tab without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('the Timeline tab shows the gold difference and objectives in place of the scoreboard', async ({
+		page
+	}) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		const tabs = page.getByRole('navigation', { name: 'Match views' });
+		await expect(tabs.getByRole('link', { name: 'Scoreboard' })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		await expect(page.getByRole('heading', { name: 'Gold difference' })).toHaveCount(0);
+
+		await tabs.getByRole('link', { name: 'Timeline' }).click();
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ&tab=timeline`);
+		await expect(tabs.getByRole('link', { name: 'Timeline' })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		await expect(page.getByRole('region', { name: /team$/ })).toHaveCount(0);
+
+		const chart = page.getByRole('region', { name: 'Gold difference' });
+		// The figures from the recorded timeline (checked in the unit tests).
+		await expect(chart).toContainText("Blue team's largest lead: +716 at 7:00");
+		await expect(chart).toContainText("Red team's largest lead: +8,153 at 32:32");
+		await expect(chart.getByRole('img', { name: /^Gold difference/ })).toHaveAccessibleName(
+			'Gold difference over 32:32: Red team +8,153 at the end'
+		);
+
+		await chart.getByText('Objectives taken (24)').click();
+		const rows = chart.getByRole('table').getByRole('row');
+		await expect(rows).toHaveCount(25);
+		await expect(rows.nth(4)).toContainText('9:15Red teamHextech Drake');
+		await expect(rows.last()).toContainText('32:19Red teamNexus tower');
+		await expect(chart.getByRole('row', { name: /Baron Nashor/ })).toHaveCount(2);
+
+		// The highlight is kept, and Scoreboard goes back.
+		await tabs.getByRole('link', { name: 'Scoreboard' }).click();
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
+	});
+
+	test('a build opened from the Timeline tab keeps it', async ({ page }) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ&tab=timeline`);
+		await page.getByRole('link', { name: 'Your build' }).click();
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ&tab=timeline&build=8#build`);
+		await expect(page.getByRole('heading', { name: 'Gold difference' })).toBeVisible();
+		await page.getByRole('link', { name: 'Close build' }).click();
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ&tab=timeline`);
+	});
+});
+
+test('with JavaScript, switching tab adds no history, so back still leaves the match', async ({
+	page
+}) => {
+	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await page.getByRole('link', { name: 'Details of this match' }).first().click();
+	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+	// The load doesn't read the URL, so switching tab asks the server for nothing.
+	const loads: string[] = [];
+	page.on('request', (r) => {
+		if (r.url().includes('__data.json')) loads.push(r.url());
+	});
+	const tabs = page.getByRole('navigation', { name: 'Match views' });
+	await tabs.getByRole('link', { name: 'Timeline' }).click();
+	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ&tab=timeline`);
+	await expect(page.getByRole('heading', { name: 'Gold difference' })).toBeVisible();
+	await tabs.getByRole('link', { name: 'Scoreboard' }).click();
+	await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
+	await tabs.getByRole('link', { name: 'Timeline' }).click();
+	await expect(page.getByRole('heading', { name: 'Gold difference' })).toBeVisible();
+	expect(loads).toEqual([]);
+
+	await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
+	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+});
+
 test('a match page is cacheable at the edge for a day', async ({ request }) => {
 	const response = await request.get(MATCH);
 	expect(response.status()).toBe(200);

@@ -131,6 +131,61 @@ describe('parseTimeline', () => {
 		]);
 	});
 
+	it('reads the monster and building kills, in game order', () => {
+		const timeline = parseTimeline(fixtureBody(TIMELINE_PATH));
+		const objectives = timeline?.objectives ?? [];
+		expect(objectives.filter((e) => e.type === 'ELITE_MONSTER_KILL')).toHaveLength(10);
+		expect(objectives.filter((e) => e.type === 'BUILDING_KILL')).toHaveLength(14);
+		expect(objectives[3]).toEqual({
+			type: 'ELITE_MONSTER_KILL',
+			timestamp: 555091,
+			killerTeamId: 200,
+			monsterType: 'DRAGON',
+			monsterSubType: 'HEXTECH_DRAGON'
+		});
+		expect(objectives.find((e) => e.type === 'BUILDING_KILL')).toEqual({
+			type: 'BUILDING_KILL',
+			timestamp: 822830,
+			teamId: 200,
+			buildingType: 'TOWER_BUILDING',
+			laneType: 'TOP_LANE',
+			towerType: 'OUTER_TURRET'
+		});
+		const stamps = objectives.map((e) => e.timestamp);
+		expect(stamps).toEqual([...stamps].sort((a, b) => a - b));
+	});
+
+	it('drops objective kills missing a field it reads', () => {
+		const body = {
+			metadata: { matchId: 'OC1_1' },
+			info: {
+				frames: [
+					{
+						timestamp: 0,
+						events: [
+							{ type: 'ELITE_MONSTER_KILL', timestamp: 1, monsterType: 'DRAGON' },
+							{ type: 'ELITE_MONSTER_KILL', timestamp: 2, killerTeamId: 100 },
+							{ type: 'BUILDING_KILL', timestamp: 3, buildingType: 'TOWER_BUILDING' },
+							{ type: 'BUILDING_KILL', timestamp: 4, teamId: 100 },
+							{ type: 'TURRET_PLATE_DESTROYED', timestamp: 5, teamId: 100 },
+							{ type: 'BUILDING_KILL', timestamp: 6, teamId: 100, buildingType: 'TOWER_BUILDING' }
+						]
+					}
+				]
+			}
+		};
+		expect(parseTimeline(body)?.objectives).toEqual([
+			{
+				type: 'BUILDING_KILL',
+				timestamp: 6,
+				teamId: 100,
+				buildingType: 'TOWER_BUILDING',
+				laneType: null,
+				towerType: null
+			}
+		]);
+	});
+
 	it('rejects a payload without frames', () => {
 		expect(parseTimeline({ metadata: { matchId: 'OC1_1' }, info: {} })).toBeUndefined();
 		expect(parseTimeline('nope')).toBeUndefined();

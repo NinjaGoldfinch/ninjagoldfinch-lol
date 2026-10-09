@@ -3,11 +3,14 @@
 	import { page } from '$app/state';
 	import BuildPanel from '#lib/components/BuildPanel.svelte';
 	import Scoreboard from '#lib/components/Scoreboard.svelte';
+	import TimelineChart from '#lib/components/TimelineChart.svelte';
 	import {
 		formatMatchDate,
 		matchPath,
+		matchTab,
 		openBuildId,
-		selectBuild
+		selectBuild,
+		type MatchTab
 	} from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
 	import { parseRiotId, profilePath, sameRiotId } from '#lib/domain/riot-id.ts';
@@ -39,6 +42,18 @@
 			: null;
 	});
 	const back = $derived(cameFrom ?? (highlight ? profilePath(data.region.slug, highlight) : null));
+
+	// `?tab=timeline` shows the charts in place of the scoreboard. The tab links
+	// are plain links. The load doesn't read the URL, so with JavaScript switching
+	// tab fetches nothing, and it replaces the history entry so that the back
+	// link's history.back() still leaves the match.
+	const tab = $derived(matchTab(page.url.searchParams.get('tab')));
+	const TABS: { id: MatchTab; label: string }[] = [
+		{ id: 'scoreboard', label: 'Scoreboard' },
+		{ id: 'timeline', label: 'Timeline' }
+	];
+	const tabHref = (id: MatchTab) =>
+		matchPath(data.region.slug, data.matchId, { player: highlight, tab: id });
 	function goBack(event: MouseEvent) {
 		if (!cameFrom || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
 		event.preventDefault();
@@ -54,8 +69,8 @@
 	const build = $derived(openId === null ? undefined : selectBuild(data, openId, highlight));
 	const buildLine = $derived(lines.find((l) => l.participantId === build?.participantId));
 	const buildHref = (participantId: number) =>
-		`${matchPath(data.region.slug, data.matchId, { player: highlight, build: participantId })}#build`;
-	const closeHref = $derived(matchPath(data.region.slug, data.matchId, { player: highlight }));
+		`${matchPath(data.region.slug, data.matchId, { player: highlight, tab, build: participantId })}#build`;
+	const closeHref = $derived(matchPath(data.region.slug, data.matchId, { player: highlight, tab }));
 
 	// The header's build link: the highlighted player's, else the first player's.
 	const firstBuild = $derived(selectBuild(data, null, highlight));
@@ -136,19 +151,37 @@
 	</div>
 </header>
 
-<div class="mt-6 flex flex-col gap-6">
-	{#each data.teams as team (team.teamId)}
-		<Scoreboard
-			{team}
-			version={data.ddragonVersion}
-			region={data.region.slug}
-			{maxDamage}
-			{highlight}
-			selected={build?.participantId ?? null}
-			{buildHref}
-			onbuild={openBuild}
-		/>
+<nav aria-label="Match views" class="mt-5 flex gap-1 border-b border-border">
+	{#each TABS as t (t.id)}
+		<a
+			href={tabHref(t.id)}
+			aria-current={tab === t.id ? 'page' : undefined}
+			data-sveltekit-replacestate
+			data-sveltekit-noscroll
+			class="-mb-px border-b-2 px-3 py-2 text-sm {tab === t.id
+				? 'border-accent text-text'
+				: 'border-transparent text-muted hover:text-text'}">{t.label}</a
+		>
 	{/each}
+</nav>
+
+<div class="mt-4 flex flex-col gap-6">
+	{#if tab === 'timeline'}
+		<TimelineChart teams={data.teams} gold={data.gold} objectives={data.objectives} />
+	{:else}
+		{#each data.teams as team (team.teamId)}
+			<Scoreboard
+				{team}
+				version={data.ddragonVersion}
+				region={data.region.slug}
+				{maxDamage}
+				{highlight}
+				selected={build?.participantId ?? null}
+				{buildHref}
+				onbuild={openBuild}
+			/>
+		{/each}
+	{/if}
 	{#if build && buildLine}
 		<!-- In the page without JavaScript (`static`); a popup once modal. -->
 		<dialog

@@ -11,6 +11,9 @@
 	--color-accent: oklch(0.79 0.12 302);
 	--color-win: oklch(0.72 0.13 240);
 	--color-loss: oklch(0.66 0.17 25);
+	/* The map sides, for the timeline chart: Blue and Red, not win and loss. */
+	--color-team-blue: oklch(0.7 0.12 245);
+	--color-team-red: oklch(0.66 0.16 20);
 }
 
 @layer base {

@@ -1,6 +1,6 @@
 # Match page layouts
 
-The match page has to fit two team scoreboards and a build (and, from P3-03, the timeline charts) into as little height as possible. Three layouts were mocked up on 2026-10-10, at 1440 × 900 against the recorded match `OC1_712351051`. The owner chose **A** (ADR-028). **B** and **B with the build** are kept here so they can be built later, possibly as a layout a visitor picks.
+The match page has to fit two team scoreboards and a build (and the timeline charts, which went in a tab: ADR-029) into as little height as possible. Three layouts were mocked up on 2026-10-10, at 1440 × 900 against the recorded match `OC1_712351051`. The owner chose **A** (ADR-028). **B** and **B with the build** are kept here so they can be built later, possibly as a layout a visitor picks.
 
 The mock-ups were made by restyling the live page in the browser. The CSS below is what produced them, not finished code.
 
@@ -70,4 +70,4 @@ If these become a visitor's choice, things to settle first:
 
 - **Where the choice lives.** The page is server-rendered and cached at the edge for a day, so a cookie read on the server would split the cache by cookie. A class set on `<html>` from `localStorage` before first paint keeps one cached page, but needs a small inline script and the CSP to allow it (P5-03). A query parameter (`?layout=side`) is cacheable and works without JavaScript, but has to be carried on every link.
 - **Narrow screens.** B only makes sense on wide screens. Below about 1200 px it should fall back to A whatever the choice.
-- **P3-03's charts** need a place in each layout.
+- **P3-03's charts** are in a Timeline tab (ADR-029), which works in either layout.

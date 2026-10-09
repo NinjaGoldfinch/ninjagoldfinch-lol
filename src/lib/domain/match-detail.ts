@@ -11,6 +11,7 @@ import { itemSteps, skillOrder, toRunePage, type Build } from './builds.ts';
 import type { Region } from './regions.ts';
 import { sameRiotId, type RiotId } from './riot-id.ts';
 import { loadoutOf, patchOf, type MatchRow } from './matches.ts';
+import { objectiveKills, type GoldFrame, type ObjectiveKill } from './timeline.ts';
 
 /** One player's scoreboard line: only what the page renders. */
 export interface ScoreboardLine {
@@ -48,13 +49,6 @@ export interface TeamScoreboard {
 	players: ScoreboardLine[];
 }
 
-/** Both teams' gold at one timeline frame, in the order of `MatchDetail.teams`. */
-export interface GoldFrame {
-	/** Seconds from the start of the game. */
-	at: number;
-	teamGold: number[];
-}
-
 /** Everything the match page renders, and nothing more: it is embedded in the HTML. */
 export interface MatchDetail {
 	matchId: string;
@@ -73,6 +67,8 @@ export interface MatchDetail {
 	teams: TeamScoreboard[];
 	/** From the timeline; null when it could not be loaded. */
 	gold: GoldFrame[] | null;
+	/** Objective kills from the timeline, in game order; null without one. */
+	objectives: ObjectiveKill[] | null;
 	/** Every player's build, in Riot's order. */
 	builds: Build[];
 }
@@ -86,7 +82,8 @@ const NO_OBJECTIVES = Object.fromEntries(OBJECTIVES.map((key) => [key, 0])) as R
 
 /**
  * Shapes a match into one scoreboard per team, players in Riot's order, plus
- * each team's gold over time from the timeline when there is one. Every
+ * each team's gold over time and the objectives taken from the timeline when
+ * there is one. Every
  * team's result reads `remake` when the game ended in an early surrender.
  */
 export function toMatchDetail(
@@ -143,6 +140,7 @@ export function toMatchDetail(
 			};
 		}),
 		gold: timeline ? teamGold(timeline, match, teamIds) : null,
+		objectives: timeline ? objectiveKills(timeline.objectives, teamIds) : null,
 		builds: match.participants.map((p) => ({
 			participantId: p.participantId,
 			items: timeline ? itemSteps(timeline.events, p.participantId, names) : null,
@@ -234,18 +232,28 @@ export function openBuildId(
 	return state === null ? null : String(state);
 }
 
+/** The match page's tabs; the scoreboard is the default and has no `?tab=`. */
+export const MATCH_TABS = ['scoreboard', 'timeline'] as const;
+export type MatchTab = (typeof MATCH_TABS)[number];
+
+/** The tab `?tab=` asks for; anything unknown is the scoreboard. */
+export function matchTab(fromUrl: string | null): MatchTab {
+	return MATCH_TABS.find((tab) => tab === fromUrl) ?? 'scoreboard';
+}
+
 /**
  * The match page URL. `player` is whose champion to highlight: the profile the
- * visitor came from, written `GameName-TAG` as in profile URLs. `build` is
- * whose build to show, by participant id.
+ * visitor came from, written `GameName-TAG` as in profile URLs. `tab` is which
+ * tab to show. `build` is whose build to show, by participant id.
  */
 export function matchPath(
 	region: string,
 	matchId: string,
-	{ player, build }: { player?: RiotId | null; build?: number } = {}
+	{ player, tab, build }: { player?: RiotId | null; tab?: MatchTab; build?: number } = {}
 ): string {
 	const query = new URLSearchParams();
 	if (player) query.set('player', `${player.gameName}-${player.tagLine}`);
+	if (tab && tab !== 'scoreboard') query.set('tab', tab);
 	if (build !== undefined) query.set('build', String(build));
 	const search = query.size > 0 ? `?${query}` : '';
 	return `/match/${region}/${encodeURIComponent(matchId)}${search}`;

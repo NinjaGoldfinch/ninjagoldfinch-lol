@@ -111,6 +111,7 @@ describe('loadMatch', () => {
 		const match = await loadMatch(oce, 'OC1_712351051', { client: proxy, cdragon });
 		expect(match.teams).toHaveLength(2);
 		expect(match.gold).toBeNull();
+		expect(match.objectives).toBeNull();
 		expect(match.builds[0]).toMatchObject({ items: null, skills: null });
 	});
 
