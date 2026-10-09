@@ -1,0 +1,3 @@
+#!/bin/sh
+# Stand-in for CI: nothing leaves this machine unless the gate passes.
+exec just check
