@@ -55,6 +55,11 @@ test.describe('without JavaScript', () => {
 			'src',
 			/communitydragon\.org\/16\.20\/.*icon-position-middle\.png$/
 		);
+		// Lane icons draw the map in a dim tone behind the lane; fading the whole
+		// badge left Mid, Top and Bot washed out next to Jungle.
+		const lane = first.getByRole('img', { name: 'Mid' });
+		await expect(lane).toHaveCSS('opacity', '1');
+		await expect(lane).toHaveCSS('filter', /brightness\(1\.25\)/);
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
 		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
