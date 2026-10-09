@@ -242,10 +242,18 @@ Date: 2026-10-09 · Task: P2-03 (follow-up) · Layout superseded by ADR-021
 
 ## ADR-021: Items in one line, packed left
 
-Date: 2026-10-09 · Task: P2-03 (follow-up; supersedes the layout in ADR-020)
+Date: 2026-10-09 · Task: P2-03 (follow-up; supersedes the layout in ADR-020) · Trinket position superseded by ADR-022
 
 **Context.** The two rows of four from ADR-020 did not fit the match row's layout. Riot reports items by inventory slot, so a sold or used item left an empty square mid-build.
 
 **Decision.** `MatchRow` draws the items in one line, packed left: the six inventory items in slot order, the trinket, then the role quest item, with the empty slots at the end. riot-proxy's showcase does the same. The slot count doesn't change: seven, plus the role quest slot for bot laners. ADR-020's rule that only bot laners keep the role quest slot stands.
 
 **Consequences.** The trinket is no longer at a fixed position: it follows the last item. The row no longer shows which inventory slot an item was in.
+
+## ADR-022: The trinket in a fixed slot at the end of the row
+
+Date: 2026-10-09 · Task: P2-03 (follow-up; supersedes the trinket position in ADR-021)
+
+**Decision.** Only the six inventory items are packed left, with their empty slots after them. The trinket comes next, then the role quest slot when the game has one. So the trinket is always the last slot, or second last for a bot laner, whose boots take the last.
+
+**Consequences.** The trinket lines up down the match list, with any inventory gaps just before it. A game with no trinket shows that slot empty rather than moving an item into it.

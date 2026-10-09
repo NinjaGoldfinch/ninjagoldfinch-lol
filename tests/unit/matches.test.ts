@@ -165,30 +165,36 @@ describe('itemSlots', () => {
 	const item = (id: number) => ({ id, name: `Item ${id}` });
 	const held = (id: number, roleQuest = false) => ({ ...item(id), roleQuest });
 
-	it('packs items left, with the trinket and role quest item before the empty slots', () => {
+	it('packs the inventory left, then the trinket, then the role quest item', () => {
 		const items = [item(1), null, item(2), null, null, null, item(3340)];
 		expect(itemSlots({ items, roleBoundItem: item(3006) })).toEqual([
 			held(1),
 			held(2),
+			null,
+			null,
+			null,
+			null,
 			held(3340),
-			held(3006, true),
-			null,
-			null,
-			null,
-			null
+			held(3006, true)
 		]);
 	});
 
-	it('keeps eight slots when the role quest slot is empty', () => {
+	it('keeps the trinket second last when the role quest slot is empty', () => {
 		const items = [item(1), item(2), item(3), item(4), item(5), item(6), item(3340)];
 		const slots = itemSlots({ items, roleBoundItem: null });
 		expect(slots).toHaveLength(8);
+		expect(slots.at(-2)).toEqual(held(3340));
 		expect(slots.at(-1)).toBeNull();
 	});
 
-	it('draws seven slots for a game that predates role quests', () => {
-		const items = [null, item(1), null, null, null, null, null];
-		expect(itemSlots({ items })).toEqual([held(1), null, null, null, null, null, null]);
+	it('puts the trinket last for a game without a role quest slot', () => {
+		const items = [null, item(1), null, null, null, null, item(3340)];
+		expect(itemSlots({ items })).toEqual([held(1), null, null, null, null, null, held(3340)]);
+	});
+
+	it('keeps the trinket slot empty, not filled by an item, when there is no trinket', () => {
+		const items = [item(1), item(2), null, null, null, null, null];
+		expect(itemSlots({ items })).toEqual([held(1), held(2), null, null, null, null, null]);
 	});
 
 	it('packs the recorded game that sold an item mid-build', () => {
@@ -196,9 +202,10 @@ describe('itemSlots', () => {
 		const gapped = rows.find((r) => r.items[4] === null && r.items[5] !== null);
 		expect(gapped).toBeDefined();
 		const slots = gapped ? itemSlots(gapped) : [];
-		// A jungler: no role quest slot, so seven slots with the gap last.
+		// A jungler: no role quest slot, so the gap sits just before the trinket.
 		expect(slots).toHaveLength(7);
-		expect(slots.slice(0, 6).every(Boolean)).toBe(true);
-		expect(slots.at(-1)).toBeNull();
+		expect(slots.slice(0, 5).every(Boolean)).toBe(true);
+		expect(slots[5]).toBeNull();
+		expect(slots[6]).toEqual({ id: 3364, name: 'Oracle Lens', roleQuest: false });
 	});
 });

@@ -73,12 +73,13 @@ test.describe('without JavaScript', () => {
 		);
 		await expect(first.getByRole('img', { name: 'Mid Lane Quest Reward' })).toHaveCount(0);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
-		// A game with slot 4 empty draws its items packed left, the gap moved to the end.
+		// A game with slot 4 empty draws its items packed left, the gap before
+		// the trinket, which stays last.
 		const slots = matches.nth(6).getByRole('list', { name: 'Items' }).getByRole('listitem');
 		await expect(slots).toHaveCount(7);
 		await expect(slots.nth(4).getByRole('img')).toHaveAccessibleName("Lord Dominik's Regards");
-		await expect(slots.nth(5).getByRole('img')).toBeVisible();
-		await expect(slots.nth(6).getByRole('img')).toHaveCount(0);
+		await expect(slots.nth(5).getByRole('img')).toHaveCount(0);
+		await expect(slots.nth(6).getByRole('img')).toHaveAccessibleName('Oracle Lens');
 	});
 
 	test('refresh re-reads the profile and starts the cooldown', async ({ page }) => {

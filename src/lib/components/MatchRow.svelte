@@ -132,7 +132,7 @@
 	</div>
 
 	<ul class="flex gap-1" aria-label="Items">
-		<!-- Packed left: inventory, trinket, role quest item, then the empty slots. -->
+		<!-- Inventory packed left, then the trinket, then the role quest slot. -->
 		{#each slots as item, i (i)}
 			<li>
 				{#if item}
