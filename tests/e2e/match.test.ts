@@ -67,6 +67,72 @@ test.describe('without JavaScript', () => {
 	});
 });
 
+test.describe('builds', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test("a bare match URL shows the first player's build: Blue's top laner", async ({ page }) => {
+		await page.goto(MATCH);
+		await expect(page.getByRole('heading', { name: /^Build/ })).toHaveText(
+			'Build · Mordekaiser · TheYoungBull#1494'
+		);
+	});
+
+	test("a match opened from a profile shows that player's build", async ({ page }) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		const build = page.getByRole('region', { name: /^Build/ });
+		await expect(build.getByRole('heading', { level: 2 })).toHaveText(
+			'Build · Ahri · NinjaGoldfinch#OCENZ'
+		);
+
+		const steps = build.getByRole('list', { name: 'Item order' }).locator(':scope > li');
+		await expect(steps).toHaveCount(16);
+		await expect(steps.first()).toContainText('0 min');
+		await expect(steps.first().getByRole('img', { name: "Doran's Ring" })).toBeVisible();
+		await expect(build.getByRole('img', { name: /^Sold / })).toHaveCount(1);
+
+		await expect(build).toContainText('Skill order · Q > W > E');
+		const grid = build.getByRole('table', { name: 'Skill points by champion level' });
+		await expect(grid.getByRole('columnheader')).toHaveCount(16);
+		await expect(grid.getByRole('row', { name: /^W/ }).getByRole('cell').first()).toHaveText('W');
+
+		await expect(build.getByRole('list', { name: 'Primary runes' })).toContainText(
+			'Deathfire Touch'
+		);
+		await expect(build).toContainText('Sorcery');
+		await expect(build.getByRole('list', { name: 'Stat shards' }).getByRole('img')).toHaveCount(3);
+		await expect(build.getByRole('img', { name: 'Adaptive Force' })).toHaveAttribute(
+			'src',
+			'https://raw.communitydragon.org/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png'
+		);
+	});
+
+	test("a champion on the scoreboard shows that player's build, keeping the highlight", async ({
+		page
+	}) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		await page.getByRole('link', { name: "Show Kai'Sa's build" }).click();
+
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ&build=9#build`);
+		await expect(page.getByRole('heading', { name: /^Build/ })).toHaveText(
+			"Build · Kai'Sa · Demacia123#6666"
+		);
+		await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
+		await expect(page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' })).toBeVisible();
+	});
+});
+
+test('with JavaScript, switching builds keeps back leading to the profile', async ({ page }) => {
+	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await page.getByRole('link', { name: 'Details of this match' }).first().click();
+	await page.getByRole('link', { name: "Show Kai'Sa's build" }).click();
+	await expect(page.getByRole('heading', { name: /^Build/ })).toHaveText(
+		"Build · Kai'Sa · Demacia123#6666"
+	);
+
+	await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
+	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+});
+
 test('a match page is cacheable at the edge for a day', async ({ request }) => {
 	const response = await request.get(MATCH);
 	expect(response.status()).toBe(200);

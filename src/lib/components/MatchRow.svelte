@@ -91,7 +91,7 @@
 	<ItemList items={match.items} roleBoundItem={match.roleBoundItem} {version} />
 
 	<a
-		href={matchPath(region, match.matchId, player)}
+		href={matchPath(region, match.matchId, { player })}
 		class="ml-auto text-sm text-muted underline-offset-4 hover:text-text hover:underline"
 		>Details<span class="sr-only"> of this match</span></a
 	>

@@ -1,7 +1,8 @@
 // The only place image URLs are built. Images come from Riot's Data Dragon
 // CDN, keyed by patch version; riot-proxy mirrors Data Dragon's JSON but not
-// its images. CommunityDragon fills what Data Dragon lacks (lane icons). A CDN
-// or path change is an edit to this file only. ADR-009, ADR-015.
+// its images. CommunityDragon fills what Data Dragon lacks (lane icons, stat
+// shards). A CDN or path change is an edit to this file only. ADR-009,
+// ADR-015, ADR-026.
 
 const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn';
 const CDRAGON = 'https://raw.communitydragon.org';
@@ -31,6 +32,26 @@ export function runeIconUrl(icon: string): string {
 	return `${DDRAGON}/img/${icon.split('/').map(segment).join('/')}`;
 }
 
+/**
+ * A stat shard's icon from CommunityDragon. `icon` is the path inside its
+ * game data, as `statShards` reduces perks.json's `iconPath`.
+ */
+export function statShardIconUrl(patch: string, icon: string): string {
+	return `${cdragonGameData(patch)}/${icon.split('/').map(segment).join('/')}`;
+}
+
+/**
+ * CommunityDragon's copy of the client's game data for a patch, pinned to its
+ * `major.minor`. `base` is for the server, which may use a mirror (CDRAGON_URL).
+ */
+export function cdragonGameData(patch: string, base = CDRAGON): string {
+	return `${base}/${segment(majorMinor(patch))}/plugins/rcp-be-lol-game-data/global/default/v1`;
+}
+
+function majorMinor(patch: string): string {
+	return patch.split('.').slice(0, 2).join('.');
+}
+
 /** Riot's teamPosition values, as the site names them. */
 export const LANES: Record<string, string> = {
 	TOP: 'Top',
@@ -46,6 +67,5 @@ export const LANES: Record<string, string> = {
  */
 export function laneIconUrl(patch: string, position: string): string | undefined {
 	if (!(position in LANES)) return undefined;
-	const version = patch.split('.').slice(0, 2).join('.');
-	return `${CDRAGON}/${segment(version)}/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-${position.toLowerCase()}.png`;
+	return `${CDRAGON}/${segment(majorMinor(patch))}/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-${position.toLowerCase()}.png`;
 }

@@ -3,6 +3,7 @@ import { parseMatch, parseTimeline } from '#lib/api/match.ts';
 import { isMatchIdFor, toMatchDetail, type MatchDetail } from '#lib/domain/match-detail.ts';
 import { isCustomGame } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
+import { statShards } from './cdragon.ts';
 import { toHttpError } from './errors.ts';
 import { ddragonVersionFor, patchVersions } from './patch.ts';
 import { proxy } from './proxy.ts';
@@ -10,18 +11,25 @@ import { NO_NAMES, staticNames } from './static-data.ts';
 
 type ProxyClient = typeof proxy;
 
+interface Sources {
+	client?: ProxyClient;
+	/** For CommunityDragon's stat shard names; tests pass their own. */
+	cdragon?: (patch: string) => ReturnType<typeof statShards>;
+}
+
 /**
  * The match and its timeline, fetched in parallel with the patch list.
  *
  * Only the match is essential. If the timeline fails, the page still renders
- * with `gold: null`; if the Data Dragon lookups fail, plain fallbacks are used.
+ * with `gold: null` and no item or skill order; if the Data Dragon lookups
+ * fail, plain fallbacks are used; if CommunityDragon fails, no stat shards.
  * A match id that does not belong to the region, and a custom game (Riot
  * policy), are not found.
  */
 export async function loadMatch(
 	region: Region,
 	matchId: string,
-	client: ProxyClient = proxy
+	{ client = proxy, cdragon = (patch) => statShards(patch) }: Sources = {}
 ): Promise<MatchDetail> {
 	if (!isMatchIdFor(region, matchId)) error(404, 'Not found');
 
@@ -45,14 +53,21 @@ export async function loadMatch(
 		console.error(`match ${matchId}: unexpected timeline payload`);
 	}
 
-	const names = await staticNames(versions.current, client).catch((e: unknown) => {
-		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
-		return NO_NAMES;
-	});
+	const [names, shards] = await Promise.all([
+		staticNames(versions.current, client).catch((e: unknown) => {
+			console.error('Data Dragon lookups unavailable; using fallbacks:', e);
+			return NO_NAMES;
+		}),
+		cdragon(versions.current).catch((e: unknown) => {
+			console.error('CommunityDragon stat shards unavailable:', e);
+			return {};
+		})
+	]);
 
 	return toMatchDetail(match, names, {
 		region,
 		ddragonVersion: ddragonVersionFor(versions.versions, match.gameVersion) ?? versions.current,
-		timeline
+		timeline,
+		shards
 	});
 }

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
 	championIconUrl,
 	itemIconUrl,
+	cdragonGameData,
 	laneIconUrl,
+	statShardIconUrl,
 	profileIconUrl,
 	runeIconUrl,
 	summonerSpellIconUrl
@@ -36,6 +38,23 @@ describe('asset URLs', () => {
 
 	it('encodes path segments', () => {
 		expect(championIconUrl('16.20.1', 'a/../b')).toBe(`${CDN}/champion/a%2F..%2Fb.png`);
+	});
+});
+
+describe('CommunityDragon URLs', () => {
+	it('pins game data to the major.minor patch, on a mirror if given', () => {
+		expect(cdragonGameData('16.20.1')).toBe(
+			'https://raw.communitydragon.org/16.20/plugins/rcp-be-lol-game-data/global/default/v1'
+		);
+		expect(cdragonGameData('16.20.1', 'http://mirror')).toBe(
+			'http://mirror/16.20/plugins/rcp-be-lol-game-data/global/default/v1'
+		);
+	});
+
+	it('builds a stat shard icon URL', () => {
+		expect(statShardIconUrl('16.20.1', 'perk-images/statmods/statmodsattackspeedicon.png')).toBe(
+			'https://raw.communitydragon.org/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsattackspeedicon.png'
+		);
 	});
 });
 

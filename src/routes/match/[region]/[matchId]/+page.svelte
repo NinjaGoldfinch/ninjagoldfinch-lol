@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import BuildPanel from '#lib/components/BuildPanel.svelte';
 	import Scoreboard from '#lib/components/Scoreboard.svelte';
-	import { formatMatchDate } from '#lib/domain/match-detail.ts';
+	import { formatMatchDate, matchPath, selectBuild } from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
 	import { parseRiotId, profilePath } from '#lib/domain/riot-id.ts';
 	import type { PageProps } from './$types';
@@ -25,7 +26,9 @@
 	// `player`'s profile. With it, a match opened from a profile page goes back
 	// through history, so that page's filters, page number and scroll return.
 	let cameFrom = $state<string | null>(null);
-	afterNavigate(({ from }) => {
+	afterNavigate(({ from, to }) => {
+		// Switching whose build is shown stays on this match; keep where we came from.
+		if (from && from.url.pathname === to?.url.pathname) return;
 		cameFrom = from?.url.pathname.startsWith('/summoner/')
 			? from.url.pathname + from.url.search
 			: null;
@@ -36,6 +39,15 @@
 		event.preventDefault();
 		history.back();
 	}
+
+	// `?build=<participant id>`: whose build to show; by default the highlighted
+	// player, else the first player (normally Blue's top laner).
+	const build = $derived(selectBuild(data, page.url.searchParams.get('build'), highlight));
+	const buildLine = $derived(
+		data.teams.flatMap((t) => t.players).find((l) => l.participantId === build?.participantId)
+	);
+	const buildHref = (participantId: number) =>
+		`${matchPath(data.region.slug, data.matchId, { player: highlight, build: participantId })}#build`;
 
 	const maxDamage = $derived(
 		Math.max(0, ...data.teams.flatMap((t) => t.players.map((p) => p.damage)))
@@ -68,6 +80,11 @@
 			region={data.region.slug}
 			{maxDamage}
 			{highlight}
+			selected={build?.participantId ?? null}
+			{buildHref}
 		/>
 	{/each}
+	{#if build && buildLine}
+		<BuildPanel {build} line={buildLine} version={data.ddragonVersion} />
+	{/if}
 </div>

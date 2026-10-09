@@ -301,3 +301,19 @@ Date: 2026-10-09 · Task: P3-01 (follow-up, owner request)
 - Without JavaScript it links to the profile named by `player` (ADR-024), on its first page with no filter.
 - With JavaScript, when the match was opened from a profile page, the link goes back through the browser's history instead, so that page's filters, page number and scroll position come back. A modified click (new tab or window) follows the plain link.
 - With no `player` and no profile page before it, there is no back link.
+
+## ADR-026: Builds, one player at a time; stat shards from CommunityDragon
+
+Date: 2026-10-10 · Task: P3-02
+
+**Decision.**
+
+- The match page has one build panel. It shows the player `?build=` names (a participant id), else the highlighted player (`?player=`, ADR-024), else the first player, normally Blue's top laner. Builds are never stacked. Each champion on the scoreboard links to that player's build (`…&build=N#build`, keeping `player`), and the shown player's champion has an accent ring. The links replace the history entry, so the back link (ADR-025) still leads to the profile.
+- Every player's build is in the load's data, about 16 kB of the page, and the page picks one from the URL. So the load is the same for every link, and switching player with JavaScript doesn't reload anything.
+- **Item order** comes from the timeline's purchases and sales, grouped by game minute. Sold items are shown faded. Riot's `ITEM_UNDO` names the item in `beforeId` or `afterId`, not consistently by whether a buy or a sale was undone: the recorded match has an undone purchase with `afterId` set. So an undo cancels the player's latest buy or sale of whichever item it names. Items consumed by an upgrade stay in the list, because they were bought.
+- **Skill order** is the timeline's `SKILL_LEVEL_UP` events, leaving out `EVOLVE` (Kha'Zix and the like), drawn as a Q/W/E/R grid by level. The heading gives the max order: Q, W and E by when each took its fifth point, with unmaxed skills after, most points first.
+- **Runes:** the whole page from the match. Path and rune names come from Data Dragon (ADR-015). Data Dragon's `runesReforged.json` has no stat shards, so their names and icons come from CommunityDragon's `perks.json`, which the owner chose over a hand-kept table. The server fetches it and keeps only the shards (perk ids 5000–5999), held in memory for the current patch like ADR-013. If it fails, the shards are left out and the rest of the page renders.
+- **`CDRAGON_URL`** (optional, default `https://raw.communitydragon.org`) is where the server reads CommunityDragon. It lets the e2e tests replay a recorded fixture from the mock, and the planned CommunityDragon mirror replace it with one setting. Browser image URLs (lane icons, stat shards) still use the public host in `assets.ts`. A mirror would change that one constant too.
+- The fixture recorder takes a full URL for CommunityDragon, keyed by the URL's path, and `--keep` trims a list by `id`.
+
+**Consequences.** The server now makes one outbound request that doesn't go to riot-proxy: CommunityDragon's `perks.json`, about 100 kB, once per patch. This is data riot-proxy doesn't mirror. The stat shard names are the current patch's, like every other name on the page.

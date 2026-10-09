@@ -1,6 +1,6 @@
 import { building } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
-import { parseProxyKey, parseProxyUrl } from '#lib/server/env.ts';
+import { parseCdragonUrl, parseProxyKey, parseProxyUrl } from '#lib/server/env.ts';
 
 // SvelteKit also runs these validators while `vite build` analyses routes,
 // where the runtime environment is absent and NODE_ENV is always production.
@@ -19,6 +19,10 @@ export const variables = defineEnvVars({
 		public: true,
 		static: true,
 		schema: (value) => value || 'ninjagoldfinch.lol'
+	},
+	CDRAGON_URL: {
+		description: 'Base URL of CommunityDragon, for stat shard names. Optional.',
+		schema: atStartup(parseCdragonUrl)
 	},
 	PROXY_KEY: {
 		description: 'riot-proxy consumer key. Secret. Required when NODE_ENV=production.',

@@ -4,6 +4,7 @@ import {
 	formatMatchDate,
 	isMatchIdFor,
 	matchPath,
+	selectBuild,
 	teamGold,
 	toMatchDetail
 } from '#lib/domain/match-detail.ts';
@@ -77,6 +78,7 @@ describe('toMatchDetail', () => {
 
 	it("shapes each player's line", () => {
 		expect(detail.teams[1].players[2]).toEqual({
+			participantId: 8,
 			riotId: { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' },
 			champion: { id: 103, key: 'Ahri', name: 'Ahri', level: 16 },
 			position: 'MIDDLE',
@@ -132,6 +134,25 @@ describe('teamGold', () => {
 	});
 });
 
+describe('selectBuild', () => {
+	const me = { gameName: 'ninjagoldfinch', tagLine: 'OCENZ' };
+
+	it('shows the first player (Blue top) by default', () => {
+		expect(selectBuild(detail, null, null)?.participantId).toBe(1);
+		expect(detail.teams[0].players[0].position).toBe('TOP');
+	});
+
+	it("shows the highlighted player's build", () => {
+		expect(selectBuild(detail, null, me)?.participantId).toBe(8);
+	});
+
+	it('shows the player `build` names, over the highlighted one', () => {
+		expect(selectBuild(detail, '4', me)?.participantId).toBe(4);
+		expect(selectBuild(detail, '11', me)?.participantId).toBe(8);
+		expect(selectBuild(detail, 'x', null)?.participantId).toBe(1);
+	});
+});
+
 describe('isMatchIdFor', () => {
 	it("accepts only a match id naming the region's platform", () => {
 		expect(isMatchIdFor(oce, 'OC1_712351051')).toBe(true);
@@ -149,10 +170,10 @@ describe('matchPath', () => {
 	});
 
 	it('names the player to highlight as in profile URLs', () => {
-		expect(matchPath('oce', 'OC1_1', { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' })).toBe(
-			'/match/oce/OC1_1?player=NinjaGoldfinch-OCENZ'
-		);
-		expect(matchPath('kr', 'KR_1', { gameName: 'Hide on bush', tagLine: 'KR1' })).toBe(
+		expect(
+			matchPath('oce', 'OC1_1', { player: { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' } })
+		).toBe('/match/oce/OC1_1?player=NinjaGoldfinch-OCENZ');
+		expect(matchPath('kr', 'KR_1', { player: { gameName: 'Hide on bush', tagLine: 'KR1' } })).toBe(
 			'/match/kr/KR_1?player=Hide+on+bush-KR1'
 		);
 	});

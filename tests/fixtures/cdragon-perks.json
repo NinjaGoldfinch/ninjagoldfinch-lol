@@ -1,0 +1,134 @@
+{
+	"request": {
+		"method": "GET",
+		"path": "/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perks.json"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json"
+		},
+		"body": [
+			{
+				"id": 5003,
+				"name": "Magic Resist",
+				"majorChangePatchVersion": "",
+				"tooltip": "+8 Magic Resist",
+				"shortDesc": "+8 Magic Resist",
+				"longDesc": "+8 Magic Resist",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsMagicResIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5012,
+				"name": "Resist Scaling",
+				"majorChangePatchVersion": "",
+				"tooltip": "+@f1@ Armor and Magic Resist (based on level)",
+				"shortDesc": "+1-8 Armor and Magic Resist (based on level)",
+				"longDesc": "+1-8 Armor and Magic Resist (based on level)",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceScalingIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5002,
+				"name": "Armor",
+				"majorChangePatchVersion": "",
+				"tooltip": "+6 Armor",
+				"shortDesc": "+6 Armor",
+				"longDesc": "+6 Armor",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsArmorIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5011,
+				"name": "Health",
+				"majorChangePatchVersion": "",
+				"tooltip": "<scaleHealth>+65 Health</scaleHealth>",
+				"shortDesc": "+65 Health",
+				"longDesc": "+65 Health",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthScalingIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5013,
+				"name": "Tenacity and Slow Resist",
+				"majorChangePatchVersion": "",
+				"tooltip": "+15% Tenacity and Slow Resist",
+				"shortDesc": "+15% Tenacity and Slow Resist",
+				"longDesc": "+15% Tenacity and Slow Resist",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsTenacityIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5008,
+				"name": "Adaptive Force",
+				"majorChangePatchVersion": "",
+				"tooltip": "<scaleAD>+@f2@ Attack Damage</scaleAD>",
+				"shortDesc": "+9 <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_Adaptive'><font color='#48C4B7'>Adaptive Force</font></lol-uikit-tooltipped-keyword>",
+				"longDesc": "+9 <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_Adaptive'><font color='#48C4B7'>Adaptive Force</font></lol-uikit-tooltipped-keyword>",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5001,
+				"name": "Health Scaling",
+				"majorChangePatchVersion": "",
+				"tooltip": "<scaleHealth>+@f1@ Health</scaleHealth> (based on level)",
+				"shortDesc": "+10-180 Health (based on level)",
+				"longDesc": "+10-180 Health (based on level)",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthPlusIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5007,
+				"name": "Ability Haste",
+				"majorChangePatchVersion": "",
+				"tooltip": "<attention>+8 Ability Haste</attention>",
+				"shortDesc": "+8 <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_CDR'>Ability Haste</lol-uikit-tooltipped-keyword> ",
+				"longDesc": "+8 <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_CDR'>Ability Haste</lol-uikit-tooltipped-keyword> ",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsCDRScalingIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5005,
+				"name": "Attack Speed",
+				"majorChangePatchVersion": "",
+				"tooltip": "+10% Attack Speed",
+				"shortDesc": "+10% Attack Speed",
+				"longDesc": "+10% Attack Speed",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAttackSpeedIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			},
+			{
+				"id": 5010,
+				"name": "Move Speed",
+				"majorChangePatchVersion": "",
+				"tooltip": "<speed>+2.5% Move Speed</speed>",
+				"shortDesc": "+2.5% <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_MS'>Move Speed</lol-uikit-tooltipped-keyword>",
+				"longDesc": "+2.5% <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_MS'>Move Speed</lol-uikit-tooltipped-keyword>",
+				"recommendationDescriptor": "",
+				"iconPath": "/lol-game-data/assets/v1/perk-images/StatMods/StatModsMovementSpeedIcon.png",
+				"endOfGameStatDescs": [],
+				"recommendationDescriptorAttributes": {}
+			}
+		]
+	}
+}

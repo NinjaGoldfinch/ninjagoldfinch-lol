@@ -11,16 +11,29 @@ export function parseProxyUrl(value: string | undefined): string {
 	if (!value) {
 		throw new Error('PROXY_URL is required, e.g. http://riot-proxy:8080');
 	}
+	return httpUrl('PROXY_URL', value);
+}
 
+export const DEFAULT_CDRAGON_URL = 'https://raw.communitydragon.org';
+
+/**
+ * Base URL of CommunityDragon, for the data riot-proxy does not mirror (stat
+ * shard names). Optional; a mirror can stand in for it. No trailing slash.
+ */
+export function parseCdragonUrl(value: string | undefined): string {
+	return value ? httpUrl('CDRAGON_URL', value).replace(/\/+$/, '') : DEFAULT_CDRAGON_URL;
+}
+
+function httpUrl(name: string, value: string): string {
 	let url: URL;
 	try {
 		url = new URL(value);
 	} catch {
-		throw new Error(`PROXY_URL must be an absolute URL, got "${value}"`);
+		throw new Error(`${name} must be an absolute URL, got "${value}"`);
 	}
 
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-		throw new Error(`PROXY_URL must use http or https, got "${url.protocol}"`);
+		throw new Error(`${name} must use http or https, got "${url.protocol}"`);
 	}
 
 	return value;

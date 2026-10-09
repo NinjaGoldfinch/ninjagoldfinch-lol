@@ -40,10 +40,11 @@ There is no CI. The pre-push hook runs `just check`, and the pre-commit hook ref
 
 ## riot-proxy
 
-| Variable    | Meaning                                                                                |
-| ----------- | -------------------------------------------------------------------------------------- |
-| `PROXY_URL` | Base URL of riot-proxy. Defaults to the LAN dev instance, `http://192.168.68.46:8080`. |
-| `PROXY_KEY` | Read-scope consumer key. Optional in development, required in production.              |
+| Variable      | Meaning                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROXY_URL`   | Base URL of riot-proxy. Defaults to the LAN dev instance, `http://192.168.68.46:8080`.                                                 |
+| `PROXY_KEY`   | Read-scope consumer key. Optional in development, required in production.                                                              |
+| `CDRAGON_URL` | Base URL of CommunityDragon, for stat shard names. Optional; defaults to `https://raw.communitydragon.org`, and a mirror can stand in. |
 
 The dev instance runs with auth disabled, so no key is needed locally. Production riot-proxy refuses to start with auth disabled, so the production site must have `PROXY_KEY` set.
 
@@ -76,7 +77,9 @@ just fixture account-hide-on-bush '/v1/riot/accounts/by-riot-id/asia/Hide%20on%2
 
 Failure states that can't be recorded on demand use hand-written `tests/fixtures/synthetic-*.json` files, each with a `_note` saying so (ADR-017).
 
-Use the path exactly as the client sends it, URL-encoded. The recorder keeps only the headers the site reads, and replaces Riot's player ids (every `puuid` and `summonerId`, and a match's `metadata.participants`) with stable placeholders. For Data Dragon files, add `--keep id,id,…` to keep only the entries the other fixtures use, for example `just fixture static-item '/v1/static/item?version=16.20.1' --keep 1001,1056`.
+Use the path exactly as the client sends it, URL-encoded. The recorder keeps only the headers the site reads, and replaces Riot's player ids (every `puuid` and `summonerId`, and a match's `metadata.participants`) with stable placeholders. For Data Dragon files, add `--keep id,id,…` to keep only the entries the other fixtures use, for example `just fixture static-item '/v1/static/item?version=16.20.1' --keep 1001,1056`. For a list, `--keep` keeps the entries with those `id`s.
+
+A full URL records from CommunityDragon instead. The fixture is keyed by the URL's path, and the mock serves it when `CDRAGON_URL` points at the mock, as the e2e tests do: `just fixture cdragon-perks 'https://raw.communitydragon.org/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perks.json' --keep 5001,5008`.
 
 ## Deploying
 

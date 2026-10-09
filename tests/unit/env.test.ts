@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseProxyKey, parseProxyUrl } from '#lib/server/env.ts';
+import {
+	DEFAULT_CDRAGON_URL,
+	parseCdragonUrl,
+	parseProxyKey,
+	parseProxyUrl
+} from '#lib/server/env.ts';
 import { variables } from '../../src/env';
 
 const KEY = 'placeholder-key';
@@ -29,6 +34,19 @@ describe('parseProxyUrl', () => {
 		expect(() => parseProxyUrl('')).toThrow('PROXY_URL is required');
 		expect(() => parseProxyUrl('riot-proxy:8080/v1')).toThrow('http or https');
 		expect(() => parseProxyUrl('/v1')).toThrow('absolute URL');
+	});
+});
+
+describe('parseCdragonUrl', () => {
+	it('defaults to CommunityDragon', () => {
+		expect(parseCdragonUrl(undefined)).toBe(DEFAULT_CDRAGON_URL);
+		expect(parseCdragonUrl('')).toBe('https://raw.communitydragon.org');
+	});
+
+	it('takes a mirror, without a trailing slash', () => {
+		expect(parseCdragonUrl('http://cdragon.lan:8080/')).toBe('http://cdragon.lan:8080');
+		expect(() => parseCdragonUrl('cdragon.lan')).toThrow('CDRAGON_URL must be an absolute URL');
+		expect(() => parseCdragonUrl('ftp://cdragon.lan')).toThrow('http or https');
 	});
 });
 
