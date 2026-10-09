@@ -84,3 +84,29 @@ Gates at the same commit: `just check` passes (53 unit tests); `just e2e` 11 pas
 Tagged `phase-P1`. Paused for owner review before P2.
 
 Noted for P2: the header's region picker always starts at the default (Oceania) rather than the region of the profile being viewed.
+
+### P2 exit check (amended, ADR-011) — passed 2026-10-09
+
+Production build of `main` at e1ad65e (`node build`, `NODE_ENV=production`, `ORIGIN` set), against the real dev proxy, in Chromium **with JavaScript disabled**.
+
+```text
+GET /summoner/oce/NinjaGoldfinch-OCENZ
+  status          200 (979 ms, cold Data Dragon lookups)
+  cache-control   public, s-maxage=60, stale-while-revalidate=300
+  h1              NinjaGoldfinch#OCENZ
+  rank            Ranked Solo/Duo · Emerald III 67 LP · 475W 464L · 51%
+  match rows      10, all in the one HTML response
+  champion panel  4 champions
+  older link      /summoner/oce/NinjaGoldfinch-OCENZ?page=2
+  data requests   1 document; the rest are module preloads and images
+```
+
+Gates at the same commit: `just check` passes (106 unit tests); `just e2e` 22 passed against the mock.
+
+Still open for P2, waiting on riot-proxy (see `riot-proxy-requests.md`, given to that project):
+
+- P2-04 champion filter: needs a `champion` parameter on `/v1/players/{puuid}/matches`.
+- P2-02 "Updated N minutes ago": needs per-part fetch age (ADR-016).
+- Cloudflare serving the second request: checked in P5-02.
+
+Not tagged `phase-P2` yet: the owner decides whether the open items block the tag.
