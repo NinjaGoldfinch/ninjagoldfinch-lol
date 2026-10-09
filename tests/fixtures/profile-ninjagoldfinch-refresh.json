@@ -8,8 +8,8 @@
 		"headers": {
 			"content-type": "application/json; charset=utf-8",
 			"x-cache": "MISS",
-			"x-cache-age": "287",
-			"x-request-id": "01M4FMPY47RBB6Z4PM3YX2RXXE"
+			"x-cache-age": "8282",
+			"x-request-id": "01M4FWAXGBV8ZHSDGBX9KF49D7"
 		},
 		"body": {
 			"puuid": "fixture-puuid-4f3f29f89c01d123",
@@ -146,10 +146,16 @@
 				}
 			],
 			"ageSeconds": {
+				"account": 7995,
+				"summoner": 8282,
+				"league": 43,
+				"mastery": 8282
+			},
+			"fetchedAgeSeconds": {
 				"account": 0,
-				"summoner": 287,
-				"league": 287,
-				"mastery": 287
+				"summoner": 0,
+				"league": 0,
+				"mastery": 0
 			},
 			"refreshed": true,
 			"refreshAvailableIn": 60,

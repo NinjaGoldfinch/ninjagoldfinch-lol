@@ -1,10 +1,4 @@
-import {
-	parseAccount,
-	parseLeagueEntries,
-	parseSummoner,
-	type LeagueEntry,
-	type Summoner
-} from '#lib/api/riot.ts';
+import { toLeagueEntries, toSummoner, type LeagueEntry, type Summoner } from '#lib/api/riot.ts';
 import type { StaticNames } from '#lib/api/ddragon.ts';
 import { FILTER_QUEUES, MATCHES_PER_PAGE, type MatchFilter } from '#lib/domain/match-filters.ts';
 import { isCustomGame, toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
@@ -100,7 +94,7 @@ export async function loadProfile(
 	const warnings = [...body.warnings, ...(matches?.warnings ?? [])];
 	if (warnings.length > 0) console.error(`profile ${label} warnings: ${warnings.join('; ')}`);
 
-	const account = parseAccount(body.account);
+	const account = body.account;
 	const shown = matches?.matches.filter((m) => !isCustomGame(m));
 	let matchesError: ProfileData['matchesError'] = null;
 	if (!matches) {
@@ -114,8 +108,8 @@ export async function loadProfile(
 			gameName: account?.gameName ?? id.gameName,
 			tagLine: account?.tagLine ?? id.tagLine
 		},
-		summoner: parseSummoner(body.summoner) ?? null,
-		ranks: parseLeagueEntries(body.league) ?? null,
+		summoner: toSummoner(body.summoner),
+		ranks: toLeagueEntries(body.league),
 		refreshed: body.refreshed || Boolean(matches?.refreshed),
 		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches?.refreshAvailableIn ?? 0),
 		matches: shown ? toMatchRows(shown, names) : null,

@@ -62,7 +62,7 @@ curl -fsS http://192.168.68.46:8080/openapi.json -o openapi/riot-proxy.json
 just gen
 ```
 
-The committed copy is riot-proxy `2.0.0-rc.3`. It is excluded from Prettier so it stays byte-identical to what the proxy serves. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
+The committed copy is riot-proxy `2.0.0-rc.3` as served by the dev instance on 2026-10-09 (`main`, with the site's requested changes). It is excluded from Prettier so it stays byte-identical to what the proxy serves. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
 
 ## Tests and fixtures
 

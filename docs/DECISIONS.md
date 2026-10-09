@@ -213,3 +213,13 @@ Date: 2026-10-09 · Task: P2-06
 - **Only the profile call is essential.** If the match page fails, the page renders the header and rank with a match-history notice ("Too many requests … Try again in 30 seconds"), using the same mapping as `toHttpError`. If the Data Dragon lookups fail, it renders with plain fallbacks. A failed profile call still fails the page.
 - **Cache rules are applied centrally** in the `handle` hook, whatever a load set. Form posts and error responses get `no-store`, except 404, which gets `public, s-maxage=60` so repeated misses don't all reach riot-proxy. A profile whose match page failed sets `no-store` itself, so a passing rate limit isn't cached at the edge.
 - **Synthetic fixtures** (`tests/fixtures/synthetic-*.json`, each with a `_note`) are allowed for failure states that can't be recorded on demand. They follow riot-proxy's documented shapes, and recorded fixtures stay unedited.
+
+## ADR-018: riot-proxy's own schemas replace the hand-written Riot types
+
+Date: 2026-10-09 · Task: P2 follow-up
+
+**Context.** riot-proxy answered the site's change request (`main`, `:edge`; the spec still says `2.0.0-rc.3`). It now declares Riot's payloads (`AccountDto`, `SummonerDTO`, `LeagueEntryDTO`, `ChampionMasteryDto`, riot-proxy #133) and response headers, and adds `fetchedAgeSeconds`, a `champion` match filter, `ddragonVersion` and `roleBoundItem`.
+
+**Decision.** The committed spec is the dev instance's `/openapi.json` of 2026-10-09. `src/lib/api/riot.ts` uses the generated types and only projects the fields the page shows (`toSummoner`, `toLeagueEntries`). The runtime shape checks from ADR-006 are gone: the spec is the contract for riot-proxy's responses, as for its own routes. ADR-006's hand-typing is superseded for these payloads; match and timeline payloads are still untyped in the spec.
+
+**Consequences.** Fixtures were re-recorded so they carry the new fields. The data was unchanged (same patch, same matches), so the test expectations still hold. Images stay on Riot's CDN and CommunityDragon: riot-proxy's new `/ddragon/…` mirror is only reachable inside the VM in the planned architecture (ADR-009), so using it would mean relaying images through the site.

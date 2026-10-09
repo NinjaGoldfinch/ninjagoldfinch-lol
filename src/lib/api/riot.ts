@@ -1,59 +1,35 @@
-// Riot's own payloads, which riot-proxy passes through unmodified and its
-// spec leaves untyped. Only the fields the site uses, from Riot's published
-// DTOs, checked at runtime. See ADR-006.
+// Riot's own payloads. riot-proxy passes them through verbatim and, since
+// riot-proxy #133, declares them in its spec (AccountDto, SummonerDTO,
+// LeagueEntryDTO, …), so the site uses the generated types. ADR-018.
 
-/** account-v1 AccountDto. Riot documents gameName and tagLine as optional. */
-export interface Account {
-	puuid: string;
-	gameName?: string;
-	tagLine?: string;
+import type { components } from './schema.d.ts';
+
+type Schemas = components['schemas'];
+
+export type Account = Schemas['AccountDto'];
+
+/** The summoner fields the profile shows. */
+export type Summoner = Pick<Schemas['SummonerDTO'], 'profileIconId' | 'summonerLevel'>;
+
+/** The league entry fields the profile shows. */
+export type LeagueEntry = Pick<
+	Schemas['LeagueEntryDTO'],
+	'queueType' | 'tier' | 'rank' | 'leaguePoints' | 'wins' | 'losses'
+>;
+
+export function toSummoner(dto: Schemas['SummonerDTO'] | null): Summoner | null {
+	return dto && { profileIconId: dto.profileIconId, summonerLevel: dto.summonerLevel };
 }
 
-export function parseAccount(value: unknown): Account | undefined {
-	if (typeof value !== 'object' || value === null) return undefined;
-	const { puuid, gameName, tagLine } = value as Record<string, unknown>;
-	if (typeof puuid !== 'string') return undefined;
-	if (gameName !== undefined && typeof gameName !== 'string') return undefined;
-	if (tagLine !== undefined && typeof tagLine !== 'string') return undefined;
-	return { puuid, gameName, tagLine };
-}
-
-/** summoner-v4 SummonerDto: the fields the site uses. */
-export interface Summoner {
-	profileIconId: number;
-	summonerLevel: number;
-}
-
-export function parseSummoner(value: unknown): Summoner | undefined {
-	if (typeof value !== 'object' || value === null) return undefined;
-	const { profileIconId, summonerLevel } = value as Record<string, unknown>;
-	if (typeof profileIconId !== 'number' || typeof summonerLevel !== 'number') return undefined;
-	return { profileIconId, summonerLevel };
-}
-
-/** league-v4 LeagueEntryDto: the fields the site uses. */
-export interface LeagueEntry {
-	queueType: string;
-	tier: string;
-	rank: string;
-	leaguePoints: number;
-	wins: number;
-	losses: number;
-}
-
-/** Riot's league entries for a player; entries of the wrong shape are dropped. */
-export function parseLeagueEntries(value: unknown): LeagueEntry[] | undefined {
-	if (!Array.isArray(value)) return undefined;
-	return value.flatMap((entry): LeagueEntry[] => {
-		if (typeof entry !== 'object' || entry === null) return [];
-		const { queueType, tier, rank, leaguePoints, wins, losses } = entry as Record<string, unknown>;
-		return typeof queueType === 'string' &&
-			typeof tier === 'string' &&
-			typeof rank === 'string' &&
-			typeof leaguePoints === 'number' &&
-			typeof wins === 'number' &&
-			typeof losses === 'number'
-			? [{ queueType, tier, rank, leaguePoints, wins, losses }]
-			: [];
-	});
+export function toLeagueEntries(dtos: Schemas['LeagueEntryDTO'][] | null): LeagueEntry[] | null {
+	return (
+		dtos?.map(({ queueType, tier, rank, leaguePoints, wins, losses }) => ({
+			queueType,
+			tier,
+			rank,
+			leaguePoints,
+			wins,
+			losses
+		})) ?? null
+	);
 }

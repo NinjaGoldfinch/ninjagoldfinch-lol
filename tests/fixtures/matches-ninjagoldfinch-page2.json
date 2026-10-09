@@ -9,7 +9,7 @@
 			"content-type": "application/json; charset=utf-8",
 			"x-cache": "MISS",
 			"x-cache-age": "0",
-			"x-request-id": "01M4FN80CHSD074FKKP3K426W1"
+			"x-request-id": "01M4FWAWRDYEPP9RZ7SK8ZBBGD"
 		},
 		"body": {
 			"puuid": "fixture-puuid-4f3f29f89c01d123",
@@ -35,6 +35,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.20.824.8524",
+					"ddragonVersion": "16.20.1",
 					"gameCreation": 1791349029538,
 					"gameEndTimestamp": 1791350995442,
 					"gameDuration": 1950,
@@ -63,6 +64,7 @@
 						"item4": 3031,
 						"item5": 1036,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -79,6 +81,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791307498381,
 					"gameEndTimestamp": 1791309219896,
 					"gameDuration": 1698,
@@ -107,6 +110,7 @@
 						"item4": 3031,
 						"item5": 1036,
 						"item6": 3363,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -123,6 +127,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791305359661,
 					"gameEndTimestamp": 1791307098292,
 					"gameDuration": 1720,
@@ -151,6 +156,7 @@
 						"item4": 1038,
 						"item5": 0,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -167,6 +173,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791302583418,
 					"gameEndTimestamp": 1791304296274,
 					"gameDuration": 1690,
@@ -195,6 +202,7 @@
 						"item4": 3031,
 						"item5": 0,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -211,6 +219,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791300240701,
 					"gameEndTimestamp": 1791302337069,
 					"gameDuration": 2070,
@@ -239,6 +248,7 @@
 						"item4": 3031,
 						"item5": 1028,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -255,6 +265,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791298632023,
 					"gameEndTimestamp": 1791300025782,
 					"gameDuration": 1325,
@@ -283,6 +294,7 @@
 						"item4": 1058,
 						"item5": 0,
 						"item6": 3363,
+						"roleBoundItem": 1206,
 						"summoner1Id": 6,
 						"summoner2Id": 4,
 						"perks": {
@@ -299,6 +311,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791260871481,
 					"gameEndTimestamp": 1791262473931,
 					"gameDuration": 1560,
@@ -327,6 +340,7 @@
 						"item4": 1038,
 						"item5": 1037,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -343,6 +357,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791222747373,
 					"gameEndTimestamp": 1791224445041,
 					"gameDuration": 1664,
@@ -371,6 +386,7 @@
 						"item4": 1018,
 						"item5": 1038,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -387,6 +403,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791213555184,
 					"gameEndTimestamp": 1791215183382,
 					"gameDuration": 1571,
@@ -415,6 +432,7 @@
 						"item4": 1038,
 						"item5": 1037,
 						"item6": 3364,
+						"roleBoundItem": 1209,
 						"summoner1Id": 11,
 						"summoner2Id": 4,
 						"perks": {
@@ -431,6 +449,7 @@
 					"queueId": 420,
 					"gameMode": "CLASSIC",
 					"gameVersion": "16.19.823.722",
+					"ddragonVersion": "16.19.1",
 					"gameCreation": 1791143686683,
 					"gameEndTimestamp": 1791145473429,
 					"gameDuration": 1759,
@@ -459,6 +478,7 @@
 						"item4": 3116,
 						"item5": 0,
 						"item6": 3363,
+						"roleBoundItem": 1206,
 						"summoner1Id": 12,
 						"summoner2Id": 4,
 						"perks": {
@@ -473,6 +493,7 @@
 			],
 			"hasMore": true,
 			"matchIdsAgeSeconds": 0,
+			"matchIdsFetchedAgeSeconds": 0,
 			"backfill": null,
 			"refreshed": false,
 			"refreshAvailableIn": 0,
