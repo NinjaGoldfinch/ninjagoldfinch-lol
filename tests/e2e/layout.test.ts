@@ -10,6 +10,14 @@ test('every page has the search form and the Riot legal notice', async ({ page }
 	await expect(page.locator('footer')).toContainText(LEGAL);
 });
 
+test('the accent is light purple', async ({ page }) => {
+	await page.goto('/');
+	const name = page.getByRole('banner').getByRole('link', { name: 'ninjagoldfinch.lol' });
+	const button = page.getByRole('banner').getByRole('button', { name: 'Search' });
+	await expect(name).toHaveCSS('color', 'oklch(0.79 0.12 302)');
+	await expect(button).toHaveCSS('background-color', 'oklch(0.79 0.12 302)');
+});
+
 test('an unknown page shows the not-found state, with the footer', async ({ page }) => {
 	const response = await page.goto('/no-such-page');
 	expect(response?.status()).toBe(404);
