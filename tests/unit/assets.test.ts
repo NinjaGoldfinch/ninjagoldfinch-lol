@@ -1,0 +1,32 @@
+import { render } from 'svelte/server';
+import { describe, expect, it } from 'vitest';
+import { championIconUrl, itemIconUrl, profileIconUrl, summonerSpellIconUrl } from '#lib/assets.ts';
+import ChampionIcon from '#lib/components/ChampionIcon.svelte';
+
+const CDN = 'https://ddragon.leagueoflegends.com/cdn/16.20.1/img';
+
+describe('asset URLs', () => {
+	it('builds Data Dragon image URLs keyed by patch', () => {
+		expect(championIconUrl('16.20.1', 'MonkeyKing')).toBe(`${CDN}/champion/MonkeyKing.png`);
+		expect(itemIconUrl('16.20.1', 3078)).toBe(`${CDN}/item/3078.png`);
+		expect(profileIconUrl('16.20.1', 6)).toBe(`${CDN}/profileicon/6.png`);
+		expect(summonerSpellIconUrl('16.20.1', 'SummonerFlash')).toBe(`${CDN}/spell/SummonerFlash.png`);
+	});
+
+	it('encodes path segments', () => {
+		expect(championIconUrl('16.20.1', 'a/../b')).toBe(`${CDN}/champion/a%2F..%2Fb.png`);
+	});
+});
+
+describe('ChampionIcon', () => {
+	it('renders a sized, lazy image with the champion name as alt text', () => {
+		const { body } = render(ChampionIcon, {
+			props: { patch: '16.20.1', id: 'MonkeyKing', name: 'Wukong', size: 48 }
+		});
+		expect(body).toContain(`src="${CDN}/champion/MonkeyKing.png"`);
+		expect(body).toContain('alt="Wukong"');
+		expect(body).toContain('width="48"');
+		expect(body).toContain('height="48"');
+		expect(body).toContain('loading="lazy"');
+	});
+});
