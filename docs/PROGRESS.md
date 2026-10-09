@@ -14,7 +14,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 
 - [x] P1-01 `openapi/riot-proxy.json` (landed in #2), `just gen`, generated types, drift check in `just check` — #6
 - [x] P1-02 `src/lib/server/proxy.ts`, `toHttpError`, request-id logging, `hooks.server.ts` error handling — #7
-- [ ] P1-03 Mock proxy server and first redacted fixtures for tests
+- [x] P1-03 Mock proxy server, fixture recorder (`just fixture`) and first redacted fixtures — #8
 - [ ] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`
 - [ ] P1-05 `/`, `/about`, `/healthz`; region table and `parseRiotId` with unit tests
 - [ ] P1-06 `src/lib/assets.ts` and a `ChampionIcon` component
