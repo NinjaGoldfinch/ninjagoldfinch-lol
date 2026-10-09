@@ -30,14 +30,19 @@ ip=dhcp
 gw=""
 ciuser=web
 ssh_keys=""
+gen_key=0
+key_dir=/root/.ssh/ninjagoldfinch
 image_dir=/var/tmp/ninjagoldfinch-images
 mode=run
 
 usage() {
   cat <<USAGE
-usage: $0 --ssh-keys FILE [options]
+usage: $0 --ssh-keys FILE | --generate-key [options]
 
-  --ssh-keys FILE      public keys allowed to log in to the VM (required)
+  --ssh-keys FILE      public keys allowed to log in to the VM
+  --generate-key       make a new ed25519 login keypair for this VM in --key-dir
+                       on this host (with --ssh-keys, the VM accepts both)
+  --key-dir DIR        where --generate-key writes <name>-<vmid>[.pub] (default: $key_dir)
   --vmid N             VM id (default: the cluster's next free id)
   --name NAME          VM name (default: $name)
   --storage ID         disk + cloud-init drive storage (default: $storage)
@@ -60,6 +65,8 @@ die() { echo "create-vm: $*" >&2; exit 1; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --ssh-keys) ssh_keys=$2; shift ;;
+    --generate-key) gen_key=1 ;;
+    --key-dir) key_dir=$2; shift ;;
     --vmid) vmid=$2; shift ;;
     --name) name=$2; shift ;;
     --storage) storage=$2; shift ;;
@@ -114,8 +121,8 @@ if [ "$mode" = vendor ]; then
   exit 0
 fi
 
-[ -n "$ssh_keys" ] || { usage >&2; die "--ssh-keys is required"; }
-[ -r "$ssh_keys" ] || die "can't read $ssh_keys"
+[ -n "$ssh_keys" ] || [ "$gen_key" = 1 ] || { usage >&2; die "--ssh-keys or --generate-key is required"; }
+[ -z "$ssh_keys" ] || [ -r "$ssh_keys" ] || die "can't read $ssh_keys"
 if [ "$ip" = dhcp ]; then
   ipconfig="ip=dhcp"
 else
@@ -132,12 +139,17 @@ if [ "$mode" = run ]; then
   command -v qm >/dev/null || die "qm not found; this must run on a Proxmox VE host"
   pvesm status --content snippets 2>/dev/null | awk 'NR>1{print $1}' | grep -qx "$snippets" \
     || die "storage '$snippets' has no 'snippets' content type; add it (Datacenter → Storage → $snippets → Content) or pass --snippets"
+  [ "$gen_key" = 0 ] || command -v ssh-keygen >/dev/null || die "ssh-keygen not found; install openssh-client"
 fi
 
 [ -n "$vmid" ] || vmid=$(if [ "$mode" = dry ]; then echo 9000; else pvesh get /cluster/nextid; fi)
 [[ $vmid =~ ^[0-9]+$ ]] || die "--vmid must be a number"
 snippet="$name-$vmid.yaml"
 image="$image_dir/$(basename "$IMAGE_URL")"
+
+# Fail before the download, not after it, if the key is already there.
+[ "$gen_key" = 0 ] || [ "$mode" = dry ] || [ ! -e "$key_dir/$name-$vmid" ] \
+  || die "$key_dir/$name-$vmid already exists; delete it (and .pub) or pass --key-dir"
 
 # Download (or refresh) the Debian cloud image and check it against Debian's SHA512SUMS.
 run mkdir -p "$image_dir"
@@ -160,6 +172,24 @@ else
   echo "# vendor-data → $snippets:snippets/$snippet (see --print-vendor-data)"
 fi
 
+# A fresh login keypair per VM, made after the download so an interrupted
+# download leaves no key behind to block a retry.
+keys_file=$ssh_keys
+key=""
+if [ "$gen_key" = 1 ]; then
+  key="$key_dir/$name-$vmid"
+  step "generating login key $key"
+  run install -d -m 700 "$key_dir"
+  run ssh-keygen -q -t ed25519 -N '' -C "$ciuser@$name-$vmid" -f "$key"
+  if [ -n "$ssh_keys" ]; then
+    keys_file=$(mktemp)
+    trap 'rm -f "$keys_file"' EXIT
+    if [ "$mode" = run ]; then cat "$ssh_keys" "$key.pub" > "$keys_file"; fi
+  else
+    keys_file="$key.pub"
+  fi
+fi
+
 step "creating VM $vmid ($name)"
 run qm create "$vmid" --name "$name" --ostype l26 --cpu host --cores "$cores" --memory "$memory" \
   --net0 "virtio,bridge=$bridge" --scsihw virtio-scsi-single --agent enabled=1 \
@@ -167,7 +197,7 @@ run qm create "$vmid" --name "$name" --ostype l26 --cpu host --cores "$cores" --
 run qm set "$vmid" --scsi0 "$storage:0,import-from=$image,discard=on,ssd=1"
 run qm resize "$vmid" scsi0 "$disk"
 run qm set "$vmid" --ide2 "$storage:cloudinit" --boot order=scsi0
-run qm set "$vmid" --ciuser "$ciuser" --sshkeys "$ssh_keys" --ipconfig0 "$ipconfig" \
+run qm set "$vmid" --ciuser "$ciuser" --sshkeys "$keys_file" --ipconfig0 "$ipconfig" \
   --cicustom "vendor=$snippets:snippets/$snippet"
 step "starting VM $vmid"
 run qm start "$vmid"
@@ -181,13 +211,21 @@ else
   find_ip="$addr"
 fi
 
+login="ssh $ciuser@$addr"
+[ -z "$key" ] || login="ssh -i $key $ciuser@$addr"
+
 cat <<NEXT
 create-vm: VM $vmid ($name) created and booting. First boot installs Docker; give it a few minutes.
 Next:
   1. Its address:       $find_ip
-  2. Log in:            ssh $ciuser@$addr
-  3. Deploy key:        cat ~/.ssh/ninjagoldfinch-deploy.pub
-                        add it read-only: GitHub → NinjaGoldfinch/ninjagoldfinch-lol → Settings → Deploy keys
+  2. Log in:            $login
+     If ssh warns that the host identification has changed, the address belonged to another
+     machine before. Check the new key first, then drop the old entry:
+                        qm guest exec $vmid -- ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+                        ssh-keygen -R $addr
+  3. Deploy key:        qm guest exec $vmid -- cat /home/$ciuser/.ssh/ninjagoldfinch-deploy.pub
+                        save the ssh-ed25519 line to a file, then add it read-only:
+                        gh repo deploy-key add <file> -R NinjaGoldfinch/ninjagoldfinch-lol --title "$name VM"
   4. First deploy:      ninjagoldfinch-update        (clones, creates /opt/ninjagoldfinch/deploy/.env, stops)
                         edit /opt/ninjagoldfinch/deploy/.env (PROXY_KEY), then ninjagoldfinch-update again
   5. Open               http://$addr:3000

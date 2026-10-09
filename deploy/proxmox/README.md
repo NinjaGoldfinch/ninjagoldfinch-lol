@@ -6,41 +6,71 @@ Needs Proxmox VE 8 or later, and the `local` storage set to hold snippets once (
 
 ## Create the VM
 
-The repo is private, so copy this folder to the Proxmox host rather than downloading it there:
+On the Proxmox host, as root. The repo is private, so fetch it with `gh` (over HTTPS, so no SSH key is needed on the host):
 
 ```bash
-# from a machine with the repo
-scp -r deploy/proxmox root@<proxmox-host>:ninjagoldfinch-proxmox
+mkdir -p ~/ninjagoldfinch-lol
+gh api repos/NinjaGoldfinch/ninjagoldfinch-lol/tarball/main | tar xz -C ~/ninjagoldfinch-lol --strip-components=1
+cd ~/ninjagoldfinch-lol/deploy/proxmox
 
-# on the Proxmox host, as root
-cd ninjagoldfinch-proxmox
-./create-vm.sh --ssh-keys ~/.ssh/my-laptop.pub             # DHCP, next free VM id
-# or: ./create-vm.sh --ssh-keys key.pub --vmid 211 --ip 192.168.68.51/22 --gw 192.168.68.1
+./create-vm.sh --generate-key                       # DHCP, next free VM id, a login key for this host
+# also let your own machines in, using the keys on your GitHub account:
+#   curl -fsS https://github.com/NinjaGoldfinch.keys > ~/github-keys.pub
+#   ./create-vm.sh --generate-key --ssh-keys ~/github-keys.pub
+# static address:   --vmid 211 --ip 192.168.68.51/22 --gw 192.168.68.1
 # reuse riot-proxy's cached Debian image: --image-dir /var/tmp/riot-proxy-images
 ```
 
-`./create-vm.sh --help` lists the options: 2 cores, 2 GB RAM and a 16 GB disk by default, login user `web`. `--dry-run` prints the `qm` commands without running anything, and `--print-vendor-data` shows what the VM installs (Docker, git, GitHub's SSH host keys, a deploy key, and `ninjagoldfinch-update`).
+Without `gh`, copy the folder over instead: `scp -r deploy/proxmox root@<proxmox-host>:ninjagoldfinch-proxmox`.
+
+`--generate-key` writes an ed25519 keypair (no passphrase) to `/root/.ssh/ninjagoldfinch/<name>-<vmid>` on the host, and the script prints the `ssh -i …` command to use. `./create-vm.sh --help` lists the options: 2 cores, 2 GB RAM and a 16 GB disk by default, login user `web`. `--dry-run` prints the `qm` commands without running anything. `--print-vendor-data` shows what the VM installs: Docker, git, GitHub's SSH host keys, a deploy key, and `ninjagoldfinch-update`.
 
 ## First deploy
 
-First boot installs Docker and takes a few minutes. Then:
+First boot installs Docker and takes a few minutes. `qm guest cmd <vmid> network-get-interfaces` answers once the guest agent is up, which is a good sign the rest is done too. On the host:
 
 ```bash
-ssh web@<vm-ip>
-cat ~/.ssh/ninjagoldfinch-deploy.pub
+qm guest exec <vmid> -- cloud-init status --long                      # out-data: "status: done"
+qm guest exec <vmid> -- cat /home/web/.ssh/ninjagoldfinch-deploy.pub  # the VM's deploy key
 ```
 
-Add that key to GitHub, read-only: NinjaGoldfinch/ninjagoldfinch-lol → Settings → Deploy keys → Add deploy key, with "Allow write access" unticked. Then, on the VM:
+Save the `ssh-ed25519 … ninjagoldfinch-deploy@…` line, without the trailing `\n`, and add it to GitHub, read-only (the default):
+
+```bash
+echo 'ssh-ed25519 AAAA… ninjagoldfinch-deploy@ninjagoldfinch-web' > /tmp/ngf-deploy.pub
+gh repo deploy-key add /tmp/ngf-deploy.pub -R NinjaGoldfinch/ninjagoldfinch-lol --title "ninjagoldfinch-web VM"
+```
+
+Then log in with the command `create-vm.sh` printed (`ssh -i /root/.ssh/ninjagoldfinch/<name>-<vmid> web@<vm-ip>`), and on the VM:
 
 ```bash
 ninjagoldfinch-update                      # clones into /opt/ninjagoldfinch, creates deploy/.env, stops
 nano /opt/ninjagoldfinch/deploy/.env       # set PROXY_KEY; ORIGIN is already http://<vm-ip>:3000
 ninjagoldfinch-update                      # builds the image on the VM and starts it
+curl -s http://localhost:3000/healthz      # {"ok":true}
 ```
 
 The image runs with `NODE_ENV=production`, so the site refuses to start without `PROXY_KEY`. The dev riot-proxy runs with auth disabled and ignores the key, so any value works against it. Production needs a real read key: `riot-proxy key create --name ninjagoldfinch-web`.
 
 Open `http://<vm-ip>:3000`.
+
+### If ssh says the host identification has changed
+
+DHCP gave the new VM an address another machine used before, and `known_hosts` still has that machine's key. Check that the key ssh was offered is the VM's own, then drop the old entry:
+
+```bash
+qm guest exec <vmid> -- ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub   # compare with the fingerprint ssh showed
+ssh-keygen -R <vm-ip>
+```
+
+### A VM made without --generate-key
+
+Let the host's root in through the guest agent:
+
+```bash
+[ -f ~/.ssh/id_ed25519 ] || ssh-keygen -q -t ed25519 -N '' -f ~/.ssh/id_ed25519
+qm guest exec <vmid> -- sh -c "echo '$(cat ~/.ssh/id_ed25519.pub)' >> /home/web/.ssh/authorized_keys"
+```
 
 ## Updating
 
