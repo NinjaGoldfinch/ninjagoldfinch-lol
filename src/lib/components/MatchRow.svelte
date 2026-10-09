@@ -38,18 +38,18 @@
 		<!-- Champion with the lane as a badge on its lower-left corner. -->
 		<div class="relative">
 			{#if match.champion.key}
-				<ChampionIcon {patch} id={match.champion.key} name={match.champion.name} size={48} />
+				<ChampionIcon {patch} id={match.champion.key} name={match.champion.name} size={56} />
 			{:else}
-				<span class="block size-12 rounded bg-bg"></span>
+				<span class="block size-14 rounded bg-bg"></span>
 			{/if}
 			{#if lane && match.position}
 				<img
 					src={lane}
 					alt={LANES[match.position]}
 					title={LANES[match.position]}
-					width="20"
-					height="20"
-					class="absolute -bottom-1.5 -left-1.5 size-5 rounded-full border border-border bg-bg p-0.5"
+					width="24"
+					height="24"
+					class="absolute -bottom-2 -left-2 size-6 rounded-full border border-border bg-bg p-0.5 opacity-80 grayscale"
 				/>
 			{/if}
 		</div>
@@ -60,13 +60,13 @@
 						src={summonerSpellIconUrl(patch, spell.id)}
 						alt={spell.name}
 						title={spell.name}
-						width="22"
-						height="22"
+						width="28"
+						height="28"
 						loading="lazy"
 						class="rounded-sm"
 					/>
 				{:else}
-					<span class="size-[22px] rounded-sm bg-bg"></span>
+					<span class="size-7 rounded-sm bg-bg"></span>
 				{/if}
 			{/each}
 		</div>
@@ -76,26 +76,26 @@
 					src={runeIconUrl(match.runes.keystone.icon)}
 					alt={match.runes.keystone.name}
 					title={match.runes.keystone.name}
-					width="22"
-					height="22"
+					width="28"
+					height="28"
 					loading="lazy"
 					class="rounded-full bg-bg"
 				/>
 			{:else}
-				<span class="size-[22px] rounded-full bg-bg"></span>
+				<span class="size-7 rounded-full bg-bg"></span>
 			{/if}
 			{#if match.runes.secondary}
 				<img
 					src={runeIconUrl(match.runes.secondary.icon)}
 					alt={match.runes.secondary.name}
 					title={match.runes.secondary.name}
-					width="16"
-					height="16"
+					width="20"
+					height="20"
 					loading="lazy"
-					class="m-[3px]"
+					class="m-1"
 				/>
 			{:else}
-				<span class="size-[22px]"></span>
+				<span class="size-7"></span>
 			{/if}
 		</div>
 	</div>
@@ -118,13 +118,13 @@
 						src={itemIconUrl(patch, item.id)}
 						alt={item.name}
 						title={item.name}
-						width="28"
-						height="28"
+						width="34"
+						height="34"
 						loading="lazy"
 						class="rounded-sm"
 					/>
 				{:else}
-					<span class="block size-7 rounded-sm bg-bg"></span>
+					<span class="block size-[34px] rounded-sm bg-bg"></span>
 				{/if}
 			</li>
 		{/each}
