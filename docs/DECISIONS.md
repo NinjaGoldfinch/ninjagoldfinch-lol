@@ -234,8 +234,18 @@ Date: 2026-10-09 · Task: P2-02 (follow-up; supersedes ADR-016)
 
 ## ADR-020: Items in two rows of four; the role quest slot for bot laners only
 
-Date: 2026-10-09 · Task: P2-03 (follow-up)
+Date: 2026-10-09 · Task: P2-03 (follow-up) · Layout superseded by ADR-021
 
 **Decision.** `MatchRow` lays a game's items out as two rows of four, as the game's own scoreboard does: item slots 0–2 then the trinket (slot 6) on the first row, slots 3–5 then the role quest slot on the second. So the trinket is always slot 4 and the role quest slot always slot 8. The role quest slot (`roleBoundItem`) is kept only when `teamPosition` is `BOTTOM`, where it holds the bot laner's boots. Other roles' quest rewards (for example the Mid Lane Quest Reward) say nothing useful and are dropped, so their slot 8 stays blank.
 
 **Consequences.** Only bot laners' boots are guaranteed to be in slot 8. Other roles buy boots into the inventory, and they show in whichever slot the player put them. The site does not move them.
+
+## ADR-021: Items in one line, packed left
+
+Date: 2026-10-09 · Task: P2-03 (follow-up; supersedes the layout in ADR-020)
+
+**Context.** The two rows of four from ADR-020 did not fit the match row's layout. Riot reports items by inventory slot, so a sold or used item left an empty square mid-build.
+
+**Decision.** `MatchRow` draws the items in one line, packed left: the six inventory items in slot order, the trinket, then the role quest item, with the empty slots at the end. riot-proxy's showcase does the same. The slot count doesn't change: seven, plus the role quest slot for bot laners. ADR-020's rule that only bot laners keep the role quest slot stands.
+
+**Consequences.** The trinket is no longer at a fixed position: it follows the last item. The row no longer shows which inventory slot an item was in.

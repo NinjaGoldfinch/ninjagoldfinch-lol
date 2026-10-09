@@ -101,6 +101,26 @@ export function toMatchRows(
 	});
 }
 
+/** One drawn item; `roleQuest` marks the item from the role quest slot. */
+export interface ItemSlot {
+	id: number;
+	name: string;
+	roleQuest: boolean;
+}
+
+/**
+ * The row's items packed to the left: inventory, trinket, then the role quest
+ * item, with the empty slots at the end. Riot reports items by inventory slot,
+ * so a sold item leaves a gap mid-build that would otherwise show as a hole.
+ * The slot count is unchanged: seven, plus one when the role quest slot exists.
+ */
+export function itemSlots(row: Pick<MatchRow, 'items' | 'roleBoundItem'>): (ItemSlot | null)[] {
+	const held = row.items.flatMap((item) => (item ? [{ ...item, roleQuest: false }] : []));
+	if (row.roleBoundItem) held.push({ ...row.roleBoundItem, roleQuest: true });
+	const slots = row.items.length + (row.roleBoundItem === undefined ? 0 : 1);
+	return [...held, ...Array<null>(slots - held.length).fill(null)];
+}
+
 /**
  * Custom games (queue 0) are never shown: Riot policy keeps custom-queue
  * history private without the player's opt-in. A game with no queue id is
