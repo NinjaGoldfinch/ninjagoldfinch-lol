@@ -109,4 +109,4 @@ Still open for P2, waiting on riot-proxy (see `riot-proxy-requests.md`, given to
 - P2-02 "Updated N minutes ago": needs per-part fetch age (ADR-016).
 - Cloudflare serving the second request: checked in P5-02.
 
-Not tagged `phase-P2` yet: the owner decides whether the open items block the tag.
+Tagged `phase-P2` on 2026-10-09 with the open items above, at the owner's request. The tag moves to the commit that closes the champion filter and the fetch-age items, once riot-proxy ships them.
