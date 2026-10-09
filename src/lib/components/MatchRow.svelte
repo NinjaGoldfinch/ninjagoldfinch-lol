@@ -49,7 +49,7 @@
 					title={LANES[match.position]}
 					width="24"
 					height="24"
-					class="absolute -bottom-2 -left-2 size-6 rounded-full border border-border bg-bg p-0.5 brightness-125 grayscale"
+					class="absolute -bottom-2 -left-2 size-6 rounded-full border border-border bg-bg p-0.5 brightness-110 grayscale"
 				/>
 			{/if}
 		</div>
