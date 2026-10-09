@@ -30,9 +30,8 @@ test.describe('without JavaScript', () => {
 			'src',
 			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/profileicon/7173.png'
 		);
-		// riot-proxy's part ages say how long content has been unchanged, not when it
-		// was fetched, so a normal view shows no "updated" time (ADR-016).
-		await expect(main).not.toContainText('Updated');
+		// From riot-proxy's fetchedAgeSeconds: the summoner part, read 602 s ago (ADR-019).
+		await expect(main).toContainText('Updated 10 minutes ago');
 		const rank = page.getByRole('region', { name: 'Rank' });
 		await expect(rank).toContainText('Ranked Solo/Duo');
 		await expect(rank).toContainText('Emerald III 67 LP');

@@ -40,7 +40,7 @@
 	regionLabel={profile.region.label}
 	summoner={profile.summoner}
 	patch={profile.patch}
-	refreshed={profile.refreshed}
+	fetchedAgeSeconds={profile.fetchedAgeSeconds}
 	refreshAvailableIn={profile.refreshAvailableIn}
 	refreshAction={actionUrl(profile.filter, 'refresh')}
 />

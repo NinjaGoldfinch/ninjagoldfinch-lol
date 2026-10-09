@@ -19,11 +19,12 @@ export interface ProfileData {
 	summoner: Summoner | null;
 	ranks: LeagueEntry[] | null;
 	/**
-	 * Whether this load went to Riot (a refresh riot-proxy accepted). riot-proxy
-	 * reports how long content has been unchanged, not when it last fetched it,
-	 * so there is no honest "updated N minutes ago" otherwise. ADR-016.
+	 * Seconds since riot-proxy last read what the page shows (summoner, rank,
+	 * match list) from Riot: the oldest of those. null if none is known. The
+	 * account and mastery parts are left out; riot-proxy re-reads Riot IDs
+	 * rarely and the page does not show mastery. ADR-019.
 	 */
-	refreshed: boolean;
+	fetchedAgeSeconds: number | null;
 	refreshAvailableIn: number;
 	/** null when the match page could not be loaded; `matchesError` says why. */
 	matches: MatchRow[] | null;
@@ -110,7 +111,11 @@ export async function loadProfile(
 		},
 		summoner: toSummoner(body.summoner),
 		ranks: toLeagueEntries(body.league),
-		refreshed: body.refreshed || Boolean(matches?.refreshed),
+		fetchedAgeSeconds: oldest([
+			body.fetchedAgeSeconds.summoner,
+			body.fetchedAgeSeconds.league,
+			matches?.matchIdsFetchedAgeSeconds ?? null
+		]),
 		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches?.refreshAvailableIn ?? 0),
 		matches: shown ? toMatchRows(shown, names) : null,
 		matchesError,
@@ -120,4 +125,9 @@ export async function loadProfile(
 		queueOptions: FILTER_QUEUES.map((id) => ({ id, name: names.queues[id] ?? `Queue ${id}` })),
 		patch
 	};
+}
+
+function oldest(ages: (number | null)[]): number | null {
+	const known = ages.filter((age): age is number => age !== null);
+	return known.length > 0 ? Math.max(...known) : null;
 }
