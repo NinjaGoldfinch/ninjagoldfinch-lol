@@ -16,3 +16,25 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - riot-proxy OpenAPI JSON is served at `/openapi.json`. Recorded in the README.
 - GitHub does not offer branch protection for this private repo on the current plan. ADR-003.
 - Environment handling follows SvelteKit 3 (`src/env.ts`, `$app/env/private`). ADR-004.
+
+### P0 exit check — passed 2026-10-09
+
+Run on a fresh clone of `main` at 5598c6e in an empty directory.
+
+```text
+$ just setup && just check            exit 0
+  pnpm install                        Done in 2.5s using pnpm v12.10.1
+  git config core.hooksPath .githooks
+  [ -f .env ] || cp .env.example .env
+  prettier --check                    All matched files use Prettier code style!
+  eslint                              no findings
+  svelte-check                        346 FILES 0 ERRORS 0 WARNINGS
+  vitest run                          Test Files 1 passed (1), Tests 6 passed (6)
+  build                               ✔ done (adapter-node)
+
+$ git commit   # staging a file with a test key (`rpx_` followed by `test`)
+  on main:      exit 1  pre-commit: refusing to commit on main. Use a task branch and a PR.
+  on a branch:  exit 1  pre-commit: staged changes contain what looks like a riot-proxy or Riot API key: leak.txt
+```
+
+Tagged `phase-P0`. Paused for owner review before P1.
