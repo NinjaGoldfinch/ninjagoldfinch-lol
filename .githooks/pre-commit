@@ -1,0 +1,23 @@
+#!/bin/sh
+# Refuse commits on main, and staged additions that look like a key.
+
+branch=$(git symbolic-ref --short -q HEAD)
+if [ "$branch" = "main" ]; then
+	echo "pre-commit: refusing to commit on main. Use a task branch and a PR." >&2
+	exit 1
+fi
+
+# A key prefix followed by a key character. Bare mentions of the prefixes in
+# docs (such as `rpx_` or `RGAPI-` in backticks) do not match.
+pattern='(rpx_|RGAPI-)[A-Za-z0-9_-]'
+
+files=$(git diff --cached -U0 --no-color --no-ext-diff --diff-filter=ACMR |
+	awk -v re="$pattern" '/^\+\+\+ /{ file = substr($0, 7); next } /^\+/ && $0 ~ re { print file }' |
+	sort -u)
+
+if [ -n "$files" ]; then
+	echo "pre-commit: staged changes contain what looks like a riot-proxy or Riot API key:" >&2
+	echo "$files" | sed 's/^/  /' >&2
+	echo "Keys belong in .env only. Redact them and stage again." >&2
+	exit 1
+fi
