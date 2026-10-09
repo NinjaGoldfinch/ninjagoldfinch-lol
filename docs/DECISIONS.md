@@ -87,3 +87,15 @@ Date: 2026-10-09 · Task: P1-02
 - The retry time comes from the error body's `retryAfter`, falling back to `Retry-After`, because those are the fields the spec documents for rate-limit errors. The plan said `X-RateLimit-*`, but those headers describe this site's quota in general, not the wait for a failed request.
 - riot-proxy's `X-Request-Id` is logged by an openapi-fetch middleware on the client, not in `hooks.server.ts` as the plan says, because the middleware is the one place that sees every proxy response. `hooks.server.ts` handles SvelteKit 3's `unknown` errors (bugs, an unreachable proxy) by logging them and showing a generic message.
 - SvelteKit 3's `App.Error` carries `status`; the site adds an optional `retryAfter`.
+
+## ADR-008: Search goes through a `/search` page; recent searches stay in the browser
+
+Date: 2026-10-09 · Task: P1-05
+
+**Context.** The header search form is on every page and must work without JavaScript. The plan's route table has no search route.
+
+**Decision.**
+
+- The form submits `GET /search?region=…&riotId=…`. A valid `Name#TAG` redirects (303) to `/summoner/{region}/{Name-TAG}`. Anything else re-renders the form with a hint, so a malformed Riot ID never reaches riot-proxy. `GET` keeps it to one request with no form-action or CSRF handling.
+- Recent searches on `/` are kept in the visitor's own `localStorage` (up to eight), written when a profile page loads in the browser. The site stores nothing per visitor. Without JavaScript or storage the list is simply absent.
+- The P1 profile page makes one call, the regional account lookup. Rank and match history come in P2.

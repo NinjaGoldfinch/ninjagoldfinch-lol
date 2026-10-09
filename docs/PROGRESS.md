@@ -16,7 +16,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - [x] P1-02 `src/lib/server/proxy.ts`, `toHttpError`, request-id logging, `hooks.server.ts` error handling — #7
 - [x] P1-03 Mock proxy server, fixture recorder (`just fixture`) and first redacted fixtures — #8
 - [x] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`, design tokens; region table moved here from P1-05 — #9
-- [ ] P1-05 `/`, `/about`, `/healthz`; `parseRiotId` with unit tests; search redirect and minimal profile page for the exit check
+- [x] P1-05 `/`, `/about`, `/healthz`; `parseRiotId` with unit tests; `/search` redirect and minimal profile page for the exit check — #10
 - [ ] P1-06 `src/lib/assets.ts` and a `ChampionIcon` component
 
 ## Open decisions resolved
