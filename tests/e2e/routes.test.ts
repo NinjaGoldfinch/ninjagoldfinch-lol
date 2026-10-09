@@ -59,7 +59,7 @@ test.describe('without JavaScript', () => {
 		// badge left Mid, Top and Bot washed out next to Jungle.
 		const lane = first.getByRole('img', { name: 'Mid' });
 		await expect(lane).toHaveCSS('opacity', '1');
-		await expect(lane).toHaveCSS('filter', /brightness\(1\.25\)/);
+		await expect(lane).toHaveCSS('filter', /brightness\(1\.1\)/);
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
 		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
