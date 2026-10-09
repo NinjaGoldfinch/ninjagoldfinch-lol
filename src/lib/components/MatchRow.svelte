@@ -17,7 +17,9 @@
 		remake: { label: 'Remake', border: 'border-l-border', text: 'text-muted' }
 	} as const;
 	const result = $derived(RESULT[match.result]);
-	const lane = $derived(match.position ? laneIconUrl(patch, match.position) : undefined);
+	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
+	const version = $derived(match.ddragonVersion ?? patch);
+	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
 </script>
 
 <article
@@ -38,7 +40,12 @@
 		<!-- Champion with the lane as a badge on its lower-left corner. -->
 		<div class="relative">
 			{#if match.champion.key}
-				<ChampionIcon {patch} id={match.champion.key} name={match.champion.name} size={56} />
+				<ChampionIcon
+					patch={version}
+					id={match.champion.key}
+					name={match.champion.name}
+					size={56}
+				/>
 			{:else}
 				<span class="block size-14 rounded bg-bg"></span>
 			{/if}
@@ -57,7 +64,7 @@
 			{#each match.spells as spell, i (i)}
 				{#if spell}
 					<img
-						src={summonerSpellIconUrl(patch, spell.id)}
+						src={summonerSpellIconUrl(version, spell.id)}
 						alt={spell.name}
 						title={spell.name}
 						width="28"
@@ -115,7 +122,7 @@
 			<li>
 				{#if item}
 					<img
-						src={itemIconUrl(patch, item.id)}
+						src={itemIconUrl(version, item.id)}
 						alt={item.name}
 						title={item.name}
 						width="34"
@@ -128,5 +135,23 @@
 				{/if}
 			</li>
 		{/each}
+		{#if match.roleBoundItem !== undefined}
+			<!-- The role quest slot, after the trinket. -->
+			<li>
+				{#if match.roleBoundItem}
+					<img
+						src={itemIconUrl(version, match.roleBoundItem.id)}
+						alt={match.roleBoundItem.name}
+						title="Role quest: {match.roleBoundItem.name}"
+						width="34"
+						height="34"
+						loading="lazy"
+						class="rounded-sm"
+					/>
+				{:else}
+					<span class="block size-[34px] rounded-sm bg-bg" title="Role quest: empty"></span>
+				{/if}
+			</li>
+		{/if}
 	</ul>
 </article>
