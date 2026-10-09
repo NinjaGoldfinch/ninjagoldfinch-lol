@@ -279,3 +279,15 @@ Date: 2026-10-09 · Task: P3-01
 **Consequences.** Each match nobody has opened before costs riot-proxy up to two Riot calls (match and timeline), both archived afterwards. Arena's teams of two are untested: there's no recorded Arena match, so how its `teamId`s group is unverified.
 
 **Noted for riot-proxy (not changed here).** Schemas for match-v5's `MatchDto` and `TimelineDto` on the two match routes would replace `src/lib/api/match.ts`'s hand-typing, as #133 did for the account, summoner and league payloads.
+
+## ADR-024: The profile's own champion is highlighted on the match page
+
+Date: 2026-10-09 · Task: P3-01 (follow-up, owner request)
+
+**Decision.**
+
+- A profile's match rows link to `/match/{region}/{matchId}?player=GameName-TAG`, the Riot ID written as in profile URLs. The match page tints that player's line and marks it with an accent bar on the left and `aria-current`. Riot IDs match without regard to case. A link without `player`, or one naming nobody in the game, highlights nothing.
+- The page reads `player` from the URL itself, not in the load, so the load's data is the same for every link to a match. The edge caches each URL separately, so each player's link is a separate cache entry.
+- The objective label reads "Herald", not "Heralds": a team can take only one Rift Herald a game at present.
+
+**Consequences.** The match is found by the Riot ID it recorded. A player who has changed their Riot ID since the game isn't highlighted in it.

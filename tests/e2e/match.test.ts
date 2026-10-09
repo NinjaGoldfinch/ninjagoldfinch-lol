@@ -21,6 +21,9 @@ test.describe('without JavaScript', () => {
 		await expect(blue.getByRole('list', { name: 'Objectives' })).toContainText('Towers 5');
 		await expect(red.getByRole('list', { name: 'Objectives' })).toContainText('Dragons 4');
 		await expect(blue.getByRole('list', { name: 'Bans' }).getByRole('img')).toHaveCount(5);
+		await expect(blue.getByRole('list', { name: 'Objectives' })).toContainText('Herald 0');
+		// Opened by URL alone, nobody's line is highlighted.
+		await expect(page.locator('tr[aria-current]')).toHaveCount(0);
 
 		const ahri = red.getByRole('row', { name: 'Ahri' });
 		await expect(ahri).toContainText('NinjaGoldfinch#OCENZ');
@@ -49,8 +52,12 @@ test.describe('without JavaScript', () => {
 		const first = page.getByRole('article', { name: 'Victory as Ahri' }).first();
 		await first.getByRole('link', { name: 'Details of this match' }).click();
 
-		await expect(page).toHaveURL(MATCH);
-		await expect(page.getByRole('region', { name: 'Victory · Red team' })).toBeVisible();
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		// The profile's own champion is highlighted, and no one else's.
+		const highlighted = page.locator('tr[aria-current="true"]');
+		await expect(highlighted).toHaveCount(1);
+		await expect(highlighted).toHaveAccessibleName('Ahri');
+		await expect(highlighted).toHaveCSS('box-shadow', /inset/);
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 });
@@ -66,11 +73,19 @@ test('a match page is cacheable at the edge for a day', async ({ request }) => {
 test('with JavaScript, a profile row opens its match page', async ({ page }) => {
 	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
 	await page.getByRole('link', { name: 'Details of this match' }).first().click();
-	await expect(page).toHaveURL(MATCH);
+	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+	await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ranked Solo');
 	await expect(page.getByRole('banner').getByRole('combobox', { name: 'Region' })).toHaveValue(
 		'oce'
 	);
+});
+
+test('a player link names the line to highlight, whatever its case', async ({ page }) => {
+	await page.goto(`${MATCH}?player=ninjagoldfinch-ocenz`);
+	await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
+	await page.goto(`${MATCH}?player=Nobody-0000`);
+	await expect(page.locator('tr[aria-current]')).toHaveCount(0);
 });
 
 test('an unknown match shows not found', async ({ page }) => {

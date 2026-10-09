@@ -147,6 +147,15 @@ describe('matchPath', () => {
 	it('builds the match page URL', () => {
 		expect(matchPath('oce', 'OC1_712351051')).toBe('/match/oce/OC1_712351051');
 	});
+
+	it('names the player to highlight as in profile URLs', () => {
+		expect(matchPath('oce', 'OC1_1', { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' })).toBe(
+			'/match/oce/OC1_1?player=NinjaGoldfinch-OCENZ'
+		);
+		expect(matchPath('kr', 'KR_1', { gameName: 'Hide on bush', tagLine: 'KR1' })).toBe(
+			'/match/kr/KR_1?player=Hide+on+bush-KR1'
+		);
+	});
 });
 
 describe('formatMatchDate', () => {

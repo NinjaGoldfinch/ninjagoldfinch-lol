@@ -1,18 +1,28 @@
 <script lang="ts">
 	import { LANES } from '#lib/assets.ts';
 	import type { TeamScoreboard } from '#lib/domain/match-detail.ts';
-	import { profilePath } from '#lib/domain/riot-id.ts';
+	import { profilePath, sameRiotId, type RiotId } from '#lib/domain/riot-id.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 	import ItemList from './ItemList.svelte';
 	import Loadout from './Loadout.svelte';
 
-	/** `region` is the URL slug; `maxDamage` is the match's highest, for the bars. */
+	/**
+	 * `region` is the URL slug; `maxDamage` is the match's highest, for the bars;
+	 * `highlight` is whose line to mark, if anyone's.
+	 */
 	let {
 		team,
 		version,
 		region,
-		maxDamage
-	}: { team: TeamScoreboard; version: string; region: string; maxDamage: number } = $props();
+		maxDamage,
+		highlight = null
+	}: {
+		team: TeamScoreboard;
+		version: string;
+		region: string;
+		maxDamage: number;
+		highlight?: RiotId | null;
+	} = $props();
 
 	const RESULT = {
 		win: { label: 'Victory', text: 'text-win' },
@@ -25,7 +35,7 @@
 		['inhibitor', 'Inhibitors'],
 		['dragon', 'Dragons'],
 		['baron', 'Barons'],
-		['riftHerald', 'Heralds'],
+		['riftHerald', 'Herald'],
 		['horde', 'Voidgrubs']
 	] as const;
 	const number = (n: number) => n.toLocaleString('en-GB');
@@ -78,7 +88,12 @@
 			</thead>
 			<tbody class="divide-y divide-border">
 				{#each team.players as player, i (i)}
-					<tr aria-label={player.champion.name}>
+					{@const own = !!highlight && !!player.riotId && sameRiotId(player.riotId, highlight)}
+					<tr
+						aria-label={player.champion.name}
+						aria-current={own ? 'true' : undefined}
+						class={own ? 'bg-accent/10 shadow-[inset_3px_0_0_var(--color-accent)]' : ''}
+					>
 						<td class="px-4 py-2">
 							<div class="flex items-center gap-2">
 								<div class="relative shrink-0">
