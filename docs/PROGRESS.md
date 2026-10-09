@@ -10,12 +10,23 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - [x] P0-04 `README.md`, `docs/DECISIONS.md`, `docs/PROGRESS.md`, `openapi/riot-proxy.json` — #2 (CLAUDE.md and `docs/IMPLEMENTATION.md` came with P0-01)
 - [x] P0-05 `src/lib/server/env.ts` and `src/env.ts` with start-up validation and tests — #3
 
+## P1 — Proxy client and site shell
+
+- [x] P1-01 `openapi/riot-proxy.json` (landed in #2), `just gen`, generated types, drift check in `just check` — #6
+- [ ] P1-02 `src/lib/server/proxy.ts`, `toHttpError`, request-id logging in `hooks.server.ts`
+- [ ] P1-03 Mock proxy server and first redacted fixtures for tests
+- [ ] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`
+- [ ] P1-05 `/`, `/about`, `/healthz`; region table and `parseRiotId` with unit tests
+- [ ] P1-06 `src/lib/assets.ts` and a `ChampionIcon` component
+
 ## Open decisions resolved
 
 - SvelteKit 3 is stable; scaffolded on 3.x. ADR-001.
 - riot-proxy OpenAPI JSON is served at `/openapi.json`. Recorded in the README.
 - GitHub does not offer branch protection for this private repo on the current plan. ADR-003.
 - Environment handling follows SvelteKit 3 (`src/env.ts`, `$app/env/private`). ADR-004.
+- riot-proxy mirrors Data Dragon JSON only, no images; icons load from Riot's Data Dragon CDN, with the patch number taken from the proxy.
+- Region picker offers every public LoL platform.
 
 ### P0 exit check — passed 2026-10-09
 

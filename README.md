@@ -29,6 +29,7 @@ just dev     # dev server
 | ------------ | ------------------------------------------------------------------- |
 | `just setup` | Install dependencies, enable git hooks, create `.env`               |
 | `just dev`   | Dev server with hot reload                                          |
+| `just gen`   | Regenerate `src/lib/api/schema.d.ts` from `openapi/riot-proxy.json` |
 | `just check` | Format check, lint, svelte-check, unit tests, build. The only gate. |
 | `just e2e`   | Playwright smoke tests                                              |
 | `just image` | Build the production Docker image                                   |
@@ -52,10 +53,11 @@ riot-proxy serves its OpenAPI document as raw JSON at **`/openapi.json`**. It is
 http://192.168.68.46:8080/openapi.json
 ```
 
-A copy is committed at `openapi/riot-proxy.json` so that a proxy change shows up as a diff. To refresh it:
+A copy is committed at `openapi/riot-proxy.json` so that a proxy change shows up as a diff. To refresh it, then regenerate the types:
 
 ```sh
 curl -fsS http://192.168.68.46:8080/openapi.json -o openapi/riot-proxy.json
+just gen
 ```
 
-The committed copy is riot-proxy `2.0.0-rc.3`. It is excluded from Prettier so it stays byte-identical to what the proxy serves.
+The committed copy is riot-proxy `2.0.0-rc.3`. It is excluded from Prettier so it stays byte-identical to what the proxy serves. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.

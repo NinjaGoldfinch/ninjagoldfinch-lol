@@ -5,3 +5,8 @@ allowBuilds:
 # hiding every app dependency from Dependabot. Corepack still enforces the
 # packageManager pin. See ADR-005.
 pmOnFail: ignore
+# openapi-typescript 7 declares typescript ^5 but generates correctly with 6.
+# See ADR-006.
+peerDependencyRules:
+  allowedVersions:
+    openapi-typescript>typescript: '6'
