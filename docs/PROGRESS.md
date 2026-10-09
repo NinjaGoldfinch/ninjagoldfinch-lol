@@ -32,7 +32,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 ## P3 — Match detail
 
-- [x] P3-01 Match load with timeline; scoreboard for both teams; profile rows link to it — #41 (ADR-023); the profile's own champion highlighted, "Herald" label — #42 (ADR-024)
+- [x] P3-01 Match load with timeline; scoreboard for both teams; profile rows link to it — #41 (ADR-023); the profile's own champion highlighted, "Herald" label — #42 (ADR-024); a back link to the profile — #43 (ADR-025)
 - [ ] P3-02 Builds: items, runes, summoner spells, skill order
 - [ ] P3-03 Timeline charts in SVG: gold difference and objective events
 - [ ] P3-04 Expand a match inline from the profile page without a full reload

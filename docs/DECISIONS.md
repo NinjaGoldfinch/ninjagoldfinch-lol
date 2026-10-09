@@ -291,3 +291,13 @@ Date: 2026-10-09 · Task: P3-01 (follow-up, owner request)
 - The objective label reads "Herald", not "Heralds": a team can take only one Rift Herald a game at present.
 
 **Consequences.** The match is found by the Riot ID it recorded. A player who has changed their Riot ID since the game isn't highlighted in it.
+
+## ADR-025: A back link from the match page to the profile
+
+Date: 2026-10-09 · Task: P3-01 (follow-up, owner request)
+
+**Decision.** A back link above the match page's heading returns to the profile the visitor came from ("← Back to GameName#TAG").
+
+- Without JavaScript it links to the profile named by `player` (ADR-024), on its first page with no filter.
+- With JavaScript, when the match was opened from a profile page, the link goes back through the browser's history instead, so that page's filters, page number and scroll position come back. A modified click (new tab or window) follows the plain link.
+- With no `player` and no profile page before it, there is no back link.
