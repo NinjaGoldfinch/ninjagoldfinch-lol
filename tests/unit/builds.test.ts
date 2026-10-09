@@ -22,13 +22,14 @@ describe('itemSteps', () => {
 	const ids = (minute: number) => steps.find((s) => s.minute === minute)?.items.map((i) => i.id);
 
 	it("groups the recorded player's purchases by minute", () => {
+		// Two Health Potions in the first minute stack as one entry.
 		expect(steps[0]).toEqual({
 			minute: 0,
-			items: [1056, 2003, 2003, 3340].map((id) => ({
-				id,
-				name: names.items[id] ?? `Item ${id}`,
-				sold: false
-			}))
+			items: [
+				[1056, 1],
+				[2003, 2],
+				[3340, 1]
+			].map(([id, count]) => ({ id, name: names.items[id] ?? `Item ${id}`, sold: false, count }))
 		});
 		expect(steps.map((s) => s.minute)).toEqual([
 			0, 2, 5, 6, 7, 10, 12, 13, 15, 16, 19, 20, 22, 23, 26, 27
@@ -42,8 +43,33 @@ describe('itemSteps', () => {
 
 	it('keeps a sale, marked as sold', () => {
 		const sold = steps.find((s) => s.minute === 16)?.items[0];
-		expect(sold).toEqual({ id: 2031, name: expect.any(String), sold: true });
+		expect(sold).toEqual({ id: 2031, name: expect.any(String), sold: true, count: 1 });
 		expect(ids(16)).toEqual([2031, 3113, 3364, 3363]);
+	});
+
+	it('stacks repeat buys in a minute, apart from sales of the same item', () => {
+		const buy = (timestamp: number, itemId: number): TimelineEvent => ({
+			type: 'ITEM_PURCHASED',
+			participantId: 1,
+			timestamp,
+			itemId
+		});
+		const events: TimelineEvent[] = [
+			buy(1000, 2003),
+			buy(2000, 1001),
+			buy(3000, 2003),
+			{ type: 'ITEM_SOLD', participantId: 1, timestamp: 4000, itemId: 2003 },
+			buy(61000, 2003)
+		];
+		const steps = itemSteps(events, 1, names);
+		expect(steps.map((s) => s.items.map((i) => [i.id, i.count, i.sold]))).toEqual([
+			[
+				[2003, 2, false],
+				[1001, 1, false],
+				[2003, 1, true]
+			],
+			[[2003, 1, false]]
+		]);
 	});
 
 	it("cancels the latest buy or sale of the undo's item, whichever field names it", () => {
@@ -56,7 +82,7 @@ describe('itemSteps', () => {
 			{ type: 'ITEM_PURCHASED', participantId: 2, timestamp: 6000, itemId: 1001 }
 		];
 		expect(itemSteps(events, 1, names)).toEqual([
-			{ minute: 0, items: [{ id: 2055, name: names.items[2055], sold: false }] }
+			{ minute: 0, items: [{ id: 2055, name: names.items[2055], sold: false, count: 1 }] }
 		]);
 	});
 });

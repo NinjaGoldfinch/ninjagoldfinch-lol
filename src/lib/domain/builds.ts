@@ -2,11 +2,12 @@ import type { Shard } from '#lib/api/cdragon.ts';
 import type { Rune, StaticNames } from '#lib/api/ddragon.ts';
 import type { RunePage, TimelineEvent } from '#lib/api/match.ts';
 
-/** One bought or sold item in a player's build. */
+/** One bought or sold item in a player's build; `count` of it in that minute. */
 export interface BuildItem {
 	id: number;
 	name: string;
 	sold: boolean;
+	count: number;
 }
 
 /** What a player bought and sold in one minute of the game. */
@@ -38,7 +39,8 @@ export const SKILL_KEYS = ['Q', 'W', 'E', 'R'] as const;
  * A player's purchases and sales, grouped by game minute. An undo cancels the
  * player's latest purchase or sale of the item it names, whichever field
  * Riot names it in (ADR-026). Items consumed by an upgrade stay in the list:
- * they were bought.
+ * they were bought. The same item bought (or sold) more than once in a minute
+ * is one entry with a count, where it first appears.
  */
 export function itemSteps(
 	events: TimelineEvent[],
@@ -63,10 +65,14 @@ export function itemSteps(
 
 	const steps: ItemStep[] = [];
 	for (const { minute, id, sold } of actions) {
-		const item = { id, name: names.items[id] ?? `Item ${id}`, sold };
-		const step = steps.at(-1);
-		if (step?.minute === minute) step.items.push(item);
-		else steps.push({ minute, items: [item] });
+		let step = steps.at(-1);
+		if (step?.minute !== minute) {
+			step = { minute, items: [] };
+			steps.push(step);
+		}
+		const same = step.items.find((item) => item.id === id && item.sold === sold);
+		if (same) same.count += 1;
+		else step.items.push({ id, name: names.items[id] ?? `Item ${id}`, sold, count: 1 });
 	}
 	return steps;
 }
