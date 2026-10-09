@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { itemIconUrl, summonerSpellIconUrl } from '#lib/assets.ts';
+	import {
+		LANES,
+		itemIconUrl,
+		laneIconUrl,
+		runeIconUrl,
+		summonerSpellIconUrl
+	} from '#lib/assets.ts';
 	import { csPerMinute, formatDuration, kdaRatio, type MatchRow } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 
@@ -11,6 +17,7 @@
 		remake: { label: 'Remake', border: 'border-l-border', text: 'text-muted' }
 	} as const;
 	const result = $derived(RESULT[match.result]);
+	const lane = $derived(match.position ? laneIconUrl(patch, match.position) : undefined);
 </script>
 
 <article
@@ -27,10 +34,25 @@
 		</p>
 	</div>
 
-	<div class="flex items-center gap-2">
-		{#if match.champion.key}
-			<ChampionIcon {patch} id={match.champion.key} name={match.champion.name} size={44} />
-		{/if}
+	<div class="flex items-center gap-1.5">
+		<!-- Champion with the lane as a badge on its lower-left corner. -->
+		<div class="relative">
+			{#if match.champion.key}
+				<ChampionIcon {patch} id={match.champion.key} name={match.champion.name} size={48} />
+			{:else}
+				<span class="block size-12 rounded bg-bg"></span>
+			{/if}
+			{#if lane && match.position}
+				<img
+					src={lane}
+					alt={LANES[match.position]}
+					title={LANES[match.position]}
+					width="20"
+					height="20"
+					class="absolute -bottom-1.5 -left-1.5 size-5 rounded-full border border-border bg-bg p-0.5"
+				/>
+			{/if}
+		</div>
 		<div class="flex flex-col gap-1">
 			{#each match.spells as spell, i (i)}
 				{#if spell}
@@ -38,15 +60,43 @@
 						src={summonerSpellIconUrl(patch, spell.id)}
 						alt={spell.name}
 						title={spell.name}
-						width="20"
-						height="20"
+						width="22"
+						height="22"
 						loading="lazy"
 						class="rounded-sm"
 					/>
 				{:else}
-					<span class="size-5 rounded-sm bg-bg"></span>
+					<span class="size-[22px] rounded-sm bg-bg"></span>
 				{/if}
 			{/each}
+		</div>
+		<div class="flex flex-col items-center gap-1">
+			{#if match.runes.keystone}
+				<img
+					src={runeIconUrl(match.runes.keystone.icon)}
+					alt={match.runes.keystone.name}
+					title={match.runes.keystone.name}
+					width="22"
+					height="22"
+					loading="lazy"
+					class="rounded-full bg-bg"
+				/>
+			{:else}
+				<span class="size-[22px] rounded-full bg-bg"></span>
+			{/if}
+			{#if match.runes.secondary}
+				<img
+					src={runeIconUrl(match.runes.secondary.icon)}
+					alt={match.runes.secondary.name}
+					title={match.runes.secondary.name}
+					width="16"
+					height="16"
+					loading="lazy"
+					class="m-[3px]"
+				/>
+			{:else}
+				<span class="size-[22px]"></span>
+			{/if}
 		</div>
 	</div>
 

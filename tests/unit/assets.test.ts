@@ -1,6 +1,13 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
-import { championIconUrl, itemIconUrl, profileIconUrl, summonerSpellIconUrl } from '#lib/assets.ts';
+import {
+	championIconUrl,
+	itemIconUrl,
+	laneIconUrl,
+	profileIconUrl,
+	runeIconUrl,
+	summonerSpellIconUrl
+} from '#lib/assets.ts';
 import ChampionIcon from '#lib/components/ChampionIcon.svelte';
 
 const CDN = 'https://ddragon.leagueoflegends.com/cdn/16.20.1/img';
@@ -11,6 +18,20 @@ describe('asset URLs', () => {
 		expect(itemIconUrl('16.20.1', 3078)).toBe(`${CDN}/item/3078.png`);
 		expect(profileIconUrl('16.20.1', 6)).toBe(`${CDN}/profileicon/6.png`);
 		expect(summonerSpellIconUrl('16.20.1', 'SummonerFlash')).toBe(`${CDN}/spell/SummonerFlash.png`);
+	});
+
+	it('builds unversioned rune image URLs from runesReforged paths', () => {
+		expect(runeIconUrl('perk-images/Styles/7201_Precision.png')).toBe(
+			'https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7201_Precision.png'
+		);
+	});
+
+	it('builds CommunityDragon lane icons pinned to major.minor, only for lanes', () => {
+		expect(laneIconUrl('16.20.1', 'UTILITY')).toBe(
+			'https://raw.communitydragon.org/16.20/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-utility.png'
+		);
+		expect(laneIconUrl('16.20.1', '')).toBeUndefined();
+		expect(laneIconUrl('16.20.1', 'Invalid')).toBeUndefined();
 	});
 
 	it('encodes path segments', () => {

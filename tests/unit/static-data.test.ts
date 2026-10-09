@@ -26,14 +26,15 @@ afterEach(() => {
 });
 
 describe('staticNames', () => {
-	it('fetches the four files once per patch', async () => {
+	it('fetches the five files once per patch', async () => {
 		const { client, requests } = countingClient();
 		const first = await staticNames('16.20.1', client);
 		await staticNames('16.20.1', client);
 
-		expect(requests()).toBe(4);
+		expect(requests()).toBe(5);
 		expect(first.champions[103].id).toBe('Ahri');
 		expect(first.queues[420]).toBe('Ranked Solo');
+		expect(first.runes[8112].name).toBe('Electrocute');
 	});
 
 	it('does not keep a failed fetch', async () => {
@@ -43,6 +44,6 @@ describe('staticNames', () => {
 
 		const working = countingClient();
 		await expect(staticNames('16.20.1', working.client)).resolves.toBeTruthy();
-		expect(working.requests()).toBe(4);
+		expect(working.requests()).toBe(5);
 	});
 });

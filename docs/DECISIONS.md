@@ -181,3 +181,14 @@ Date: 2026-10-09 · Task: P5-01 (fix)
 - Playwright now runs the real production server (`pnpm build && node build`, with `ORIGIN` and `NODE_ENV=production`) instead of `vite preview`. Without this fix, the two refresh e2e tests fail on it.
 
 **Consequences.** A cross-origin form `POST` is still refused (checked: 403). The plan's configuration table is out of date on `ORIGIN`: it is now build-time.
+
+## ADR-015: Runes from Data Dragon, lane icons from CommunityDragon
+
+Date: 2026-10-09 · Task: P2-03 (follow-up, owner request)
+
+**Decision.** Match rows show the keystone and secondary rune path, and the lane as a badge on the champion portrait.
+
+- Runes: riot-proxy mirrors `runesReforged.json` (35 kB, added to the per-patch lookups from ADR-013). Rune images come from Data Dragon's unversioned `cdn/img/<path>`.
+- Lanes: Data Dragon has no position icons, so they come from CommunityDragon's copy of the client's own, pinned to the patch's `major.minor` (`raw.communitydragon.org/16.20/…/icon-position-middle.png`), as ADR-009 allows for what Data Dragon lacks. Riot's `teamPosition` maps to Top, Jungle, Mid, Bot and Support for the `alt` text. Games without a lane (ARAM, Arena) show no badge.
+
+**Consequences.** The P5-03 Content Security Policy must also allow `img-src https://raw.communitydragon.org`.

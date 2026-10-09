@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseItemNames, parseKeyedNames, parseQueueNames } from '#lib/api/ddragon.ts';
+import { parseItemNames, parseKeyedNames, parseQueueNames, parseRunes } from '#lib/api/ddragon.ts';
 import { fixtureBody } from './fixtures.ts';
 
 describe('Data Dragon lookups', () => {
@@ -30,9 +30,22 @@ describe('Data Dragon lookups', () => {
 		expect(queues[0]).toBe('Custom');
 	});
 
+	it('maps rune paths and runes to names and icons', () => {
+		const runes = parseRunes(fixtureBody('/v1/static/runesReforged?version=16.20.1'));
+		expect(runes[8000]).toEqual({
+			name: 'Precision',
+			icon: 'perk-images/Styles/7201_Precision.png'
+		});
+		expect(runes[8112]).toEqual({
+			name: 'Electrocute',
+			icon: 'perk-images/Styles/Domination/Electrocute/Electrocute.png'
+		});
+	});
+
 	it('ignores malformed input', () => {
 		expect(parseKeyedNames(null)).toEqual({});
 		expect(parseItemNames({ data: 'x' })).toEqual({});
 		expect(parseQueueNames({})).toEqual({});
+		expect(parseRunes([{ id: 1 }, null, { slots: 'x' }])).toEqual({});
 	});
 });

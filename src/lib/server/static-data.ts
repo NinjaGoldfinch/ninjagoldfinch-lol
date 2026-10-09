@@ -2,6 +2,7 @@ import {
 	parseItemNames,
 	parseKeyedNames,
 	parseQueueNames,
+	parseRunes,
 	type StaticNames
 } from '#lib/api/ddragon.ts';
 import { toHttpError } from './errors.ts';
@@ -27,16 +28,17 @@ export function staticNames(patch: string, client: ProxyClient = proxy): Promise
 }
 
 async function fetchNames(patch: string, client: ProxyClient): Promise<StaticNames> {
-	const file = (file: 'champion' | 'item' | 'summoner') =>
+	const file = (file: 'champion' | 'item' | 'summoner' | 'runesReforged') =>
 		client.GET('/v1/static/{file}', { params: { path: { file }, query: { version: patch } } });
 
-	const [champions, items, spells, queues] = await Promise.all([
+	const [champions, items, spells, runes, queues] = await Promise.all([
 		file('champion'),
 		file('item'),
 		file('summoner'),
+		file('runesReforged'),
 		client.GET('/v1/static/queues')
 	]);
-	for (const r of [champions, items, spells, queues]) {
+	for (const r of [champions, items, spells, runes, queues]) {
 		if (!r.response.ok) toHttpError(r.response, r.error);
 	}
 
@@ -44,7 +46,8 @@ async function fetchNames(patch: string, client: ProxyClient): Promise<StaticNam
 		champions: parseKeyedNames(champions.data),
 		items: parseItemNames(items.data),
 		spells: parseKeyedNames(spells.data),
-		queues: parseQueueNames(queues.data)
+		queues: parseQueueNames(queues.data),
+		runes: parseRunes(runes.data)
 	};
 }
 
