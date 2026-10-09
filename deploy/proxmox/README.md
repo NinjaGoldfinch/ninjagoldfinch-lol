@@ -82,7 +82,14 @@ ninjagoldfinch-update v0.1.0     # a tag, branch or commit; also how you roll ba
 docker compose -f /opt/ninjagoldfinch/deploy/compose.yaml logs -f
 ```
 
-Each run fetches, checks out the ref, rebuilds the image on the VM and restarts the container. The checkout is detached, so nothing on the VM ever commits.
+Each run fetches, checks out the ref, rebuilds the image on the VM and restarts the container. The checkout is detached, so nothing on the VM ever commits. Tags follow GitHub: one moved there (like `phase-P2`) is overwritten on the VM, and one deleted there is pruned.
+
+cloud-init installs `ninjagoldfinch-update` once, when the VM is created. To give an existing VM a newer copy, from a checkout:
+
+```bash
+scp deploy/proxmox/ninjagoldfinch-update web@<vm-ip>:
+ssh web@<vm-ip> 'sudo install -m 755 ninjagoldfinch-update /usr/local/bin/ && rm ninjagoldfinch-update'
+```
 
 ## Tests
 
