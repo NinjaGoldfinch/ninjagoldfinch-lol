@@ -5,6 +5,7 @@ import {
 	type LeagueEntry,
 	type Summoner
 } from '#lib/api/riot.ts';
+import { FILTER_QUEUES, MATCHES_PER_PAGE, type MatchFilter } from '#lib/domain/match-filters.ts';
 import { toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
@@ -14,8 +15,6 @@ import { proxy } from './proxy.ts';
 import { staticNames } from './static-data.ts';
 
 type ProxyClient = typeof proxy;
-
-export const MATCHES_PER_PAGE = 10;
 
 /** Everything the profile page renders, and nothing more: it is embedded in the HTML. */
 export interface ProfileData {
@@ -29,6 +28,9 @@ export interface ProfileData {
 	refreshAvailableIn: number;
 	matches: MatchRow[];
 	hasMore: boolean;
+	filter: MatchFilter;
+	/** The queue filter's choices, named for this patch. */
+	queueOptions: { id: number; name: string }[];
 	/** Data Dragon patch for icons. */
 	patch: string;
 }
@@ -39,12 +41,16 @@ export interface ProfileData {
  *
  * `refresh` asks riot-proxy to re-read both from Riot, spending quota; it
  * allows that once a minute per player and otherwise answers from cache.
+ * `filter` picks the match page: a queue, and which page of ten.
  */
 export async function loadProfile(
 	region: Region,
 	id: RiotId,
 	client: ProxyClient = proxy,
-	{ refresh = false }: { refresh?: boolean } = {}
+	{
+		refresh = false,
+		filter = { queue: null, page: 1 }
+	}: { refresh?: boolean; filter?: MatchFilter } = {}
 ): Promise<ProfileData> {
 	const refreshQuery = refresh ? { refresh: true } : {};
 	const profile = await client.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
@@ -57,7 +63,13 @@ export async function loadProfile(
 		client.GET('/v1/players/{puuid}/matches', {
 			params: {
 				path: { puuid: body.puuid },
-				query: { platform: region.platform, count: MATCHES_PER_PAGE, ...refreshQuery }
+				query: {
+					platform: region.platform,
+					...(filter.page > 1 ? { start: (filter.page - 1) * MATCHES_PER_PAGE } : {}),
+					count: MATCHES_PER_PAGE,
+					...(filter.queue !== null ? { queue: filter.queue } : {}),
+					...refreshQuery
+				}
 			}
 		}),
 		currentPatch(client)
@@ -84,6 +96,8 @@ export async function loadProfile(
 		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches.data.refreshAvailableIn),
 		matches: toMatchRows(matches.data.matches, names),
 		hasMore: matches.data.hasMore,
+		filter,
+		queueOptions: FILTER_QUEUES.map((id) => ({ id, name: names.queues[id] ?? `Queue ${id}` })),
 		patch
 	};
 }

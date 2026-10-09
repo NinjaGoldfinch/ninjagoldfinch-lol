@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { parseMatchFilter } from '#lib/domain/match-filters.ts';
 import { findRegion } from '#lib/domain/regions.ts';
 import { parseRiotId } from '#lib/domain/riot-id.ts';
 import { cacheControl } from '#lib/server/cache.ts';
@@ -12,18 +13,21 @@ function target(params: { region: string; riotId: string }) {
 	return { region, id };
 }
 
-export const load: PageServerLoad = async ({ params, setHeaders }) => {
+export const load: PageServerLoad = async ({ params, url, setHeaders }) => {
 	const { region, id } = target(params);
-	const profile = await loadProfile(region, id);
+	const profile = await loadProfile(region, id, undefined, {
+		filter: parseMatchFilter(url.searchParams)
+	});
 	setHeaders(cacheControl('profile'));
 	return profile;
 };
 
 export const actions: Actions = {
 	// Returns the refreshed profile itself, so the page shows it even when a
-	// cache in front of the site still holds the previous one.
-	refresh: async ({ params }) => {
+	// cache in front of the site still holds the previous one. ADR-012.
+	refresh: async ({ params, url }) => {
 		const { region, id } = target(params);
-		return { profile: await loadProfile(region, id, undefined, { refresh: true }) };
+		const filter = parseMatchFilter(url.searchParams);
+		return { profile: await loadProfile(region, id, undefined, { refresh: true, filter }) };
 	}
 };
