@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseMatch, parseTimeline, type Match, type Timeline } from '#lib/api/match.ts';
 import {
+	asMatchDetail,
 	formatMatchDate,
 	isMatchIdFor,
 	matchPath,
@@ -216,6 +217,20 @@ describe('matchTab', () => {
 		expect(matchTab(null)).toBe('scoreboard');
 		expect(matchTab('Timeline')).toBe('scoreboard');
 		expect(matchTab('constructor')).toBe('scoreboard');
+	});
+});
+
+describe('asMatchDetail', () => {
+	it("accepts the match page's data for the match asked for", () => {
+		expect(asMatchDetail(detail, 'OC1_712351051')).toBe(detail);
+	});
+
+	it('rejects anything else', () => {
+		expect(asMatchDetail(detail, 'OC1_1')).toBeUndefined();
+		expect(asMatchDetail({ ...detail, teams: undefined }, 'OC1_712351051')).toBeUndefined();
+		expect(asMatchDetail({ matchId: 'OC1_712351051', teams: [] }, 'OC1_712351051')).toBeUndefined();
+		expect(asMatchDetail(null, 'OC1_712351051')).toBeUndefined();
+		expect(asMatchDetail('OC1_712351051', 'OC1_712351051')).toBeUndefined();
 	});
 });
 

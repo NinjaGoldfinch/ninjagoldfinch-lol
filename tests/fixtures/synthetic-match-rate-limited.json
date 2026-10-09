@@ -1,0 +1,23 @@
+{
+	"_note": "Synthetic: riot-proxy's documented RATE_LIMITED envelope (ErrorResponse) for the profile's second match, so its inline view fails. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/matches/sea/OC1_712345690"
+	},
+	"response": {
+		"status": 503,
+		"headers": {
+			"content-type": "application/json",
+			"retry-after": "30",
+			"x-request-id": "SYNTHETIC"
+		},
+		"body": {
+			"error": {
+				"code": "RATE_LIMITED",
+				"message": "Riot rate limit budget exhausted",
+				"requestId": "SYNTHETIC",
+				"retryAfter": 30
+			}
+		}
+	}
+}

@@ -304,6 +304,80 @@ test('with JavaScript, switching tab adds no history, so back still leaves the m
 	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
 });
 
+test.describe('inline match on the profile', () => {
+	const PROFILE = '/summoner/oce/NinjaGoldfinch-OCENZ';
+
+	test('a row shows both teams in place, from the match page cached at the edge', async ({
+		page
+	}) => {
+		const loads: { url: string; cacheControl: string | undefined }[] = [];
+		page.on('response', (r) => {
+			if (r.url().includes('__data.json')) {
+				loads.push({ url: r.url(), cacheControl: r.headers()['cache-control'] });
+			}
+		});
+		await page.goto(PROFILE);
+		const row = page.getByRole('article', { name: 'Victory as Ahri' }).first();
+		await row.getByRole('button', { name: 'Show the teams' }).click();
+
+		const blue = row.getByRole('rowgroup', { name: 'Defeat · Blue team' });
+		const red = row.getByRole('rowgroup', { name: 'Victory · Red team' });
+		await expect(blue.getByRole('row')).toHaveCount(6);
+		await expect(red.getByRole('row')).toHaveCount(6);
+		await expect(blue).toContainText('28 / 44 / 18');
+		const own = row.locator('tr[aria-current="true"]');
+		await expect(own).toHaveAccessibleName('Ahri');
+		await expect(own).toContainText('NinjaGoldfinch#OCENZ');
+		await expect(own).toContainText('8 / 8 / 10');
+		await expect(own.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
+		await expect(row.getByRole('button', { name: 'Hide the teams' })).toHaveAttribute(
+			'aria-expanded',
+			'true'
+		);
+
+		// No navigation: the profile stays, and the match page's load answered.
+		await expect(page).toHaveURL(PROFILE);
+		expect(loads).toHaveLength(1);
+		expect(loads[0].url).toContain('/match/oce/OC1_712351051/__data.json');
+		expect(loads[0].cacheControl).toBe('public, s-maxage=86400, stale-while-revalidate=86400');
+
+		// Hiding and showing again asks for nothing more.
+		await row.getByRole('button', { name: 'Hide the teams' }).click();
+		await expect(blue).toHaveCount(0);
+		await row.getByRole('button', { name: 'Show the teams' }).click();
+		await expect(blue.getByRole('row')).toHaveCount(6);
+		expect(loads).toHaveLength(1);
+
+		// A player in it links to their profile.
+		await expect(row.getByRole('link', { name: 'Demacia123#6666' })).toHaveAttribute(
+			'href',
+			'/summoner/oce/Demacia123-6666'
+		);
+	});
+
+	test("a match that can't be loaded says so, with a link to its page", async ({ page }) => {
+		await page.goto(PROFILE);
+		const row = page.getByRole('article').nth(1);
+		await row.getByRole('button', { name: 'Show the teams' }).click();
+		await expect(row).toContainText("The teams couldn't be loaded.");
+		await expect(row.getByRole('link', { name: 'Open the match page' })).toHaveAttribute(
+			'href',
+			'/match/oce/OC1_712345690?player=NinjaGoldfinch-OCENZ'
+		);
+	});
+
+	test.describe('without JavaScript', () => {
+		test.use({ javaScriptEnabled: false });
+
+		test('a row has only its Details link', async ({ page }) => {
+			await page.goto(PROFILE);
+			const row = page.getByRole('article').first();
+			await expect(row.getByRole('button')).toHaveCount(0);
+			await expect(row.getByRole('link', { name: 'Details of this match' })).toBeVisible();
+		});
+	});
+});
+
 test('a match page is cacheable at the edge for a day', async ({ request }) => {
 	const response = await request.get(MATCH);
 	expect(response.status()).toBe(200);

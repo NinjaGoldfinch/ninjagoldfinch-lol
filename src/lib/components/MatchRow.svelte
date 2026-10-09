@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { preloadData } from '$app/navigation';
 	import { LANES, laneIconUrl } from '#lib/assets.ts';
-	import { matchPath } from '#lib/domain/match-detail.ts';
+	import { asMatchDetail, matchPath, type MatchDetail } from '#lib/domain/match-detail.ts';
 	import { csPerMinute, formatDuration, kdaRatio, type MatchRow } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 	import ItemList from './ItemList.svelte';
 	import Loadout from './Loadout.svelte';
+	import MatchTeams from './MatchTeams.svelte';
 
 	import type { RiotId } from '#lib/domain/riot-id.ts';
 
@@ -28,6 +31,36 @@
 	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
 	const version = $derived(match.ddragonVersion ?? patch);
 	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
+	const href = $derived(matchPath(region, match.matchId, { player }));
+
+	// With JavaScript, a button shows both teams inside the row (ADR-030). Their
+	// data is the match page's own load, run through SvelteKit's preloadData,
+	// so the browser asks the site, never riot-proxy, and the answer is cached
+	// like the match page. Without JavaScript there is only the Details link.
+	let enhanced = $state(false);
+	onMount(() => {
+		enhanced = true;
+	});
+	let open = $state(false);
+	let detail = $state<MatchDetail>();
+	let failed = $state(false);
+	const panelId = $derived(`teams-${match.matchId}`);
+
+	async function toggle() {
+		open = !open;
+		if (!open || detail) return;
+		failed = false;
+		try {
+			const result = await preloadData(href);
+			detail =
+				result.type === 'loaded' && result.status === 200
+					? asMatchDetail(result.data, match.matchId)
+					: undefined;
+		} catch {
+			detail = undefined;
+		}
+		failed = !detail;
+	}
 </script>
 
 <article
@@ -90,9 +123,57 @@
 
 	<ItemList items={match.items} roleBoundItem={match.roleBoundItem} {version} />
 
-	<a
-		href={matchPath(region, match.matchId, { player })}
-		class="ml-auto text-sm text-muted underline-offset-4 hover:text-text hover:underline"
-		>Details<span class="sr-only"> of this match</span></a
-	>
+	<!-- Stacked, so the button doesn't push the row onto another line. -->
+	<div class="ml-auto flex flex-col items-end gap-1">
+		<a {href} class="text-sm text-muted underline-offset-4 hover:text-text hover:underline"
+			>Details<span class="sr-only"> of this match</span></a
+		>
+		{#if enhanced}
+			<button
+				type="button"
+				onclick={toggle}
+				aria-expanded={open}
+				aria-controls={open ? panelId : undefined}
+				aria-label={open ? 'Hide the teams' : 'Show the teams'}
+				title={open ? 'Hide the teams' : 'Show the teams'}
+				class="rounded p-1 text-muted hover:bg-bg hover:text-text"
+				><svg
+					viewBox="0 0 16 16"
+					width="16"
+					height="16"
+					aria-hidden="true"
+					class="block {open ? 'rotate-180' : ''}"
+					><path
+						d="M4 6l4 4 4-4"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/></svg
+				></button
+			>
+		{/if}
+	</div>
+
+	{#if open}
+		<div id={panelId} class="min-w-0 basis-full border-t border-border pt-3">
+			{#if detail}
+				<MatchTeams
+					teams={detail.teams}
+					version={detail.ddragonVersion}
+					{region}
+					highlight={player}
+				/>
+			{:else if failed}
+				<p class="text-sm text-muted">
+					The teams couldn't be loaded. <a {href} class="text-accent hover:underline"
+						>Open the match page</a
+					>
+				</p>
+			{:else}
+				<p role="status" class="text-sm text-muted">Loading the teams…</p>
+			{/if}
+		</div>
+	{/if}
 </article>
