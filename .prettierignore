@@ -11,3 +11,6 @@ bun.lockb
 # Kept verbatim
 CLAUDE.md
 docs/IMPLEMENTATION.md
+
+# Committed copy of the riot-proxy spec; kept byte-identical to the source
+openapi/
