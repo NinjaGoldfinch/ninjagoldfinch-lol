@@ -61,12 +61,16 @@ test.describe('without JavaScript', () => {
 		await expect(lane).toHaveCSS('filter', /brightness\(1\.1\)/);
 		await expect(first.getByTitle('Champion level 16')).toHaveText('Level 16');
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
-		// Seven inventory slots, then the role quest slot.
-		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(8);
-		await expect(first.getByRole('img', { name: 'Mid Lane Quest Reward' })).toHaveAttribute(
-			'title',
-			'Role quest: Mid Lane Quest Reward'
+		// Two rows of four, the trinket last on the first. A mid laner has no
+		// role quest slot under it: only bot laners' (their boots) is shown.
+		const items = first.getByRole('list', { name: 'Items' });
+		await expect(items).toHaveCSS('grid-template-columns', /^(\S+ ){3}\S+$/);
+		await expect(items.getByRole('img')).toHaveCount(7);
+		await expect(items.getByRole('listitem').nth(3).getByRole('img')).toHaveAttribute(
+			'alt',
+			'Farsight Alteration'
 		);
+		await expect(first.getByRole('img', { name: 'Mid Lane Quest Reward' })).toHaveCount(0);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
 	});
 

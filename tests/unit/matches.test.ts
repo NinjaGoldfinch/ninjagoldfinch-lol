@@ -43,7 +43,6 @@ describe('toMatchRows', () => {
 				{ id: 1052, name: names.items[1052] },
 				{ id: 3363, name: names.items[3363] }
 			],
-			roleBoundItem: { id: 1206, name: 'Mid Lane Quest Reward' },
 			spells: [
 				{ id: 'SummonerDot', name: 'Ignite' },
 				{ id: 'SummonerFlash', name: 'Flash' }
@@ -89,8 +88,27 @@ describe('toMatchRows', () => {
 		});
 	});
 
+	it('keeps the role quest slot for bot laners, where their boots go', () => {
+		const p = { ...matches[0].player, teamPosition: 'BOTTOM', roleBoundItem: 3047 };
+		expect(toMatchRows([{ ...matches[0], player: p }], names, now)[0].roleBoundItem).toEqual({
+			id: 3047,
+			name: 'Plated Steelcaps'
+		});
+	});
+
+	it('drops the role quest slot for every other role', () => {
+		// The recorded first game is a mid laner's, with a Mid Lane Quest Reward.
+		expect(matches[0].player?.roleBoundItem).toBe(1206);
+		for (const teamPosition of ['TOP', 'JUNGLE', 'MIDDLE', 'UTILITY', '']) {
+			const p = { ...matches[0].player, teamPosition };
+			expect(toMatchRows([{ ...matches[0], player: p }], names, now)[0]).not.toHaveProperty(
+				'roleBoundItem'
+			);
+		}
+	});
+
 	it('keeps "empty" apart from "not recorded" for the role quest slot', () => {
-		const p = matches[0].player;
+		const p = { ...matches[0].player, teamPosition: 'BOTTOM' };
 		const empty = { ...matches[0], player: { ...p, roleBoundItem: 0 } };
 		expect(toMatchRows([empty], names, now)[0].roleBoundItem).toBeNull();
 

@@ -28,8 +28,9 @@ export interface MatchRow {
 	/** Slots item0–item6 (6 is the trinket); null for an empty slot. */
 	items: ({ id: number; name: string } | null)[];
 	/**
-	 * The role quest slot, outside the inventory (a bot laner's boots, or another
-	 * role's quest reward). null for an empty slot; undefined when the game
+	 * The role quest slot, outside the inventory, where a bot laner's boots go.
+	 * Kept for bot laners only: other roles' quest rewards say nothing useful.
+	 * null for an empty slot; undefined for other roles, and when the game
 	 * predates role quests and Riot did not record one.
 	 */
 	roleBoundItem?: { id: number; name: string } | null;
@@ -77,7 +78,7 @@ export function toMatchRows(
 				items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((id) =>
 					id ? { id, name: names.items[id] ?? `Item ${id}` } : null
 				),
-				...(p.roleBoundItem == null
+				...(p.roleBoundItem == null || p.teamPosition !== 'BOTTOM'
 					? {}
 					: {
 							roleBoundItem: p.roleBoundItem

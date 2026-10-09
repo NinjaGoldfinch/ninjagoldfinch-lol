@@ -20,6 +20,10 @@
 	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
 	const version = $derived(match.ddragonVersion ?? patch);
 	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
+	// Two rows of four: three items then the trinket (slot 6), three items then
+	// the role quest slot.
+	const SLOT_ORDER = [0, 1, 2, 6, 3, 4, 5];
+	const items = $derived(SLOT_ORDER.map((slot) => match.items[slot] ?? null));
 </script>
 
 <article
@@ -124,8 +128,8 @@
 		</p>
 	</div>
 
-	<ul class="flex gap-1" aria-label="Items">
-		{#each match.items as item, i (i)}
+	<ul class="grid grid-cols-4 gap-1" aria-label="Items">
+		{#each items as item, i (i)}
 			<li>
 				{#if item}
 					<img
@@ -143,7 +147,7 @@
 			</li>
 		{/each}
 		{#if match.roleBoundItem !== undefined}
-			<!-- The role quest slot, after the trinket. -->
+			<!-- The role quest slot, under the trinket. -->
 			<li>
 				{#if match.roleBoundItem}
 					<img
