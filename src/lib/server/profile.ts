@@ -11,6 +11,7 @@ import type { RiotId } from '#lib/domain/riot-id.ts';
 import { toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
+import { staticNames } from './static-data.ts';
 
 type ProxyClient = typeof proxy;
 
@@ -63,6 +64,7 @@ export async function loadProfile(
 	]);
 	if (!matches.response.ok || !matches.data) toHttpError(matches.response, matches.error);
 
+	const names = await staticNames(patch, client);
 	const account = parseAccount(body.account);
 	if (body.warnings.length > 0 || matches.data.warnings.length > 0) {
 		console.error(
@@ -80,7 +82,7 @@ export async function loadProfile(
 		ranks: parseLeagueEntries(body.league) ?? null,
 		ageSeconds: stalest(Object.values(body.ageSeconds)),
 		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches.data.refreshAvailableIn),
-		matches: toMatchRows(matches.data.matches),
+		matches: toMatchRows(matches.data.matches, names),
 		hasMore: matches.data.hasMore,
 		patch
 	};

@@ -1,7 +1,11 @@
 // Records one riot-proxy response as a test fixture. Each run spends real
 // Riot rate limit, so record only what a test needs.
 //
-//   just fixture <name> <path>     e.g. just fixture account-found /v1/static/versions
+//   just fixture <name> <path> [--keep ids]
+//
+// --keep trims Data Dragon files: only entries under `data` whose key, or
+// whose own `key` field, is in the comma-separated list are kept. Use it for
+// /v1/static/{champion,item,summoner}, which are hundreds of kB in full.
 //
 // Redaction: every `puuid` value, in the body and in the path, is replaced by
 // a stable placeholder derived from it, so fixtures recorded separately still
@@ -12,11 +16,12 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Fixture } from './mock-proxy/mock.ts';
 
-const [name, path] = process.argv.slice(2);
-if (!name || !path?.startsWith('/')) {
-	console.error('usage: node tests/record-fixture.ts <name> </path?query>');
+const [name, path, flag, keepList] = process.argv.slice(2);
+if (!name || !path?.startsWith('/') || (flag !== undefined && (flag !== '--keep' || !keepList))) {
+	console.error('usage: node tests/record-fixture.ts <name> </path?query> [--keep id,id,...]');
 	process.exit(1);
 }
+const keep = keepList ? new Set(keepList.split(',')) : undefined;
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const { PROXY_URL, PROXY_KEY } = process.env;
@@ -47,7 +52,15 @@ const response = await fetch(new URL(path, PROXY_URL), {
 	headers: PROXY_KEY ? { Authorization: `Bearer ${PROXY_KEY}` } : {}
 });
 const text = await response.text();
-const body = redact(text ? JSON.parse(text) : null);
+const body = trim(redact(text ? JSON.parse(text) : null));
+
+function trim(value: unknown): unknown {
+	if (!keep || typeof value !== 'object' || value === null || !('data' in value)) return value;
+	const data = Object.entries(value.data as Record<string, { key?: string }>).filter(
+		([k, entry]) => keep.has(k) || (entry.key !== undefined && keep.has(entry.key))
+	);
+	return { ...value, data: Object.fromEntries(data) };
+}
 
 let recordedPath = path;
 for (const [real, fake] of placeholders) recordedPath = recordedPath.replaceAll(real, fake);

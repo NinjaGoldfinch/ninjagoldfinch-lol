@@ -1,13 +1,18 @@
 import type { AddressInfo } from 'node:net';
 import { isHttpError } from '@sveltejs/kit';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { findRegion, type Region } from '#lib/domain/regions.ts';
 import { loadProfile } from '#lib/server/profile.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
+import { clearStaticNames } from '#lib/server/static-data.ts';
 import { createMockProxy, loadFixtures, type Fixture } from '../mock-proxy/mock.ts';
 import { PROFILE_PATH } from './fixtures.ts';
 
 const oce = findRegion('oce') as Region;
+
+beforeEach(() => {
+	clearStaticNames();
+});
 const me = { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' };
 
 async function withMock(fixtures: Fixture[]) {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import MatchRow from '#lib/components/MatchRow.svelte';
 	import ProfileHeader from '#lib/components/ProfileHeader.svelte';
 	import RankBadge from '#lib/components/RankBadge.svelte';
 	import { describeRanks } from '#lib/domain/ranks.ts';
@@ -49,11 +50,9 @@
 	<h2 id="matches" class="text-sm font-medium tracking-wide text-muted uppercase">
 		Recent matches
 	</h2>
-	<ul class="mt-2 space-y-1">
-		{#each profile.matches as m (m.matchId)}
-			<li data-result={m.result}>
-				{m.result} · {m.champion.name} · {m.kills}/{m.deaths}/{m.assists}
-			</li>
+	<ul class="mt-2 space-y-2">
+		{#each profile.matches as match (match.matchId)}
+			<li><MatchRow {match} patch={profile.patch} /></li>
 		{:else}
 			<li class="text-muted">No recent matches.</li>
 		{/each}
