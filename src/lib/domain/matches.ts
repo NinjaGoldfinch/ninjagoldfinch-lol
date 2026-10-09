@@ -82,6 +82,15 @@ export function toMatchRows(
 }
 
 /**
+ * Custom games (queue 0) are never shown: Riot policy keeps custom-queue
+ * history private without the player's opt-in. A game with no queue id is
+ * treated the same, since it cannot be shown not to be custom.
+ */
+export function isCustomGame(summary: MatchSummary): boolean {
+	return summary.queueId == null || summary.queueId === 0;
+}
+
+/**
  * `major.minor` of a game build such as `16.20.824.8524`. riot-proxy's spec
  * calls gameVersion a Data Dragon version, but it is the game build.
  */

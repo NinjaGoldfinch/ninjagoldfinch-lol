@@ -18,7 +18,8 @@ export const load: PageServerLoad = async ({ params, url, setHeaders }) => {
 	const profile = await loadProfile(region, id, undefined, {
 		filter: parseMatchFilter(url.searchParams)
 	});
-	setHeaders(cacheControl('profile'));
+	// A page whose match history failed is not kept at the edge.
+	setHeaders(cacheControl(profile.matches ? 'profile' : 'none'));
 	return profile;
 };
 

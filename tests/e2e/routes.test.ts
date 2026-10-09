@@ -205,3 +205,27 @@ test.describe('match filters and pages', () => {
 		});
 	});
 });
+
+test('when match history fails, the profile still shows, uncached', async ({ page }) => {
+	// Synthetic fixtures: this player's match page answers RATE_LIMITED, retry in 30 s.
+	const response = await page.goto('/summoner/oce/Synthetic-TEST');
+	expect(response?.status()).toBe(200);
+	expect(response?.headers()['cache-control']).toBe('no-store');
+
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Synthetic#TEST');
+	await expect(page.getByRole('region', { name: 'Rank' })).toContainText('Emerald III');
+	await expect(page.getByRole('status')).toContainText('Match history: Too many requests');
+	await expect(page.getByRole('status')).toContainText('Try again in 30 seconds.');
+	await expect(page.getByRole('region', { name: 'Champions' })).toHaveCount(0);
+});
+
+test('error pages are not cached, except briefly for not found', async ({ request }) => {
+	const missing = await request.get('/summoner/oce/NoSuchPlayer000-XXXX');
+	expect(missing.status()).toBe(404);
+	expect(missing.headers()['cache-control']).toBe('public, s-maxage=60');
+
+	// No fixture exists for this player, so the mock answers 500 and the page is unavailable.
+	const broken = await request.get('/summoner/kr/Somebody-KR1');
+	expect(broken.status()).toBe(503);
+	expect(broken.headers()['cache-control']).toBe('no-store');
+});

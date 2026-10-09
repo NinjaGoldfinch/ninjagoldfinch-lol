@@ -1,6 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { handleError } from '../../src/hooks.server';
+import { handle, handleError } from '../../src/hooks.server';
 
 const event = {
 	request: new Request('http://localhost/summoner/oce/x-OCE'),
@@ -30,5 +30,23 @@ describe('handleError', () => {
 			handleError({ kind: 'framework', error: { status: 404, message: 'Not Found' }, event })
 		).toBeUndefined();
 		expect(log).not.toHaveBeenCalled();
+	});
+});
+
+describe('handle', () => {
+	const run = (method: string, status: number) =>
+		handle({
+			event: { ...event, request: new Request('http://localhost/x', { method }) } as RequestEvent,
+			resolve: async () =>
+				new Response('x', { status, headers: { 'cache-control': 'public, s-maxage=60' } })
+		});
+
+	it('replaces the cache policy on errors and form posts', async () => {
+		expect((await run('GET', 503)).headers.get('cache-control')).toBe('no-store');
+		expect((await run('POST', 200)).headers.get('cache-control')).toBe('no-store');
+	});
+
+	it("keeps a successful GET's own policy", async () => {
+		expect((await run('GET', 200)).headers.get('cache-control')).toBe('public, s-maxage=60');
 	});
 });

@@ -5,7 +5,9 @@
 export const CACHE_POLICIES = {
 	/** Profile pages: 60 s at the edge, then stale for up to 5 min while refreshing. */
 	profile: 'public, s-maxage=60, stale-while-revalidate=300',
-	/** Never cached: redirects, health checks, anything per-request. */
+	/** Not-found pages: briefly, so repeated misses do not all reach riot-proxy. */
+	notFound: 'public, s-maxage=60',
+	/** Never cached: redirects, health checks, errors, anything per-request. */
 	none: 'no-store'
 } as const;
 
@@ -13,4 +15,16 @@ export type CachePolicy = keyof typeof CACHE_POLICIES;
 
 export function cacheControl(policy: CachePolicy): { 'cache-control': string } {
 	return { 'cache-control': CACHE_POLICIES[policy] };
+}
+
+/**
+ * The policy a finished response must have regardless of what its load set:
+ * form posts and errors are never cached, except a short-lived not-found.
+ * undefined leaves the response's own header alone.
+ */
+export function responseCachePolicy(method: string, status: number): CachePolicy | undefined {
+	if (method !== 'GET' && method !== 'HEAD') return 'none';
+	if (status === 404) return 'notFound';
+	if (status >= 400) return 'none';
+	return undefined;
 }

@@ -28,7 +28,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] P2-03 `MatchRow`: champion, spells, KDA, CS/min, items, result, duration, queue, time ago — #17; runes and lane badge — #20
 - [~] P2-04 Queue filter and pagination as query parameters — #18. Champion filter open: riot-proxy's match page has no champion parameter (asked owner).
 - [x] P2-05 Champion summary panel from the loaded matches, labelled as such; two-column profile layout — #23
-- [ ] P2-06 Hide custom-queue matches; cache headers; error states
+- [x] P2-06 Hide custom-queue matches; cache rules for errors and posts; profile still renders when match history fails — #24
 
 ## Brought forward
 

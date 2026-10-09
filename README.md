@@ -74,6 +74,8 @@ To record a new fixture from `PROXY_URL` (one live call, so it spends Riot rate 
 just fixture account-hide-on-bush '/v1/riot/accounts/by-riot-id/asia/Hide%20on%20bush/KR1'
 ```
 
+Failure states that can't be recorded on demand use hand-written `tests/fixtures/synthetic-*.json` files, each with a `_note` saying so (ADR-017).
+
 Use the path exactly as the client sends it, URL-encoded. The recorder keeps only the headers the site reads, and replaces every `puuid` with a stable placeholder. For Data Dragon files, add `--keep id,id,…` to keep only the entries the other fixtures use, for example `just fixture static-item '/v1/static/item?version=16.20.1' --keep 1001,1056`.
 
 ## Deploying
