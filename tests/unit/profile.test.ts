@@ -40,6 +40,12 @@ describe('loadProfile', () => {
 		expect(profile.patch).toBe('16.20.1');
 	});
 
+	it('asks riot-proxy to re-read both parts on refresh, and reports the cooldown', async () => {
+		const profile = await loadProfile(oce, me, mock.client, { refresh: true });
+		expect(profile.refreshAvailableIn).toBe(60);
+		expect(profile.matches).toHaveLength(10);
+	});
+
 	it('maps an unknown player to 404', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const missing = { gameName: 'NoSuchPlayer000', tagLine: 'XXXX' };

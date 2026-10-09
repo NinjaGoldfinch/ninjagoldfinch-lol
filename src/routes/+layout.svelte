@@ -1,12 +1,17 @@
 <script lang="ts">
 	import '../app.css';
+	import { page } from '$app/state';
 	import { PUBLIC_SITE_NAME } from '$app/env/public';
 	import favicon from '#lib/assets/favicon.svg';
 	import SearchForm from '#lib/components/SearchForm.svelte';
+	import { findRegion } from '#lib/domain/regions.ts';
 	import { LEGAL_NOTICE } from '#lib/legal.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
+
+	// On a profile, the header search starts at that profile's region.
+	const region = $derived(page.params.region && findRegion(page.params.region)?.slug);
 </script>
 
 <svelte:head>
@@ -19,7 +24,7 @@
 			class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-6"
 		>
 			<a href="/" class="font-semibold text-accent">{PUBLIC_SITE_NAME}</a>
-			<SearchForm />
+			<SearchForm region={region || undefined} />
 		</div>
 	</header>
 

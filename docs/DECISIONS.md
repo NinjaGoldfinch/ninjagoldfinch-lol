@@ -141,3 +141,17 @@ Date: 2026-10-09 · Task: P2-01
 
 - The first `/v1/players/{puuid}/matches` call for a player queues an archive backfill with `limit: 4294967295`, effectively the whole history. It runs in the background on the shared Riot key, and every new player the site shows will queue one.
 - `MatchSummary.gameVersion` is described as "the Data Dragon version to render it", but it holds the game build (`16.20.824.8524`). The site maps it by `major.minor`.
+
+## ADR-012: Refresh is a POST form action that returns the fresh profile
+
+Date: 2026-10-09 · Task: P2-02
+
+**Context.** riot-proxy's `?refresh=true` re-reads from Riot and spends quota, once a minute per player. Profile pages are cached at the edge (`s-maxage=60`).
+
+**Decision.**
+
+- The Refresh button is a `POST` form to the profile page's `refresh` action, not a link. Crawlers don't submit forms, `POST` is never cached, and it works without JavaScript.
+- The action calls `loadProfile` with `refresh: true` (profile and match page) and returns the result. The page renders `form.profile ?? data`, and `use:enhance` skips re-running the load. That way a cached copy of the page, or of its `__data.json`, can't hide what was just fetched.
+- The button is disabled while riot-proxy's `refreshAvailableIn` (the larger of the profile's and the match page's) is above zero. With JavaScript the cooldown counts down; without it, the server-rendered value is shown.
+
+**Consequences.** A refreshed page sits at the action URL. Reloading it asks the browser to resubmit the form, and riot-proxy answers from cache inside the cooldown. The P5 Cloudflare cache rule may cache `__data.json` alongside the HTML; refresh doesn't depend on it either way.
