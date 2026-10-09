@@ -73,7 +73,11 @@
 			<h2 id="matches" class="text-sm font-medium tracking-wide text-muted uppercase">
 				Recent matches
 			</h2>
-			<MatchFilters filter={profile.filter} options={profile.queueOptions} />
+			<MatchFilters
+				filter={profile.filter}
+				queues={profile.queueOptions}
+				champions={profile.championOptions}
+			/>
 		</div>
 		{#if profile.matches === null}
 			<div role="status" class="mt-2 rounded border border-border bg-surface px-4 py-3">
@@ -90,6 +94,11 @@
 					</li>
 				{/each}
 			</ul>
+			{#if profile.archiveComplete === false}
+				<p class="mt-2 text-xs text-muted">
+					Showing archived games only; older games are still loading.
+				</p>
+			{/if}
 			{#if profile.customHidden}
 				<p class="mt-2 text-xs text-muted">Custom games are not shown.</p>
 			{/if}

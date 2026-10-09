@@ -1,5 +1,5 @@
-import { error } from '@sveltejs/kit';
-import { parseMatchFilter } from '#lib/domain/match-filters.ts';
+import { error, redirect } from '@sveltejs/kit';
+import { filterQuery, parseMatchFilter } from '#lib/domain/match-filters.ts';
 import { findRegion } from '#lib/domain/regions.ts';
 import { parseRiotId } from '#lib/domain/riot-id.ts';
 import { cacheControl } from '#lib/server/cache.ts';
@@ -13,11 +13,17 @@ function target(params: { region: string; riotId: string }) {
 	return { region, id };
 }
 
-export const load: PageServerLoad = async ({ params, url, setHeaders }) => {
+export const load: PageServerLoad = async ({ params, url, request, setHeaders }) => {
 	const { region, id } = target(params);
-	const profile = await loadProfile(region, id, undefined, {
-		filter: parseMatchFilter(url.searchParams)
-	});
+	const filter = parseMatchFilter(url.searchParams);
+
+	// The filter form submits every select, so an unused one arrives empty
+	// (`?queue=420&champion=`). Redirect to the clean URL: one URL per view,
+	// for links and the edge cache. Form posts (refresh) are left alone.
+	const query = filterQuery(filter);
+	if (request.method === 'GET' && url.search !== query) redirect(307, url.pathname + query);
+
+	const profile = await loadProfile(region, id, undefined, { filter });
 	// A page whose match history failed is not kept at the edge.
 	setHeaders(cacheControl(profile.matches ? 'profile' : 'none'));
 	return profile;

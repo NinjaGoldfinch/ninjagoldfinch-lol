@@ -1,6 +1,11 @@
 import { toLeagueEntries, toSummoner, type LeagueEntry, type Summoner } from '#lib/api/riot.ts';
 import type { StaticNames } from '#lib/api/ddragon.ts';
-import { FILTER_QUEUES, MATCHES_PER_PAGE, type MatchFilter } from '#lib/domain/match-filters.ts';
+import {
+	FILTER_QUEUES,
+	MATCHES_PER_PAGE,
+	NO_FILTER,
+	type MatchFilter
+} from '#lib/domain/match-filters.ts';
 import { isCustomGame, toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
@@ -35,6 +40,14 @@ export interface ProfileData {
 	filter: MatchFilter;
 	/** The queue filter's choices, named for this patch. */
 	queueOptions: { id: number; name: string }[];
+	/** The champion filter's choices: every champion in this patch, by name. */
+	championOptions: { id: number; name: string }[];
+	/**
+	 * For a champion-filtered page: whether riot-proxy's archive holds the
+	 * player's whole history yet. false means older games are still arriving.
+	 * null when not filtered by champion.
+	 */
+	archiveComplete: boolean | null;
 	/** Data Dragon patch for icons. */
 	patch: string;
 }
@@ -57,10 +70,7 @@ export async function loadProfile(
 	region: Region,
 	id: RiotId,
 	client: ProxyClient = proxy,
-	{
-		refresh = false,
-		filter = { queue: null, page: 1 }
-	}: { refresh?: boolean; filter?: MatchFilter } = {}
+	{ refresh = false, filter = NO_FILTER }: { refresh?: boolean; filter?: MatchFilter } = {}
 ): Promise<ProfileData> {
 	const refreshQuery = refresh ? { refresh: true } : {};
 	const profile = await client.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
@@ -78,6 +88,7 @@ export async function loadProfile(
 					...(filter.page > 1 ? { start: (filter.page - 1) * MATCHES_PER_PAGE } : {}),
 					count: MATCHES_PER_PAGE,
 					...(filter.queue !== null ? { queue: filter.queue } : {}),
+					...(filter.champion !== null ? { champion: filter.champion } : {}),
 					...refreshQuery
 				}
 			}
@@ -123,6 +134,10 @@ export async function loadProfile(
 		hasMore: matches?.hasMore ?? false,
 		filter,
 		queueOptions: FILTER_QUEUES.map((id) => ({ id, name: names.queues[id] ?? `Queue ${id}` })),
+		championOptions: Object.entries(names.champions)
+			.map(([id, c]) => ({ id: Number(id), name: c.name }))
+			.sort((a, b) => a.name.localeCompare(b.name)),
+		archiveComplete: matches?.archive?.complete ?? null,
 		patch
 	};
 }

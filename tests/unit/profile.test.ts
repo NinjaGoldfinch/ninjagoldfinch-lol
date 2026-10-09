@@ -54,13 +54,32 @@ describe('loadProfile', () => {
 	});
 
 	it('loads a later page and a single queue', async () => {
-		const page2 = await loadProfile(oce, me, mock.client, { filter: { queue: null, page: 2 } });
+		const page2 = await loadProfile(oce, me, mock.client, {
+			filter: { queue: null, champion: null, page: 2 }
+		});
 		expect(page2.matches?.[0].matchId).toBe('OC1_712213427');
-		expect(page2.filter).toEqual({ queue: null, page: 2 });
+		expect(page2.filter).toEqual({ queue: null, champion: null, page: 2 });
 
-		const solo = await loadProfile(oce, me, mock.client, { filter: { queue: 420, page: 1 } });
+		const solo = await loadProfile(oce, me, mock.client, {
+			filter: { queue: 420, champion: null, page: 1 }
+		});
 		expect(solo.matches?.every((m) => m.queueId === 420)).toBe(true);
 		expect(solo.queueOptions[0]).toEqual({ id: 420, name: 'Ranked Solo' });
+	});
+
+	it("loads one champion's games from riot-proxy's archive", async () => {
+		const viego = await loadProfile(oce, me, mock.client, {
+			filter: { queue: null, champion: 234, page: 1 }
+		});
+		expect(viego.matches?.every((m) => m.champion.name === 'Viego')).toBe(true);
+		expect(viego.archiveComplete).toBe(true);
+		expect(viego.championOptions.map((c) => c.name)).toEqual(
+			[...viego.championOptions.map((c) => c.name)].sort((a, b) => a.localeCompare(b))
+		);
+		expect(viego.championOptions).toContainEqual({ id: 234, name: 'Viego' });
+
+		const all = await loadProfile(oce, me, mock.client);
+		expect(all.archiveComplete).toBeNull();
 	});
 
 	it('maps an unknown player to 404', async () => {
@@ -139,6 +158,18 @@ describe('loadProfile when parts fail', () => {
 
 		expect(profile.matches).toHaveLength(8);
 		expect(profile.customHidden).toBe(true);
+	});
+
+	it('says when the archive is still filling for a champion filter', async () => {
+		const path = MATCHES_PATH.replace('count=10', 'count=10&champion=234');
+		const body = fixtureBody(path) as object;
+		const filling = client((p) =>
+			p === path ? json(200, { ...body, archive: { complete: false } }) : undefined
+		);
+		const profile = await loadProfile(oce, me, filling, {
+			filter: { queue: null, champion: 234, page: 1 }
+		});
+		expect(profile.archiveComplete).toBe(false);
 	});
 
 	it('falls back to plain names when the Data Dragon lookups fail', async () => {
