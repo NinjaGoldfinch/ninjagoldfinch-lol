@@ -38,7 +38,8 @@ describe('loadProfile', () => {
 		expect(profile.riotId).toEqual(me);
 		expect(profile.summoner).toEqual({ profileIconId: 7173, summonerLevel: 458 });
 		expect(profile.ranks?.[0]).toMatchObject({ tier: 'EMERALD', rank: 'III', leaguePoints: 67 });
-		expect(profile.refreshed).toBe(false);
+		// The oldest of summoner (602 s), league (42 s) and the match ids (42 s).
+		expect(profile.fetchedAgeSeconds).toBe(602);
 		expect(profile.refreshAvailableIn).toBe(0);
 		expect(profile.matches).toHaveLength(10);
 		expect(profile.hasMore).toBe(true);
@@ -48,7 +49,7 @@ describe('loadProfile', () => {
 	it('asks riot-proxy to re-read both parts on refresh, and reports the cooldown', async () => {
 		const profile = await loadProfile(oce, me, mock.client, { refresh: true });
 		expect(profile.refreshAvailableIn).toBe(60);
-		expect(profile.refreshed).toBe(true);
+		expect(profile.fetchedAgeSeconds).toBe(0);
 		expect(profile.matches).toHaveLength(10);
 	});
 

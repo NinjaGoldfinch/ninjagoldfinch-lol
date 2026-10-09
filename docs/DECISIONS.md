@@ -223,3 +223,11 @@ Date: 2026-10-09 · Task: P2 follow-up
 **Decision.** The committed spec is the dev instance's `/openapi.json` of 2026-10-09. `src/lib/api/riot.ts` uses the generated types and only projects the fields the page shows (`toSummoner`, `toLeagueEntries`). The runtime shape checks from ADR-006 are gone: the spec is the contract for riot-proxy's responses, as for its own routes. ADR-006's hand-typing is superseded for these payloads; match and timeline payloads are still untyped in the spec.
 
 **Consequences.** Fixtures were re-recorded so they carry the new fields. The data was unchanged (same patch, same matches), so the test expectations still hold. Images stay on Riot's CDN and CommunityDragon: riot-proxy's new `/ddragon/…` mirror is only reachable inside the VM in the planned architecture (ADR-009), so using it would mean relaying images through the site.
+
+## ADR-019: "Updated N minutes ago" from riot-proxy's fetch ages
+
+Date: 2026-10-09 · Task: P2-02 (follow-up; supersedes ADR-016)
+
+**Decision.** The profile header shows "Updated N minutes ago" from riot-proxy's new `fetchedAgeSeconds`: the oldest of the **summoner** and **league** parts and the match page's `matchIdsFetchedAgeSeconds`, which is what the page shows. The account part is left out, because riot-proxy re-reads Riot IDs rarely (2.3 hours old against minutes for the rest). Mastery is left out because the page doesn't show it. After a refresh all of them reset to 0, so the header reads "Updated just now". The `refreshed`-only workaround from ADR-016 is gone.
+
+**Consequences.** The text is rendered when the page is built, so a page served from the edge cache can be up to its cache age (60 s, plus up to 300 s stale) older than it says.
