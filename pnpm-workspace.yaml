@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+# Keep pnpm's own version out of pnpm-lock.yaml. Otherwise pnpm 12 writes it as
+# a leading YAML document, and GitHub's dependency graph reads only that one,
+# hiding every app dependency from Dependabot. Corepack still enforces the
+# packageManager pin. See ADR-005.
+pmOnFail: ignore
