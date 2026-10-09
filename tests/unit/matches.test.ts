@@ -27,6 +27,7 @@ describe('toMatchRows', () => {
 			playedAgo: '2 hours ago',
 			duration: 1952,
 			patch: '16.20',
+			ddragonVersion: '16.20.1',
 			result: 'win',
 			champion: { id: 103, key: 'Ahri', name: 'Ahri', level: 16 },
 			kills: 8,
@@ -42,6 +43,7 @@ describe('toMatchRows', () => {
 				{ id: 1052, name: names.items[1052] },
 				{ id: 3363, name: names.items[3363] }
 			],
+			roleBoundItem: { id: 1206, name: 'Mid Lane Quest Reward' },
 			spells: [
 				{ id: 'SummonerDot', name: 'Ignite' },
 				{ id: 'SummonerFlash', name: 'Flash' }
@@ -85,6 +87,20 @@ describe('toMatchRows', () => {
 			keystone: null,
 			secondary: null
 		});
+	});
+
+	it('keeps "empty" apart from "not recorded" for the role quest slot', () => {
+		const p = matches[0].player;
+		const empty = { ...matches[0], player: { ...p, roleBoundItem: 0 } };
+		expect(toMatchRows([empty], names, now)[0].roleBoundItem).toBeNull();
+
+		const older = { ...matches[0], player: { ...p, roleBoundItem: undefined } };
+		expect(toMatchRows([older], names, now)[0]).not.toHaveProperty('roleBoundItem');
+	});
+
+	it('leaves ddragonVersion null when riot-proxy has none for the patch', () => {
+		const unknown = { ...matches[0], ddragonVersion: undefined };
+		expect(toMatchRows([unknown], names, now)[0].ddragonVersion).toBeNull();
 	});
 
 	it("drops summaries without the player's line or champion", () => {

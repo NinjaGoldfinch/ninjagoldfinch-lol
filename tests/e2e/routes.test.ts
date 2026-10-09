@@ -50,17 +50,22 @@ test.describe('without JavaScript', () => {
 			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png'
 		);
 		await expect(first.getByRole('img', { name: 'Flash' })).toBeVisible();
-		await expect(first.getByRole('img', { name: 'Mid' })).toHaveAttribute(
+		await expect(first.getByRole('img', { name: 'Mid', exact: true })).toHaveAttribute(
 			'src',
 			/communitydragon\.org\/16\.20\/.*icon-position-middle\.png$/
 		);
 		// Lane icons draw the map in a dim tone behind the lane; fading the whole
 		// badge left Mid, Top and Bot washed out next to Jungle.
-		const lane = first.getByRole('img', { name: 'Mid' });
+		const lane = first.getByRole('img', { name: 'Mid', exact: true });
 		await expect(lane).toHaveCSS('opacity', '1');
 		await expect(lane).toHaveCSS('filter', /brightness\(1\.1\)/);
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
-		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
+		// Seven inventory slots, then the role quest slot.
+		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(8);
+		await expect(first.getByRole('img', { name: 'Mid Lane Quest Reward' })).toHaveAttribute(
+			'title',
+			'Role quest: Mid Lane Quest Reward'
+		);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
 	});
 

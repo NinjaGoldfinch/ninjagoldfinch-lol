@@ -16,6 +16,8 @@ export interface MatchRow {
 	duration: number | null;
 	/** `major.minor` of the game build, e.g. `16.20`. */
 	patch: string | null;
+	/** The Data Dragon version for this game's patch, for its icons; null if riot-proxy lacks it. */
+	ddragonVersion: string | null;
 	result: 'win' | 'loss' | 'remake';
 	/** `key` is the Data Dragon id for the icon; null if the patch does not know it. */
 	champion: { id: number; key: string | null; name: string; level: number | null };
@@ -25,6 +27,12 @@ export interface MatchRow {
 	cs: number;
 	/** Slots item0–item6 (6 is the trinket); null for an empty slot. */
 	items: ({ id: number; name: string } | null)[];
+	/**
+	 * The role quest slot, outside the inventory (a bot laner's boots, or another
+	 * role's quest reward). null for an empty slot; undefined when the game
+	 * predates role quests and Riot did not record one.
+	 */
+	roleBoundItem?: { id: number; name: string } | null;
 	spells: (Named | null)[];
 	/** The keystone and the secondary path. */
 	runes: { keystone: Rune | null; secondary: Rune | null };
@@ -54,6 +62,7 @@ export function toMatchRows(
 				playedAgo: m.gameCreation == null ? null : formatAge((now - m.gameCreation) / 1000),
 				duration: m.gameDuration ?? null,
 				patch: patchOf(m.gameVersion),
+				ddragonVersion: m.ddragonVersion ?? null,
 				result: p.gameEndedInEarlySurrender ? 'remake' : p.win ? 'win' : 'loss',
 				champion: {
 					id: p.championId,
@@ -68,6 +77,16 @@ export function toMatchRows(
 				items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((id) =>
 					id ? { id, name: names.items[id] ?? `Item ${id}` } : null
 				),
+				...(p.roleBoundItem == null
+					? {}
+					: {
+							roleBoundItem: p.roleBoundItem
+								? {
+										id: p.roleBoundItem,
+										name: names.items[p.roleBoundItem] ?? `Item ${p.roleBoundItem}`
+									}
+								: null
+						}),
 				spells: [p.summoner1Id, p.summoner2Id].map((id) =>
 					id ? (names.spells[id] ?? null) : null
 				),
