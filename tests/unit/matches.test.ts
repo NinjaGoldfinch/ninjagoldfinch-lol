@@ -45,6 +45,10 @@ describe('toMatchRows', () => {
 				{ id: 'SummonerDot', name: 'Ignite' },
 				{ id: 'SummonerFlash', name: 'Flash' }
 			],
+			runes: {
+				keystone: names.runes[8992],
+				secondary: { name: 'Precision', icon: 'perk-images/Styles/7201_Precision.png' }
+			},
 			position: 'MIDDLE'
 		});
 	});
@@ -66,6 +70,20 @@ describe('toMatchRows', () => {
 		expect(row.queue).toBe('Queue 9999');
 		expect(row.champion).toMatchObject({ key: null, name: 'Newchamp' });
 		expect(row.items.slice(0, 2)).toEqual([{ id: 999999, name: 'Item 999999' }, null]);
+	});
+
+	it('leaves runes empty when the match or the patch lacks them', () => {
+		const p = matches[0].player;
+		const noPerks = { ...matches[0], player: { ...p, perks: null } };
+		expect(toMatchRows([noPerks], names, now)[0].runes).toEqual({
+			keystone: null,
+			secondary: null
+		});
+		const unknown = { ...matches[0], player: { ...p, perks: { keystone: 1, subStyle: 2 } } };
+		expect(toMatchRows([unknown], names, now)[0].runes).toEqual({
+			keystone: null,
+			secondary: null
+		});
 	});
 
 	it("drops summaries without the player's line or champion", () => {

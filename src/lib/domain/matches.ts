@@ -1,4 +1,4 @@
-import type { Named, StaticNames } from '#lib/api/ddragon.ts';
+import type { Named, Rune, StaticNames } from '#lib/api/ddragon.ts';
 import type { components } from '#lib/api/schema.d.ts';
 import { formatAge } from './age.ts';
 
@@ -26,6 +26,9 @@ export interface MatchRow {
 	/** Slots item0–item6 (6 is the trinket); null for an empty slot. */
 	items: ({ id: number; name: string } | null)[];
 	spells: (Named | null)[];
+	/** The keystone and the secondary path. */
+	runes: { keystone: Rune | null; secondary: Rune | null };
+	/** Riot's teamPosition: TOP, JUNGLE, MIDDLE, BOTTOM or UTILITY; null when there is none. */
 	position: string | null;
 }
 
@@ -68,6 +71,10 @@ export function toMatchRows(
 				spells: [p.summoner1Id, p.summoner2Id].map((id) =>
 					id ? (names.spells[id] ?? null) : null
 				),
+				runes: {
+					keystone: (p.perks?.keystone && names.runes[p.perks.keystone]) || null,
+					secondary: (p.perks?.subStyle && names.runes[p.perks.subStyle]) || null
+				},
 				position: p.teamPosition || null
 			}
 		];

@@ -49,6 +49,11 @@ test.describe('without JavaScript', () => {
 			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png'
 		);
 		await expect(first.getByRole('img', { name: 'Flash' })).toBeVisible();
+		await expect(first.getByRole('img', { name: 'Mid' })).toHaveAttribute(
+			'src',
+			/communitydragon\.org\/16\.20\/.*icon-position-middle\.png$/
+		);
+		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
 		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
 	});
