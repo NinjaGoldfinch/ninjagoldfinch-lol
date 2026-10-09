@@ -3,9 +3,11 @@
 	import { SKILL_KEYS, maxOrder, type Build } from '#lib/domain/builds.ts';
 	import type { ScoreboardLine } from '#lib/domain/match-detail.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
-	import Loadout from './Loadout.svelte';
 
-	/** One player's build: item order, skill order and rune page. */
+	/**
+	 * One player's build: item order, skill order and rune page. Summoner spells
+	 * and the keystone are on the scoreboard line, so the header leaves them out.
+	 */
 	let { build, line, version }: { build: Build; line: ScoreboardLine; version: string } = $props();
 
 	const who = $derived(
@@ -30,9 +32,6 @@
 		<h2 id="build-heading" class="font-semibold">
 			Build <span class="text-muted">· {line.champion.name} · {who}</span>
 		</h2>
-		<div class="flex gap-0.5">
-			<Loadout spells={line.spells} runes={line.runes} {version} size={20} />
-		</div>
 	</div>
 
 	<div class="grid gap-6 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
@@ -51,16 +50,25 @@
 								<div>
 									<ul class="flex gap-0.5">
 										{#each step.items as item, j (j)}
-											<li>
+											{@const label = `${item.sold ? 'Sold ' : ''}${item.count > 1 ? `${item.count} × ` : ''}${item.name}`}
+											<!-- Repeat buys in one minute stack, with the count on the icon's corner. -->
+											<li class="relative">
 												<img
 													src={itemIconUrl(version, item.id)}
-													alt={item.sold ? `Sold ${item.name}` : item.name}
-													title={item.sold ? `Sold ${item.name}` : item.name}
+													alt={label}
+													title={label}
 													width="28"
 													height="28"
 													loading="lazy"
 													class="rounded-sm {item.sold ? 'opacity-40 grayscale' : ''}"
 												/>
+												{#if item.count > 1}
+													<span
+														aria-hidden="true"
+														class="absolute -right-1 -bottom-1 min-w-4 rounded-full border border-border bg-bg px-0.5 text-center text-[10px] leading-[14px] font-semibold"
+														>{item.count}</span
+													>
+												{/if}
 											</li>
 										{/each}
 									</ul>

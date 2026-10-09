@@ -317,3 +317,14 @@ Date: 2026-10-10 · Task: P3-02
 - The fixture recorder takes a full URL for CommunityDragon, keyed by the URL's path, and `--keep` trims a list by `id`.
 
 **Consequences.** The server now makes one outbound request that doesn't go to riot-proxy: CommunityDragon's `perks.json`, about 100 kB, once per patch. This is data riot-proxy doesn't mirror. The stat shard names are the current patch's, like every other name on the page.
+
+## ADR-027: Build panel: repeat buys stacked; no spells or keystone in its header
+
+Date: 2026-10-10 · Task: P3-02 (follow-up, owner request)
+
+**Decision.**
+
+- The same item bought more than once in one minute, such as two Health Potions at the start, is drawn once, where it first appears, with the count on the icon's corner. Its name reads `2 × Health Potion`. Sales stack the same way, separately from purchases.
+- The panel's header shows only the champion and the player. Their summoner spells and keystone are already on the scoreboard line, and the whole rune page is in the panel's rune list.
+
+**Consequences.** The trimmed `static-item` fixture was re-recorded to cover every item bought in the recorded timeline, so the item order shows names rather than `Item N`.

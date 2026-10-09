@@ -84,10 +84,21 @@ test.describe('builds', () => {
 			'Build · Ahri · NinjaGoldfinch#OCENZ'
 		);
 
+		// The header repeats neither the summoner spells nor the keystone: the
+		// scoreboard line has them, and the rune list has the keystone.
+		await expect(build.getByRole('img', { name: 'Flash' })).toHaveCount(0);
+		await expect(build.getByRole('img', { name: 'Deathfire Touch' })).toHaveCount(0);
+		await expect(build.getByRole('list', { name: 'Primary runes' })).toContainText(
+			'Deathfire Touch'
+		);
+
 		const steps = build.getByRole('list', { name: 'Item order' }).locator(':scope > li');
 		await expect(steps).toHaveCount(16);
 		await expect(steps.first()).toContainText('0 min');
 		await expect(steps.first().getByRole('img', { name: "Doran's Ring" })).toBeVisible();
+		// Two Health Potions at 0 min stack as one icon with a count.
+		await expect(steps.first().getByRole('img')).toHaveCount(3);
+		await expect(steps.first().getByRole('img', { name: '2 × Health Potion' })).toBeVisible();
 		await expect(build.getByRole('img', { name: /^Sold / })).toHaveCount(1);
 
 		await expect(build).toContainText('Skill order · Q > W > E');
