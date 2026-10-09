@@ -109,16 +109,24 @@ export interface ItemSlot {
 }
 
 /**
- * The row's items packed to the left: inventory, trinket, then the role quest
- * item, with the empty slots at the end. Riot reports items by inventory slot,
- * so a sold item leaves a gap mid-build that would otherwise show as a hole.
- * The slot count is unchanged: seven, plus one when the role quest slot exists.
+ * The row's item slots: the six inventory items packed to the left, their
+ * empty slots after them, then the trinket, then the role quest slot when the
+ * game has one. So the trinket is always last, or second last for a bot laner.
+ * Riot reports items by inventory slot, so a sold item leaves a gap mid-build
+ * that would otherwise show as a hole.
  */
 export function itemSlots(row: Pick<MatchRow, 'items' | 'roleBoundItem'>): (ItemSlot | null)[] {
-	const held = row.items.flatMap((item) => (item ? [{ ...item, roleQuest: false }] : []));
-	if (row.roleBoundItem) held.push({ ...row.roleBoundItem, roleQuest: true });
-	const slots = row.items.length + (row.roleBoundItem === undefined ? 0 : 1);
-	return [...held, ...Array<null>(slots - held.length).fill(null)];
+	const inventory = row.items.slice(0, 6);
+	const held = inventory.flatMap((item) => (item ? [{ ...item, roleQuest: false }] : []));
+	const trinket = row.items[6] ?? null;
+	return [
+		...held,
+		...Array<null>(inventory.length - held.length).fill(null),
+		trinket && { ...trinket, roleQuest: false },
+		...(row.roleBoundItem === undefined
+			? []
+			: [row.roleBoundItem && { ...row.roleBoundItem, roleQuest: true }])
+	];
 }
 
 /**
