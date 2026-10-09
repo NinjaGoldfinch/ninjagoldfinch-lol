@@ -9,7 +9,8 @@
 	/**
 	 * `region` is the URL slug; `maxDamage` is the match's highest, for the bars;
 	 * `highlight` is whose line to mark, if anyone's. Each champion links to
-	 * `buildHref` for that player's build; `selected` is whose build is shown.
+	 * `buildHref` for that player's build, and `onbuild` may open it in place
+	 * instead; `selected` is whose build is open.
 	 */
 	let {
 		team,
@@ -18,7 +19,8 @@
 		maxDamage,
 		highlight = null,
 		selected = null,
-		buildHref
+		buildHref,
+		onbuild
 	}: {
 		team: TeamScoreboard;
 		version: string;
@@ -27,6 +29,7 @@
 		highlight?: RiotId | null;
 		selected?: number | null;
 		buildHref: (participantId: number) => string;
+		onbuild?: (participantId: number, event: MouseEvent) => void;
 	} = $props();
 
 	const RESULT = {
@@ -101,11 +104,11 @@
 					>
 						<td class="px-4 py-2">
 							<div class="flex items-center gap-2">
-								<!-- Replaces the history entry, so the back link still leads to the profile. -->
 								<a
 									href={buildHref(player.participantId)}
+									onclick={(event) => onbuild?.(player.participantId, event)}
 									aria-label="Show {player.champion.name}'s build"
-									data-sveltekit-replacestate
+									title="Show build"
 									class="relative block shrink-0 rounded {player.participantId === selected
 										? 'ring-2 ring-accent'
 										: 'hover:ring-2 hover:ring-border'}"

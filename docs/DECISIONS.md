@@ -328,3 +328,17 @@ Date: 2026-10-10 · Task: P3-02 (follow-up, owner request)
 - The panel's header shows only the champion and the player. Their summoner spells and keystone are already on the scoreboard line, and the whole rune page is in the panel's rune list.
 
 **Consequences.** The trimmed `static-item` fixture was re-recorded to cover every item bought in the recorded timeline, so the item order shows names rather than `Item N`.
+
+## ADR-028: The build opens in a popup; other layouts kept as notes
+
+Date: 2026-10-10 · Task: P3-02 (follow-up, owner request; supersedes where ADR-026 puts the build)
+
+**Context.** The match page didn't fit on one screen: two team tables and a build panel came to about 1,230 px. Three layouts were mocked up (`docs/notes/match-layouts.md`). The owner chose to keep the stacked team tables and move the build into a popup. Side-by-side teams, with or without the build underneath, are kept as notes, perhaps to offer as a choice later.
+
+**Decision.**
+
+- No build is on the page until one is asked for with `?build=<participant id>`. The champion icons link there, and so does a header link ("Your build" for the highlighted player, otherwise "Builds" for the first player, Blue's top laner). `selectBuild`'s rules from ADR-026 now pick the header link's player.
+- **With JavaScript**, those links open the build in a modal `<dialog>` without a reload. SvelteKit's shallow routing (`goto(url, { state, shallow: true })`) updates the URL and records the open build in `page.state.build`. So a copied link reopens it, and Back closes it. Escape, the × button and a click on the backdrop close it too. A popup opened by a click closes by stepping back over its history entry. One opened by loading a `?build=` URL closes by replacing the entry with the page without it. Either way the back link (ADR-025) still leads to the profile. The page behind can't scroll while the popup is open.
+- **Without JavaScript**, the server renders the build as an open, non-modal dialog styled into the page below the scoreboards, as before. The × is a link to the page without the build. In the browser the same element is reopened with `showModal()`, and its `:modal` styles make it a popup.
+
+**Consequences.** On a 900 px window the page now ends just below Red's fourth player (1,068 px) instead of 1,230 px. A link to a match no longer shows a build by default.

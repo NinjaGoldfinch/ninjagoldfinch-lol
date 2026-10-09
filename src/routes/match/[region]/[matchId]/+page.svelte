@@ -1,11 +1,16 @@
 <script lang="ts">
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import BuildPanel from '#lib/components/BuildPanel.svelte';
 	import Scoreboard from '#lib/components/Scoreboard.svelte';
-	import { formatMatchDate, matchPath, selectBuild } from '#lib/domain/match-detail.ts';
+	import {
+		formatMatchDate,
+		matchPath,
+		openBuildId,
+		selectBuild
+	} from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
-	import { parseRiotId, profilePath } from '#lib/domain/riot-id.ts';
+	import { parseRiotId, profilePath, sameRiotId } from '#lib/domain/riot-id.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -40,14 +45,64 @@
 		history.back();
 	}
 
-	// `?build=<participant id>`: whose build to show; by default the highlighted
-	// player, else the first player (normally Blue's top laner).
-	const build = $derived(selectBuild(data, page.url.searchParams.get('build'), highlight));
-	const buildLine = $derived(
-		data.teams.flatMap((t) => t.players).find((l) => l.participantId === build?.participantId)
-	);
+	// A build opens in a popup over the scoreboard (ADR-028). `?build=<id>` in
+	// the URL asks for one. Without JavaScript the page renders it below the
+	// scoreboard, and the champion links load that URL. With it, they open the
+	// popup in place through shallow routing: the URL changes, and Back closes it.
+	const lines = $derived(data.teams.flatMap((t) => t.players));
+	const openId = $derived(openBuildId(page.state.build, page.url.searchParams.get('build')));
+	const build = $derived(openId === null ? undefined : selectBuild(data, openId, highlight));
+	const buildLine = $derived(lines.find((l) => l.participantId === build?.participantId));
 	const buildHref = (participantId: number) =>
 		`${matchPath(data.region.slug, data.matchId, { player: highlight, build: participantId })}#build`;
+	const closeHref = $derived(matchPath(data.region.slug, data.matchId, { player: highlight }));
+
+	// The header's build link: the highlighted player's, else the first player's.
+	const firstBuild = $derived(selectBuild(data, null, highlight));
+	const own = $derived(
+		lines.some(
+			(l) =>
+				l.participantId === firstBuild?.participantId &&
+				!!l.riotId &&
+				!!highlight &&
+				sameRiotId(l.riotId, highlight)
+		)
+	);
+
+	function openBuild(participantId: number, event: MouseEvent) {
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+		event.preventDefault();
+		goto(buildHref(participantId), { state: { build: participantId }, shallow: true });
+	}
+
+	function closeBuild() {
+		// Opened by a click here: step back over the entry it added. Opened by
+		// loading a `?build=` URL: replace it with the page without the build.
+		if (page.state.build != null) history.back();
+		else goto(closeHref, { state: { build: null }, shallow: true, replace: true });
+	}
+
+	// The server renders the build as an open, non-modal dialog, which shows in
+	// the page without JavaScript. In the browser it becomes a modal popup.
+	let dialog = $state<HTMLDialogElement>();
+	let upgrading = false;
+	$effect(() => {
+		if (!dialog || dialog.matches(':modal')) return;
+		upgrading = true;
+		dialog.close();
+		dialog.showModal();
+	});
+	function onDialogClose() {
+		// The close() above, while upgrading, is not the visitor closing it.
+		if (upgrading) {
+			upgrading = false;
+			return;
+		}
+		if (openId !== null) closeBuild();
+	}
+	function closeFromBackdrop(event: MouseEvent) {
+		if (event.target === dialog) dialog?.close();
+	}
 
 	const maxDamage = $derived(
 		Math.max(0, ...data.teams.flatMap((t) => t.players.map((p) => p.damage)))
@@ -69,7 +124,16 @@
 		>
 	{/if}
 	<h1 class="text-2xl font-semibold">{data.queue}</h1>
-	<p class="mt-1 text-sm text-muted">{facts.join(' · ')}</p>
+	<div class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+		<p class="text-sm text-muted">{facts.join(' · ')}</p>
+		{#if firstBuild}
+			<a
+				href={buildHref(firstBuild.participantId)}
+				onclick={(event) => openBuild(firstBuild.participantId, event)}
+				class="text-sm text-accent hover:underline">{own ? 'Your build' : 'Builds'}</a
+			>
+		{/if}
+	</div>
 </header>
 
 <div class="mt-6 flex flex-col gap-6">
@@ -82,9 +146,30 @@
 			{highlight}
 			selected={build?.participantId ?? null}
 			{buildHref}
+			onbuild={openBuild}
 		/>
 	{/each}
 	{#if build && buildLine}
-		<BuildPanel {build} line={buildLine} version={data.ddragonVersion} />
+		<!-- In the page without JavaScript (`static`); a popup once modal. -->
+		<dialog
+			bind:this={dialog}
+			open
+			id="build"
+			aria-labelledby="build-heading"
+			onclose={onDialogClose}
+			onclick={closeFromBackdrop}
+			class="static m-0 w-full max-w-none scroll-mt-4 border-0 bg-transparent p-0 text-text backdrop:bg-bg/75 [&:modal]:fixed [&:modal]:inset-0 [&:modal]:m-auto [&:modal]:h-fit [&:modal]:max-h-[calc(100dvh-2rem)] [&:modal]:w-[min(60rem,calc(100vw-2rem))] [&:modal]:overflow-y-auto [&:modal]:rounded [&:modal]:shadow-2xl"
+		>
+			<BuildPanel
+				{build}
+				line={buildLine}
+				version={data.ddragonVersion}
+				{closeHref}
+				onclose={(event) => {
+					event.preventDefault();
+					dialog?.close();
+				}}
+			/>
+		</dialog>
 	{/if}
 </div>

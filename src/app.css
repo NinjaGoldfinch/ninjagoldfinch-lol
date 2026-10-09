@@ -21,4 +21,9 @@
 	body {
 		@apply bg-bg text-text;
 	}
+
+	/* The page behind an open popup (the match page's build) stays put. */
+	html:has(dialog:modal) {
+		overflow: hidden;
+	}
 }
