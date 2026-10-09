@@ -17,7 +17,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - [x] P1-03 Mock proxy server, fixture recorder (`just fixture`) and first redacted fixtures — #8
 - [x] P1-04 Root layout: header, search form, footer with Riot boilerplate, `+error.svelte`, design tokens; region table moved here from P1-05 — #9
 - [x] P1-05 `/`, `/about`, `/healthz`; `parseRiotId` with unit tests; `/search` redirect and minimal profile page for the exit check — #10
-- [ ] P1-06 `src/lib/assets.ts` and a `ChampionIcon` component
+- [x] P1-06 `src/lib/assets.ts`, `ChampionIcon`, and `currentPatch` from the proxy'''s versions route — #11
 
 ## Open decisions resolved
 
@@ -25,7 +25,7 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - riot-proxy OpenAPI JSON is served at `/openapi.json`. Recorded in the README.
 - GitHub does not offer branch protection for this private repo on the current plan. ADR-003.
 - Environment handling follows SvelteKit 3 (`src/env.ts`, `$app/env/private`). ADR-004.
-- riot-proxy mirrors Data Dragon JSON only, no images; icons load from Riot's Data Dragon CDN, with the patch number taken from the proxy.
+- riot-proxy mirrors Data Dragon JSON only, no images; icons load from Riot's Data Dragon CDN, with the patch number taken from the proxy. ADR-009.
 - Region picker offers every public LoL platform.
 
 ### P0 exit check — passed 2026-10-09
