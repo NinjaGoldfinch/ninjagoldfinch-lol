@@ -27,7 +27,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] P2-02 `RankBadge` and profile header with data age and refresh cooldown; header search follows the profile's region — #16. Data age fixed in #21: shown only after a refresh until riot-proxy reports fetch time (ADR-016).
 - [x] P2-03 `MatchRow`: champion, spells, KDA, CS/min, items, result, duration, queue, time ago — #17; runes and lane badge — #20
 - [~] P2-04 Queue filter and pagination as query parameters — #18. Champion filter open: riot-proxy's match page has no champion parameter (asked owner).
-- [ ] P2-05 Champion summary panel from the loaded matches
+- [x] P2-05 Champion summary panel from the loaded matches, labelled as such; two-column profile layout — #23
 - [ ] P2-06 Hide custom-queue matches; cache headers; error states
 
 ## Brought forward
