@@ -17,3 +17,43 @@ export function parseAccount(value: unknown): Account | undefined {
 	if (tagLine !== undefined && typeof tagLine !== 'string') return undefined;
 	return { puuid, gameName, tagLine };
 }
+
+/** summoner-v4 SummonerDto: the fields the site uses. */
+export interface Summoner {
+	profileIconId: number;
+	summonerLevel: number;
+}
+
+export function parseSummoner(value: unknown): Summoner | undefined {
+	if (typeof value !== 'object' || value === null) return undefined;
+	const { profileIconId, summonerLevel } = value as Record<string, unknown>;
+	if (typeof profileIconId !== 'number' || typeof summonerLevel !== 'number') return undefined;
+	return { profileIconId, summonerLevel };
+}
+
+/** league-v4 LeagueEntryDto: the fields the site uses. */
+export interface LeagueEntry {
+	queueType: string;
+	tier: string;
+	rank: string;
+	leaguePoints: number;
+	wins: number;
+	losses: number;
+}
+
+/** Riot's league entries for a player; entries of the wrong shape are dropped. */
+export function parseLeagueEntries(value: unknown): LeagueEntry[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	return value.flatMap((entry): LeagueEntry[] => {
+		if (typeof entry !== 'object' || entry === null) return [];
+		const { queueType, tier, rank, leaguePoints, wins, losses } = entry as Record<string, unknown>;
+		return typeof queueType === 'string' &&
+			typeof tier === 'string' &&
+			typeof rank === 'string' &&
+			typeof leaguePoints === 'number' &&
+			typeof wins === 'number' &&
+			typeof losses === 'number'
+			? [{ queueType, tier, rank, leaguePoints, wins, losses }]
+			: [];
+	});
+}

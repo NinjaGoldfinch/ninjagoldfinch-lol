@@ -124,3 +124,20 @@ Date: 2026-10-09 · Task: P5-01 (part, brought forward)
 - `.dockerignore` ignores `.env` at any depth, so `deploy/.env` never enters the build context.
 
 **Consequences.** riot-proxy stays on its own VM for now, and `PROXY_URL` points across the LAN. The scripts are covered by `deploy/proxmox/test.sh` in `just check`, but nothing here can exercise Proxmox or Docker. The first real run of the script is on the owner's node.
+
+## ADR-011: Profile data, page size and the P2 exit check
+
+Date: 2026-10-09 · Task: P2-01
+
+**Decision.**
+
+- The profile loads with riot-proxy's composite `/v1/players/by-riot-id/{gameName}/{tagLine}/profile?platform=…`, which returns account, summoner, league and mastery plus `ageSeconds` and `refreshAvailableIn`, in one call. Then `/v1/players/{puuid}/matches` and `/v1/static/versions` run in parallel. That's two round trips per uncached profile.
+- **10 matches per page** (riot-proxy's default), not the 20 in the plan's exit check. Each match riot-proxy has not archived yet is its own Riot call, so a cold 20-match profile could cost 21 calls on the shared key.
+- A part riot-proxy could not fetch (`warnings`) degrades that section, for example "Rank is unavailable", instead of failing the page. A failed profile or match call fails the page through `toHttpError`.
+- **The P2 exit check changes:** "a profile with a page of matches renders in one server response, works without JavaScript, and sends the profile `Cache-Control`". Confirming that Cloudflare actually serves the second request moves to P5-02, where Cloudflare is set up.
+- Test data is the owner's account, NinjaGoldfinch#OCENZ on Oceania.
+
+**Noted for riot-proxy (not changed here).**
+
+- The first `/v1/players/{puuid}/matches` call for a player queues an archive backfill with `limit: 4294967295`, effectively the whole history. It runs in the background on the shared Riot key, and every new player the site shows will queue one.
+- `MatchSummary.gameVersion` is described as "the Data Dragon version to render it", but it holds the game build (`16.20.824.8524`). The site maps it by `major.minor`.

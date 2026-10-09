@@ -1,0 +1,20 @@
+{
+	"request": {
+		"method": "GET",
+		"path": "/v1/players/by-riot-id/NoSuchPlayer000/XXXX/profile?platform=oc1"
+	},
+	"response": {
+		"status": 404,
+		"headers": {
+			"content-type": "application/json",
+			"x-request-id": "01M4FME71YXFKXKMQPCEHEPW9W"
+		},
+		"body": {
+			"error": {
+				"code": "NOT_FOUND",
+				"message": "Resource not found upstream",
+				"requestId": "01M4FME71YXFKXKMQPCEHEPW9W"
+			}
+		}
+	}
+}

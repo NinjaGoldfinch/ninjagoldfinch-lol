@@ -19,6 +19,17 @@ Task ticks with the PR that delivered them. Task definitions are in [IMPLEMENTAT
 - [x] P1-05 `/`, `/about`, `/healthz`; `parseRiotId` with unit tests; `/search` redirect and minimal profile page for the exit check — #10
 - [x] P1-06 `src/lib/assets.ts`, `ChampionIcon`, and `currentPatch` from the proxy's versions route — #11
 
+## P2 — Player profile
+
+Exit check (amended in ADR-011): a profile with a page of matches (10) renders in one server response, works without JavaScript, and sends the profile `Cache-Control`. That Cloudflare serves the second request is checked in P5-02.
+
+- [x] P2-01 Profile load: composite profile (account, summoner, rank), first page of 10 matches, current patch; test data from NinjaGoldfinch#OCENZ — #15
+- [ ] P2-02 `RankBadge` and profile header with data age and refresh cooldown
+- [ ] P2-03 `MatchRow`: champion, KDA, items, result, duration, queue
+- [ ] P2-04 Queue and champion filters as query parameters; pagination
+- [ ] P2-05 Champion summary panel from the loaded matches
+- [ ] P2-06 Hide custom-queue matches; cache headers; error states
+
 ## Brought forward
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Remaining for P5-01: `cloudflared`, no published port, and the 200 MB image check.
