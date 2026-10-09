@@ -705,7 +705,7 @@ export interface paths {
         };
         /**
          * Champion pick and win rates by tier
-         * @description Aggregated from the match archive, with each participant placed at the tier the latest ladder crawl found them at. Recomputed per (platform, queue) when a crawl completes. Sends an `ETag`; a matching `If-None-Match` gets 304. Games Riot flagged as remakes are left out unless `remakes=include`.
+         * @description Aggregated from every archived match on the platform. Each participant is placed at the tier the ladder crawl or the latest league lookup of that player found them at, whichever is newer, and under `UNKNOWN` when neither has. Recomputed per (platform, queue) when a crawl completes. Sends an `ETag`; a matching `If-None-Match` gets 304. Games Riot flagged as remakes are left out unless `remakes=include`.
          */
         get: operations["champions"];
         put?: never;
@@ -745,7 +745,7 @@ export interface paths {
         };
         /**
          * A champion's lane matchups
-         * @description Sends an `ETag`; a matching `If-None-Match` gets 304. Every lane matchup this champion has archived data for. No tier dimension: sample sizes die fast enough per (champion, opponent, role) alone, and the two laners can sit in different tiers anyway. Mirror lanes are excluded — their win rate is 50% by construction. A matchup is recorded from the tracked ladder player's side, so the opposite champion's view of the same lane only exists when that player is tracked too, and the two directions can disagree.
+         * @description Sends an `ETag`; a matching `If-None-Match` gets 304. Every lane matchup this champion has archived data for. No tier dimension: sample sizes die fast enough per (champion, opponent, role) alone, and the two laners can sit in different tiers anyway. Mirror lanes are excluded — their win rate is 50% by construction. Every archived lane is recorded from both sides, so the opposite champion's view of the same lane mirrors this one.
          */
         get: operations["champion_matchups"];
         put?: never;
@@ -765,7 +765,7 @@ export interface paths {
         };
         /**
          * Patches with analytics
-         * @description The patches the analytics tables hold for a ladder, newest first, with each one's games: what a client offers as `patch` choices on the other analytics routes (`all` sums them). Sends an `ETag`; a matching `If-None-Match` gets 304.
+         * @description The patches the analytics tables hold for a ladder, newest first, with each one's games: what a client offers as `patch` choices on the other analytics routes (`all` sums them). With `championId`, only the patches that champion was played on, each with its games. Sends an `ETag`; a matching `If-None-Match` gets 304.
          */
         get: operations["patches"];
         put?: never;
@@ -1046,6 +1046,8 @@ export interface paths {
         /**
          * A page of match history, summarised
          * @description The id page, then every match on it, fanned out concurrently. Archived matches come from one archive read at no quota cost. Each entry is the player's own line in the game; the full match stays one call away at `/v1/lol/matches/{region}/{matchId}`. A match that cannot be fetched is left out and named in `warnings`; a failed id lookup fails the page.
+         *
+         *     **`champion`** filters by champion. Riot's id list cannot, so the page comes from this deployment's archive: Riot's newest 20 ids are read and archived first, then the archive is paged for that champion's games, newest first. Older games appear as the player's backfill archives them; `archive.complete` says whether it has reached the start of their history. `type` cannot be combined with `champion`.
          */
         get: operations["match_page"];
         put?: never;
@@ -1252,6 +1254,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description account-v1 `AccountDto`. */
+        AccountDto: {
+            /** @description Encrypted PUUID. Exact length of 78 characters. */
+            puuid: string;
+            /** @description This field may be excluded from the response if the account doesn't have a gameName. */
+            gameName?: string;
+            /** @description This field may be excluded from the response if the account doesn't have a tagLine. */
+            tagLine?: string;
+        };
         /** @description Archive and tracking counts (v1's three fields, plus archive size). */
         AdminStats: {
             keyScope: string;
@@ -1289,7 +1300,8 @@ export interface components {
             patch: string;
             /**
              * Format: int64
-             * @description Participant games, as `totalGames` counts them on the champions route.
+             * @description Participant games, as `totalGames` counts them on the champions route;
+             *     with `championId`, that champion's games.
              */
             games: number;
             computedAt: string | null;
@@ -1299,6 +1311,11 @@ export interface components {
             /** @description `null` when the request named no platform: every platform summed. */
             platform: string | null;
             queue: string;
+            /**
+             * Format: int64
+             * @description The champion asked for, whose games each entry then counts; `null` for every champion.
+             */
+            championId: number | null;
             /** @description Newest first. */
             patches: components["schemas"]["AnalyticsPatchEntry"][];
         };
@@ -1306,6 +1323,15 @@ export interface components {
             lastRuns: components["schemas"]["RunSummary"][];
             /** @description The newest run's ladder, its latest patch, top five by games. */
             topChampions: components["schemas"]["TopChampion"][];
+        };
+        /** @description How much of a player's history a champion-filtered page draws on (SITE-02). */
+        ArchiveCoverage: {
+            /**
+             * @description A backfill has walked the player's whole history (it stamped `doneAt`).
+             *     Until then the page holds only the games archived so far: their newest
+             *     games, and whatever earlier pages, tracking or a walk in progress stored.
+             */
+            complete: boolean;
         };
         /** @description What the archive holds for one player: exact counts from `match_facts`. */
         ArchiveTotals: {
@@ -1376,7 +1402,9 @@ export interface components {
             status: string;
             /**
              * Format: int32
-             * @description How far back the walk will go, in matches.
+             * @description How far back the walk will go, in matches. `4294967295` (the default,
+             *     `LOOKUP_BACKFILL_LIMIT`) means the whole history: the walk stops where
+             *     Riot's id list ends (ADR-081).
              */
             limit: number;
         };
@@ -1430,6 +1458,58 @@ export interface components {
             wins: number;
             /** Format: double */
             winRate: number;
+        };
+        /** @description champion-mastery-v4 `ChampionMasteryDto`: one champion's mastery. */
+        ChampionMasteryDto: {
+            /** @description Player Universal Unique Identifier. Exact length of 78 characters. (Encrypted) */
+            puuid: string;
+            /**
+             * Format: int64
+             * @description Number of points needed to achieve next level. Zero if player reached
+             *     maximum champion level for this champion.
+             */
+            championPointsUntilNextLevel: number;
+            /**
+             * @description Is chest granted for this champion or not in current season. Not in
+             *     every recorded body.
+             */
+            chestGranted?: boolean;
+            /**
+             * Format: int64
+             * @description Champion ID for this entry.
+             */
+            championId: number;
+            /**
+             * Format: int64
+             * @description Last time this champion was played by this player - in Unix milliseconds time format.
+             */
+            lastPlayTime: number;
+            /**
+             * Format: int32
+             * @description Champion level for specified player and champion combination.
+             */
+            championLevel: number;
+            /**
+             * Format: int32
+             * @description Total number of champion points for this player and champion combination.
+             */
+            championPoints: number;
+            /**
+             * Format: int64
+             * @description Number of points earned since current level has been achieved.
+             */
+            championPointsSinceLastLevel: number;
+            /** Format: int32 */
+            markRequiredForNextLevel: number;
+            /** Format: int32 */
+            championSeasonMilestone: number;
+            nextSeasonMilestone: components["schemas"]["NextSeasonMilestonesDto"];
+            /**
+             * Format: int32
+             * @description The token earned for this champion at the current championLevel.
+             */
+            tokensEarned: number;
+            milestoneGrades?: string[];
         };
         /** @description v1 `ChampionMatchupEntry`. */
         ChampionMatchupEntry: {
@@ -1860,6 +1940,12 @@ export interface components {
              *     then match-id batches, then the archive hand-off. 0 for a finished run.
              */
             pendingLegs: number;
+            /**
+             * @description Apex tiers whose league Riot returned at its cap of 10,000 entries, e.g. `["MASTER"]`:
+             *     Riot lists only the top of those tiers, so the crawl is missing their lowest players.
+             *     `[]` when none.
+             */
+            apexCapped: string[];
         };
         LadderSection: {
             running: components["schemas"]["LadderCrawlSummary"][];
@@ -1869,6 +1955,36 @@ export interface components {
              * @description Ladder entries this key scope holds.
              */
             entries: number;
+        };
+        /** @description league-v4 `LeagueEntryDTO`: one ranked queue's standing. */
+        LeagueEntryDTO: {
+            /** @description Not in every recorded body. */
+            leagueId?: string;
+            /** @description Player's encrypted puuid. */
+            puuid: string;
+            /** @description e.g. `RANKED_SOLO_5x5`. */
+            queueType: string;
+            tier: string;
+            /** @description The player's division within a tier. */
+            rank: string;
+            /** Format: int32 */
+            leaguePoints: number;
+            /**
+             * Format: int32
+             * @description Winning team on Summoners Rift.
+             */
+            wins: number;
+            /**
+             * Format: int32
+             * @description Losing team on Summoners Rift.
+             */
+            losses: number;
+            hotStreak: boolean;
+            veteran: boolean;
+            freshBlood: boolean;
+            inactive: boolean;
+            /** @description Not in every recorded body. */
+            miniSeries?: components["schemas"]["MiniSeriesDTO"];
         };
         /** @description One rate-limit scope's usage (v1's `limiter[]`). */
         LimiterScope: {
@@ -1901,17 +2017,35 @@ export interface components {
             start: number;
             /** Format: int64 */
             count: number;
-            /** @description The id page as Riot returned it, including ids no summary could be built for. */
+            /**
+             * @description The id page as Riot returned it, including ids no summary could be built
+             *     for. With `champion`, the archive's ids for that champion instead.
+             */
             matchIds: string[];
             /** @description One summary per id that resolved: the requesting player's line in each game. */
             matches: components["schemas"]["MatchSummary"][];
-            /** @description A full page came back, so there is probably another behind it. */
+            /**
+             * @description A full page came back, so there is probably another behind it. With
+             *     `champion` it is exact: the archive holds another game behind this page.
+             */
             hasMore: boolean;
             /**
              * Format: int64
-             * @description How long the id list has been unchanged.
+             * @description Echoes the `champion` filter; absent without one.
+             */
+            champion?: number | null;
+            archive?: components["schemas"]["ArchiveCoverage"] | null;
+            /**
+             * Format: int64
+             * @description How long the id list has been unchanged: a refetch that returns the
+             *     same ids does not reset it.
              */
             matchIdsAgeSeconds: number;
+            /**
+             * Format: int64
+             * @description How long ago the id list was last read from Riot, whether or not it changed.
+             */
+            matchIdsFetchedAgeSeconds: number;
             backfill: components["schemas"]["BackfillNotice"] | null;
             refreshed: boolean;
             /** Format: int64 */
@@ -1923,8 +2057,17 @@ export interface components {
             /** Format: double */
             queueId?: number | null;
             gameMode?: string | null;
-            /** @description Which patch this was played on: the Data Dragon version to render it. */
+            /**
+             * @description The game build the match was played on, as Riot reports it
+             *     (`16.20.824.8524`). Not a Data Dragon version: see `ddragonVersion`.
+             */
             gameVersion?: string | null;
+            /**
+             * @description The Data Dragon version for that build's patch (`16.20.1`): the newest
+             *     in Riot's version list with the same `major.minor`. Absent when the
+             *     mirror has no version list yet or the list lacks the patch.
+             */
+            ddragonVersion?: string | null;
             /** Format: double */
             gameCreation?: number | null;
             /** Format: double */
@@ -1950,6 +2093,31 @@ export interface components {
             /** @description Oldest first. */
             points: components["schemas"]["HistoryPoint"][];
         };
+        /** @description league-v4 `MiniSeriesDTO`. */
+        MiniSeriesDTO: {
+            /** Format: int32 */
+            losses: number;
+            progress: string;
+            /** Format: int32 */
+            target: number;
+            /** Format: int32 */
+            wins: number;
+        };
+        /** @description champion-mastery-v4 `NextSeasonMilestonesDto`. */
+        NextSeasonMilestonesDto: {
+            requireGradeCounts: {
+                [key: string]: number;
+            };
+            /**
+             * Format: int32
+             * @description Reward marks.
+             */
+            rewardMarks: number;
+            /** @description Bonus. */
+            bonus: boolean;
+            /** @description Reward configuration. Not in every recorded body. */
+            rewardConfig?: components["schemas"]["RewardConfigDto"];
+        };
         /** @description A walk in flight: a (tier, division) leg and the page it is on. */
         OpenWalk: {
             /** @description `ladder:walk:GOLD:II`, `ladder:apex:MASTER`, `ladder:collect:50`, `ladder:archive`. */
@@ -1960,7 +2128,7 @@ export interface components {
              */
             page: number | null;
         };
-        /** @description Per part, how long its content has been unchanged; `null` for a failed part. */
+        /** @description Per part, in seconds; `null` for a failed part. */
         PartAges: {
             /** Format: int64 */
             account: number | null;
@@ -2104,6 +2272,15 @@ export interface components {
             item5?: number | null;
             /** Format: double */
             item6?: number | null;
+            /**
+             * Format: double
+             * @description Item in the role quest slot, outside the inventory: a bot laner's boots,
+             *     or another role's quest reward. `0` when the slot is empty, as Riot's
+             *     item fields. Absent when Riot didn't send it (games from before role
+             *     quests). Summaries are built from the archived raw match on every read,
+             *     so games archived before this field was added carry it too.
+             */
+            roleBoundItem?: number | null;
             /** Format: double */
             summoner1Id?: number | null;
             /** Format: double */
@@ -2138,16 +2315,22 @@ export interface components {
             puuid: string;
             platform: string;
             region: string;
+            account: components["schemas"]["AccountDto"] | null;
+            summoner: components["schemas"]["SummonerDTO"] | null;
             /** @description Riot's payload, verbatim, or `null` if that part failed; see `warnings`. */
-            account: unknown;
+            league: components["schemas"]["LeagueEntryDTO"][] | null;
             /** @description Riot's payload, verbatim, or `null` if that part failed; see `warnings`. */
-            summoner: unknown;
-            /** @description Riot's payload, verbatim, or `null` if that part failed; see `warnings`. */
-            league: unknown;
-            /** @description Riot's payload, verbatim, or `null` if that part failed; see `warnings`. */
-            mastery: unknown;
-            /** @description `X-Cache-Age` is the stalest of these. */
+            mastery: components["schemas"]["ChampionMasteryDto"][] | null;
+            /**
+             * @description How long each part's content has been unchanged: a refetch that returns
+             *     the same bytes does not reset it. `X-Cache-Age` is the stalest of these.
+             */
             ageSeconds: components["schemas"]["PartAges"];
+            /**
+             * @description How long ago each part was last read from Riot, whether or not it
+             *     changed. `X-Cache-Fetched-Age` is the stalest of these.
+             */
+            fetchedAgeSeconds: components["schemas"]["PartAges"];
             /** @description Whether this request won the refresh window and went upstream. */
             refreshed: boolean;
             /**
@@ -2249,6 +2432,18 @@ export interface components {
             /** @description The key's SHA-256, 64 hex characters. */
             keyHash: string;
         };
+        /** @description champion-mastery-v4 `RewardConfigDto`. */
+        RewardConfigDto: {
+            /** @description Reward value */
+            rewardValue: string;
+            /** @description Reward type */
+            rewardType: string;
+            /**
+             * Format: int32
+             * @description Maximum reward
+             */
+            maximumReward: number;
+        };
         /** @description One ladder's last analytics recompute (v1 `AnalyticsRunSummary`). */
         RunSummary: {
             platform: string;
@@ -2325,6 +2520,26 @@ export interface components {
             done: number;
             /** Format: int64 */
             failed: number;
+        };
+        /** @description summoner-v4 `SummonerDTO`: represents a summoner. */
+        SummonerDTO: {
+            /**
+             * Format: int32
+             * @description ID of the summoner icon associated with the summoner.
+             */
+            profileIconId: number;
+            /**
+             * Format: int64
+             * @description Date summoner was last modified specified as epoch milliseconds.
+             */
+            revisionDate: number;
+            /** @description Encrypted PUUID. Exact length of 78 characters. */
+            puuid: string;
+            /**
+             * Format: int64
+             * @description Summoner level associated with the summoner.
+             */
+            summonerLevel: number;
         };
         TopChampion: {
             /** Format: int64 */
@@ -2443,7 +2658,24 @@ export interface components {
     responses: never;
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Seconds to wait before trying again. */
+        "Retry-After": number;
+        /** @description Where the body came from: `HIT`, `MISS`, `STALE`, `HIT-NEG` (a cached 404), `ARCHIVE` (the match archive) or `BYPASS` (`?refresh=true`). */
+        "X-Cache": string;
+        /** @description Seconds the content has been unchanged, not since the last fetch. */
+        "X-Cache-Age": number;
+        /** @description Seconds since the proxy last read it from Riot, changed or not. Not sent for `ARCHIVE`. */
+        "X-Cache-Fetched-Age": number;
+        /** @description Your consumer quota per minute. */
+        "X-RateLimit-Limit": number;
+        /** @description Requests left in the current minute. */
+        "X-RateLimit-Remaining": number;
+        /** @description Seconds until a request slot frees up. */
+        "X-RateLimit-Reset": number;
+        /** @description This request's id; quote it when reporting a problem. */
+        "X-Request-Id": string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -2460,6 +2692,7 @@ export interface operations {
             /** @description Up */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2480,6 +2713,7 @@ export interface operations {
             /** @description Prometheus text exposition format */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2500,6 +2734,7 @@ export interface operations {
             /** @description Ready */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2509,6 +2744,8 @@ export interface operations {
             /** @description Not ready */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2533,6 +2770,10 @@ export interface operations {
             /** @description `{ok, platform, queue}` */
             202: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2542,6 +2783,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2551,6 +2796,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2560,6 +2806,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2569,6 +2816,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2578,6 +2829,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2598,6 +2854,10 @@ export interface operations {
             /** @description `{ok, stale}` */
             202: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2607,6 +2867,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2616,6 +2880,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2625,6 +2890,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2634,6 +2900,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2643,6 +2913,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2667,6 +2942,10 @@ export interface operations {
             /** @description `{ok, jobId, status}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2676,6 +2955,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2685,6 +2968,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2694,6 +2978,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2703,6 +2988,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2712,6 +3001,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2736,6 +3030,10 @@ export interface operations {
             /** @description `{ok, pattern, deleted}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2745,6 +3043,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2754,6 +3056,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2763,6 +3066,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2772,6 +3076,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2781,6 +3089,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2801,6 +3114,10 @@ export interface operations {
             /** @description The consumers */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2810,6 +3127,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2819,6 +3140,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2828,6 +3150,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2837,6 +3160,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2846,6 +3173,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2870,6 +3202,10 @@ export interface operations {
             /** @description The consumer and its key */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2879,6 +3215,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2888,6 +3228,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2897,6 +3238,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2906,6 +3248,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2915,6 +3261,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2938,6 +3289,10 @@ export interface operations {
             /** @description `{ok, id}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2947,6 +3302,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2956,6 +3315,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2965,6 +3325,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2974,6 +3335,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2983,6 +3348,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3010,6 +3380,10 @@ export interface operations {
             /** @description `{ok, id, stillActive}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3019,6 +3393,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3028,6 +3406,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3037,6 +3416,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3046,6 +3426,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3055,6 +3439,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3079,6 +3468,10 @@ export interface operations {
             /** @description `{ok, jobId}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3088,6 +3481,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3097,6 +3494,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3106,6 +3504,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3115,6 +3514,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3124,6 +3527,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3151,6 +3559,10 @@ export interface operations {
             /** @description The entry */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3160,6 +3572,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3169,6 +3585,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3178,6 +3595,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3187,6 +3605,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3196,6 +3618,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3225,6 +3652,10 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3234,6 +3665,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3243,6 +3678,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3252,6 +3688,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3261,6 +3698,10 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3270,6 +3711,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3279,6 +3725,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3288,6 +3738,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3315,6 +3770,10 @@ export interface operations {
             /** @description The jobs */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3324,6 +3783,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3333,6 +3796,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3342,6 +3806,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3351,6 +3816,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3360,6 +3829,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3383,6 +3857,10 @@ export interface operations {
             /** @description The workers */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3392,6 +3870,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3401,6 +3883,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3410,6 +3893,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3419,6 +3903,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3428,6 +3916,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3451,6 +3944,10 @@ export interface operations {
             /** @description The queue */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3460,6 +3957,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3469,6 +3970,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3478,6 +3980,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3487,6 +3990,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3496,6 +4003,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3516,6 +4028,10 @@ export interface operations {
             /** @description The counts */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3525,6 +4041,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3534,6 +4054,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3543,6 +4064,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3552,6 +4074,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3561,6 +4087,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3584,6 +4115,10 @@ export interface operations {
             /** @description The job */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3593,6 +4128,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3602,6 +4141,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3611,6 +4151,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3620,6 +4161,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3629,6 +4174,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3655,6 +4205,10 @@ export interface operations {
             /** @description The job */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3664,6 +4218,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3673,6 +4231,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3682,6 +4241,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3691,6 +4251,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3700,6 +4264,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3723,6 +4292,10 @@ export interface operations {
             /** @description The job */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3732,6 +4305,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3741,6 +4318,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3750,6 +4328,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3759,6 +4338,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3768,6 +4351,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3792,6 +4380,10 @@ export interface operations {
             /** @description `{crawlId, status: started|already-running, platform, queue, legs}` */
             202: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3801,6 +4393,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3810,6 +4406,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3819,6 +4416,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3828,6 +4426,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3837,6 +4439,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3864,6 +4471,10 @@ export interface operations {
             /** @description `{crawls}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3873,6 +4484,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3882,6 +4497,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3891,6 +4507,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3900,6 +4517,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3909,6 +4530,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3932,6 +4558,10 @@ export interface operations {
             /** @description The crawl's activity */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3941,6 +4571,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3950,6 +4584,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3959,6 +4594,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3968,6 +4604,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3977,6 +4617,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4000,6 +4645,10 @@ export interface operations {
             /** @description `{ok, crawlId, status, droppedJobs}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4009,6 +4658,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4018,6 +4671,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4027,6 +4681,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4036,6 +4691,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4045,6 +4704,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4065,6 +4729,10 @@ export interface operations {
             /** @description `{platforms, queues, tiers, defaults}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4074,6 +4742,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4083,6 +4755,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4092,6 +4765,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4101,6 +4775,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4110,6 +4788,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4134,6 +4817,10 @@ export interface operations {
             /** @description `{platform, queue, tookMs, cap, churnTolerance, summary, checks, lists, exp, pagedMaster}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4143,6 +4830,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4152,6 +4843,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4161,6 +4853,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4170,6 +4863,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4179,6 +4876,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4202,6 +4904,10 @@ export interface operations {
             /** @description The bucket */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4211,6 +4917,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4220,6 +4930,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4229,6 +4940,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4238,6 +4950,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4247,6 +4963,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4267,6 +4988,10 @@ export interface operations {
             /** @description The snapshot */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4276,6 +5001,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4285,6 +5014,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4294,6 +5024,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4303,6 +5034,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4312,6 +5047,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4332,6 +5072,10 @@ export interface operations {
             /** @description `{intervalS, maxPoints, points}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4341,6 +5085,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4350,6 +5098,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4359,6 +5108,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4368,6 +5118,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4377,6 +5131,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4397,6 +5156,10 @@ export interface operations {
             /** @description `{ok, unnamed}`: players without a name before the pass runs */
             202: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4406,6 +5169,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4415,6 +5182,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4424,6 +5192,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4433,6 +5202,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4442,6 +5215,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4465,6 +5243,10 @@ export interface operations {
             /** @description The player's archive */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4474,6 +5256,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4483,6 +5269,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4492,6 +5279,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4501,6 +5289,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4510,6 +5302,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4540,6 +5337,10 @@ export interface operations {
             /** @description The page */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4549,6 +5350,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4558,6 +5363,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4567,6 +5373,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4576,6 +5383,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4585,6 +5396,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4605,6 +5421,10 @@ export interface operations {
             /** @description The counts */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4614,6 +5434,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4623,6 +5447,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4632,6 +5457,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4641,6 +5467,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4650,6 +5480,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4670,6 +5505,10 @@ export interface operations {
             /** @description The players */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4679,6 +5518,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4688,6 +5531,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4697,6 +5541,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4706,6 +5551,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4715,6 +5564,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4739,6 +5593,10 @@ export interface operations {
             /** @description The stored player */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4748,6 +5606,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4757,6 +5619,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4766,6 +5629,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4775,6 +5639,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4784,6 +5652,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4793,6 +5666,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4802,6 +5679,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4825,6 +5707,10 @@ export interface operations {
             /** @description `{ok, puuid, tracked: false}` */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4834,6 +5720,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4843,6 +5733,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4852,6 +5743,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4861,6 +5753,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4870,6 +5766,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4885,7 +5786,7 @@ export interface operations {
                 platform?: string;
                 /** @description RANKED_SOLO_5x5 or RANKED_FLEX_SR; default the first of `LADDER_QUEUES` */
                 queue?: string;
-                /** @description IRON … CHALLENGER; default every tier */
+                /** @description IRON … CHALLENGER, or UNKNOWN; default every tier */
                 tier?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
@@ -4907,6 +5808,10 @@ export interface operations {
             /** @description The champions, most played first */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4916,6 +5821,10 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -4923,6 +5832,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4932,6 +5845,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4941,6 +5855,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4950,6 +5865,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4959,6 +5878,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4974,7 +5898,7 @@ export interface operations {
                 platform?: string;
                 /** @description RANKED_SOLO_5x5 or RANKED_FLEX_SR */
                 queue?: string;
-                /** @description IRON … CHALLENGER; applies to `stats` */
+                /** @description IRON … CHALLENGER, or UNKNOWN; applies to `stats` */
                 tier?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
@@ -4999,6 +5923,10 @@ export interface operations {
             /** @description The champion's page */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5008,6 +5936,10 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5015,6 +5947,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5024,6 +5960,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5033,6 +5970,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5042,6 +5980,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5051,6 +5993,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5089,6 +6036,10 @@ export interface operations {
             /** @description The matchups, most played first */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5098,6 +6049,10 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5105,6 +6060,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5114,6 +6073,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5123,6 +6083,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5132,6 +6093,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5141,6 +6106,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5156,6 +6126,8 @@ export interface operations {
                 platform?: string;
                 /** @description RANKED_SOLO_5x5 or RANKED_FLEX_SR; default the first of `LADDER_QUEUES` */
                 queue?: string;
+                /** @description ≥ 1: count only this champion's games */
+                championId?: number;
                 /** @description `exclude` (default) or `include` */
                 remakes?: string;
             };
@@ -5168,6 +6140,10 @@ export interface operations {
             /** @description The patches, newest first */
             200: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5177,6 +6153,10 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -5184,6 +6164,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5193,6 +6177,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5202,6 +6187,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5211,6 +6197,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5220,6 +6210,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5247,6 +6242,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5256,6 +6258,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5265,6 +6271,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5274,6 +6281,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5283,6 +6291,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5292,6 +6305,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5301,6 +6319,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5310,6 +6332,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5335,15 +6362,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LeagueEntryDTO"][];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5353,6 +6391,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5362,6 +6401,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5371,6 +6411,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5380,6 +6425,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5389,6 +6439,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5398,6 +6452,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5430,15 +6489,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LeagueEntryDTO"][];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5448,6 +6518,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5457,6 +6528,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5466,6 +6538,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5475,6 +6552,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5484,6 +6566,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5493,6 +6579,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5521,15 +6612,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ChampionMasteryDto"][];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5539,6 +6641,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5548,6 +6651,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5557,6 +6661,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5566,6 +6675,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5575,6 +6689,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5584,6 +6702,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5622,6 +6745,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5631,6 +6761,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5640,6 +6774,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5649,6 +6784,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5658,6 +6794,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5667,6 +6808,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5676,6 +6822,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5685,6 +6835,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5710,6 +6865,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5719,6 +6881,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5728,6 +6894,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5737,6 +6904,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5746,6 +6914,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5755,6 +6928,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5764,6 +6942,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5773,6 +6955,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5798,6 +6985,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5807,6 +7001,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5816,6 +7014,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5825,6 +7024,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5834,6 +7034,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5843,6 +7048,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5852,6 +7062,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5861,6 +7075,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5884,6 +7103,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5893,6 +7119,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5902,6 +7132,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5911,6 +7142,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5920,6 +7152,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5929,6 +7166,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5938,6 +7180,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5947,6 +7193,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5972,6 +7223,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5981,6 +7239,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5990,6 +7252,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5999,6 +7262,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6008,6 +7272,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6017,6 +7286,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6026,6 +7300,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6035,6 +7313,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6058,6 +7341,13 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6067,6 +7357,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6076,6 +7370,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6085,6 +7380,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6094,6 +7390,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6103,6 +7404,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6112,6 +7418,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6121,6 +7431,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6146,15 +7461,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SummonerDTO"];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6164,6 +7490,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6173,6 +7500,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6182,6 +7510,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6191,6 +7524,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6200,6 +7538,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6209,6 +7551,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6241,6 +7588,13 @@ export interface operations {
             /** @description The profile */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6250,6 +7604,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6259,6 +7617,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6268,6 +7627,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6277,6 +7637,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6286,6 +7650,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6295,6 +7664,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6304,6 +7677,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6338,6 +7716,12 @@ export interface operations {
             /** @description The pool */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6347,6 +7731,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6356,6 +7744,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6365,6 +7754,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6374,6 +7764,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6383,6 +7777,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6402,8 +7801,10 @@ export interface operations {
                 count?: number;
                 /** @description Queue id, 0–5000 */
                 queue?: number;
-                /** @description ranked, normal, tourney or tutorial */
+                /** @description ranked, normal, tourney or tutorial; not with `champion` */
                 type?: string;
+                /** @description Champion id, 1–10000: only that champion's archived games */
+                champion?: number;
                 /** @description Re-read the id list; once a minute per player */
                 refresh?: boolean;
             };
@@ -6419,6 +7820,13 @@ export interface operations {
             /** @description The page */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6428,6 +7836,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6437,6 +7849,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6446,6 +7859,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6455,6 +7869,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6464,6 +7882,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6473,6 +7896,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6482,6 +7909,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6512,6 +7944,13 @@ export interface operations {
             /** @description The profile */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6521,6 +7960,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6530,6 +7973,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6539,6 +7983,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6548,6 +7993,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6557,6 +8006,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6566,6 +8020,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6575,6 +8033,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6598,15 +8061,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AccountDto"];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6616,6 +8090,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6625,6 +8100,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6634,6 +8110,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6643,6 +8124,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6652,6 +8138,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6661,6 +8151,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6686,15 +8181,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AccountDto"];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6704,6 +8210,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6713,6 +8220,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6722,6 +8230,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6731,6 +8244,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6740,6 +8258,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6749,6 +8271,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6774,15 +8301,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AccountDto"];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6792,6 +8330,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6801,6 +8340,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6810,6 +8350,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6819,6 +8364,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6828,6 +8378,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6837,6 +8391,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6864,15 +8423,26 @@ export interface operations {
             /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AccountDto"];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6882,6 +8452,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6891,6 +8462,7 @@ export interface operations {
             /** @description The key lacks a scope. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6900,6 +8472,11 @@ export interface operations {
             /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
             404: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6909,6 +8486,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6918,6 +8500,10 @@ export interface operations {
             /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
             502: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6927,6 +8513,11 @@ export interface operations {
             /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
             503: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6947,6 +8538,12 @@ export interface operations {
             /** @description Riot's `queues.json` */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6956,6 +8553,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6965,6 +8566,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6974,6 +8576,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6983,6 +8586,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6992,6 +8599,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7012,6 +8624,12 @@ export interface operations {
             /** @description `{current, versions}` */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7021,6 +8639,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7030,6 +8652,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7039,6 +8662,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7048,6 +8672,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7057,6 +8685,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7086,6 +8719,12 @@ export interface operations {
             /** @description Data Dragon's JSON, untouched */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7095,6 +8734,10 @@ export interface operations {
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
             400: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7104,6 +8747,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7113,6 +8757,7 @@ export interface operations {
             /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7122,6 +8767,10 @@ export interface operations {
             /** @description Not found. */
             404: {
                 headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7131,6 +8780,11 @@ export interface operations {
             /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7154,6 +8808,7 @@ export interface operations {
             /** @description Switching protocols */
             101: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -7161,6 +8816,8 @@ export interface operations {
             /** @description Your consumer quota is spent */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {

@@ -9,7 +9,7 @@
 			"content-type": "application/json; charset=utf-8",
 			"x-cache": "HIT",
 			"x-cache-age": "0",
-			"x-request-id": "01M4FN88PP2FJAXN4MJCQMJPX2"
+			"x-request-id": "01M4FWBG46PSS9P5MP26CQ5956"
 		},
 		"body": {
 			"type": "item",
@@ -659,6 +659,68 @@
 						"FlatMagicDamageMod": 15
 					}
 				},
+				"1206": {
+					"name": "Mid Lane Quest Reward",
+					"description": "<mainText><stats></stats><br><br><font color = '#00FF00'>Rewards</font><br>• Upgrade boots to tier 3<br>• +8% bonus Attack Damage and Ability Power</mainText>",
+					"colloq": "",
+					"plaintext": "",
+					"inStore": false,
+					"image": {
+						"full": "1206.png",
+						"sprite": "item0.png",
+						"group": "item",
+						"x": 432,
+						"y": 192,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 0,
+						"purchasable": false,
+						"total": 0,
+						"sell": 0
+					},
+					"tags": ["Lane"],
+					"maps": {
+						"11": false,
+						"12": false,
+						"22": false,
+						"30": false,
+						"453": false
+					},
+					"stats": {}
+				},
+				"1209": {
+					"name": "Jungle Quest Reward",
+					"description": "<mainText><stats></stats><br><br><font color = '#00FF00'>Rewards</font><br>• Upgraded Smite and evolve jungle pet to <font color = '#0B6623'>Mosstomper</font><br>• Increased gold and XP from large monsters<br>• Bonus movement speed in the jungle</mainText>",
+					"colloq": "",
+					"plaintext": "",
+					"inStore": false,
+					"image": {
+						"full": "1209.png",
+						"sprite": "item0.png",
+						"group": "item",
+						"x": 96,
+						"y": 240,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 0,
+						"purchasable": false,
+						"total": 0,
+						"sell": 0
+					},
+					"tags": ["Lane"],
+					"maps": {
+						"11": false,
+						"12": false,
+						"22": false,
+						"30": false,
+						"453": false
+					},
+					"stats": {}
+				},
 				"2019": {
 					"name": "Steel Sigil",
 					"description": "<mainText><stats><attention>15</attention> Attack Damage<br><attention>30</attention> Armor</stats><br><br></mainText>",
@@ -694,6 +756,43 @@
 						"FlatPhysicalDamageMod": 15
 					},
 					"depth": 2
+				},
+				"2055": {
+					"name": "Control Ward",
+					"description": "<mainText><stats></stats><br><br><active>Consume</active><br>Places a Control Ward that grants vision and reveals enemy Stealth Wards, traps and <keywordStealth>Camouflaged</keywordStealth> enemies.</mainText>",
+					"colloq": "orange;",
+					"plaintext": "Used to disable wards and invisible traps in an area.",
+					"stacks": 2,
+					"consumed": true,
+					"consumeOnFull": true,
+					"image": {
+						"full": "2055.png",
+						"sprite": "item1.png",
+						"group": "item",
+						"x": 48,
+						"y": 0,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 75,
+						"purchasable": true,
+						"total": 75,
+						"sell": 30
+					},
+					"tags": ["Consumable", "Lane", "Stealth", "Vision"],
+					"maps": {
+						"11": true,
+						"12": false,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {},
+					"effect": {
+						"Effect1Amount": "1",
+						"Effect2Amount": "2"
+					}
 				},
 				"2503": {
 					"name": "Blackfire Torch",

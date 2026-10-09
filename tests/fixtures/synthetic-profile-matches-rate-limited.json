@@ -144,10 +144,16 @@
 				}
 			],
 			"ageSeconds": {
-				"account": 213,
-				"summoner": 0,
-				"league": 0,
-				"mastery": 0
+				"account": 8494,
+				"summoner": 8281,
+				"league": 42,
+				"mastery": 8281
+			},
+			"fetchedAgeSeconds": {
+				"account": 8494,
+				"summoner": 602,
+				"league": 42,
+				"mastery": 602
 			},
 			"refreshed": false,
 			"refreshAvailableIn": 0,
