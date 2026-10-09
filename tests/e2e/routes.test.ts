@@ -100,6 +100,19 @@ test('an unknown region shows not found', async ({ page }) => {
 	expect(response?.status()).toBe(404);
 });
 
+test('the champion panel summarises the matches shown', async ({ page }) => {
+	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+
+	const panel = page.getByRole('region', { name: 'Champions' });
+	await expect(panel).toContainText('From the 10 matches shown');
+	const rows = panel.getByRole('listitem');
+	await expect(rows).toHaveCount(4);
+	await expect(rows.first()).toHaveAccessibleName('Viego');
+	await expect(rows.first()).toContainText('67%');
+	await expect(rows.first()).toContainText('3.54 KDA · 7.1 CS/min');
+	await expect(rows.first()).toContainText('4W 2L');
+});
+
 test('opened profiles appear under recent searches', async ({ page }) => {
 	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');

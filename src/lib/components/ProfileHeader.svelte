@@ -51,14 +51,16 @@
 		/>
 	{/if}
 	<div class="min-w-0 flex-1">
-		<h1 class="text-2xl font-semibold">
+		<h1 class="text-2xl font-semibold [overflow-wrap:anywhere]">
 			{riotId.gameName}<span class="text-muted">#{riotId.tagLine}</span>
 		</h1>
 		<p class="mt-1 text-sm text-muted">
 			{[regionLabel, summoner && `Level ${summoner.summonerLevel}`].filter(Boolean).join(' · ')}
 		</p>
 	</div>
-	<div class="flex flex-col items-end gap-1 text-sm">
+	<div
+		class="flex w-full flex-row-reverse items-center justify-between gap-2 text-sm sm:w-auto sm:flex-col sm:items-end sm:gap-1"
+	>
 		<!-- POST, so crawlers never spend Riot quota; works without JavaScript. -->
 		<form
 			method="POST"
