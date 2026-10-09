@@ -8,7 +8,13 @@ declare global {
 		}
 		// interface Locals {}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			/**
+			 * The match page's open build popup, by participant id; null once closed.
+			 * Absent until the visitor opens or closes one (ADR-028).
+			 */
+			build?: number | null;
+		}
 		// interface Platform {}
 	}
 }

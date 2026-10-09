@@ -8,7 +8,20 @@
 	 * One player's build: item order, skill order and rune page. Summoner spells
 	 * and the keystone are on the scoreboard line, so the header leaves them out.
 	 */
-	let { build, line, version }: { build: Build; line: ScoreboardLine; version: string } = $props();
+	let {
+		build,
+		line,
+		version,
+		closeHref,
+		onclose
+	}: {
+		build: Build;
+		line: ScoreboardLine;
+		version: string;
+		/** The page without this build; `onclose` may close it in place instead. */
+		closeHref: string;
+		onclose?: (event: MouseEvent) => void;
+	} = $props();
 
 	const who = $derived(
 		line.riotId ? `${line.riotId.gameName}#${line.riotId.tagLine}` : line.champion.name
@@ -20,11 +33,7 @@
 	]);
 </script>
 
-<section
-	id="build"
-	aria-labelledby="build-heading"
-	class="scroll-mt-4 rounded border border-border bg-surface"
->
+<section aria-labelledby="build-heading" class="rounded border border-border bg-surface">
 	<div class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
 		{#if line.champion.key}
 			<ChampionIcon patch={version} id={line.champion.key} name={line.champion.name} size={40} />
@@ -32,6 +41,12 @@
 		<h2 id="build-heading" class="font-semibold">
 			Build <span class="text-muted">· {line.champion.name} · {who}</span>
 		</h2>
+		<a
+			href={closeHref}
+			onclick={onclose}
+			aria-label="Close build"
+			class="ml-auto rounded px-2 text-2xl leading-none text-muted hover:bg-bg hover:text-text">×</a
+		>
 	</div>
 
 	<div class="grid gap-6 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_16rem]">

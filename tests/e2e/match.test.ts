@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 const MATCH = '/match/oce/OC1_712351051';
@@ -67,18 +67,33 @@ test.describe('without JavaScript', () => {
 	});
 });
 
-test.describe('builds', () => {
+test.describe('builds without JavaScript', () => {
 	test.use({ javaScriptEnabled: false });
 
-	test("a bare match URL shows the first player's build: Blue's top laner", async ({ page }) => {
+	test('a match page shows no build until one is asked for', async ({ page }) => {
 		await page.goto(MATCH);
+		await expect(page.getByRole('heading', { name: /^Build/ })).toHaveCount(0);
+
+		// With no player to highlight, the header link opens Blue's top laner's build.
+		await page.getByRole('link', { name: 'Builds', exact: true }).click();
+		await expect(page).toHaveURL(`${MATCH}?build=1#build`);
 		await expect(page.getByRole('heading', { name: /^Build/ })).toHaveText(
 			'Build · Mordekaiser · TheYoungBull#1494'
 		);
 	});
 
-	test("a match opened from a profile shows that player's build", async ({ page }) => {
+	test("opened from a profile, the header link is that player's build", async ({ page }) => {
 		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		await expect(page.getByRole('link', { name: 'Your build' })).toHaveAttribute(
+			'href',
+			`${MATCH}?player=NinjaGoldfinch-OCENZ&build=8#build`
+		);
+	});
+
+	test('a build URL shows that build in the page: item order, skills and runes', async ({
+		page
+	}) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ&build=8`);
 		const build = page.getByRole('region', { name: /^Build/ });
 		await expect(build.getByRole('heading', { level: 2 })).toHaveText(
 			'Build · Ahri · NinjaGoldfinch#OCENZ'
@@ -128,20 +143,87 @@ test.describe('builds', () => {
 			"Build · Kai'Sa · Demacia123#6666"
 		);
 		await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
-		await expect(page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' })).toBeVisible();
+
+		// Closing loads the page without the build.
+		await page.getByRole('link', { name: 'Close build' }).click();
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		await expect(page.getByRole('heading', { name: /^Build/ })).toHaveCount(0);
 	});
 });
 
-test('with JavaScript, switching builds keeps back leading to the profile', async ({ page }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
-	await page.getByRole('link', { name: 'Details of this match' }).first().click();
-	await page.getByRole('link', { name: "Show Kai'Sa's build" }).click();
-	await expect(page.getByRole('heading', { name: /^Build/ })).toHaveText(
-		"Build · Kai'Sa · Demacia123#6666"
-	);
+test.describe('build popup', () => {
+	const popup = (page: Page) => page.getByRole('dialog', { name: /^Build/ });
+	const isModal = (page: Page) => popup(page).evaluate((d) => d.matches(':modal'));
 
-	await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
-	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	test('a champion opens its build in a popup, and Back closes it', async ({ page }) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		await page.getByRole('link', { name: "Show Kai'Sa's build" }).click();
+
+		await expect(popup(page)).toBeVisible();
+		expect(await isModal(page)).toBe(true);
+		await expect(popup(page).getByRole('heading', { level: 2 })).toHaveText(
+			"Build · Kai'Sa · Demacia123#6666"
+		);
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ&build=9#build`);
+		await expect(page.getByRole('link', { name: "Show Kai'Sa's build" })).toHaveClass(
+			/ring-accent/
+		);
+
+		await page.goBack();
+		await expect(popup(page)).toHaveCount(0);
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+	});
+
+	test('Escape, the close button and the backdrop each close it', async ({ page }) => {
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		const open = async () => {
+			await page.getByRole('link', { name: 'Your build' }).click();
+			await expect(popup(page)).toBeVisible();
+		};
+		const closed = async () => {
+			await expect(popup(page)).toHaveCount(0);
+			await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		};
+
+		await open();
+		await expect(popup(page)).toContainText('Build · Ahri · NinjaGoldfinch#OCENZ');
+		await page.keyboard.press('Escape');
+		await closed();
+
+		await open();
+		await popup(page).getByRole('link', { name: 'Close build' }).click();
+		await closed();
+
+		await open();
+		await page.mouse.click(5, 5);
+		await closed();
+	});
+
+	test('a build URL opens as a popup; closing it leaves the page in place', async ({ page }) => {
+		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ&build=8`);
+		await expect(popup(page)).toBeVisible();
+		expect(await isModal(page)).toBe(true);
+
+		await page.keyboard.press('Escape');
+		await expect(popup(page)).toHaveCount(0);
+		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+		// Closing replaced the entry rather than adding one, so Back leaves the match.
+		await page.goBack();
+		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	});
+
+	test('after a popup, back still leads to the profile', async ({ page }) => {
+		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+		await page.getByRole('link', { name: 'Details of this match' }).first().click();
+		await page.getByRole('link', { name: "Show Kai'Sa's build" }).click();
+		await expect(popup(page)).toBeVisible();
+		await page.keyboard.press('Escape');
+		await expect(popup(page)).toHaveCount(0);
+
+		await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
+		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	});
 });
 
 test('a match page is cacheable at the edge for a day', async ({ request }) => {

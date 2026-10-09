@@ -204,9 +204,9 @@ export function isMatchIdFor(region: Region, matchId: string): boolean {
 }
 
 /**
- * Whose build the page shows: the player `build` names (a participant id),
- * else the highlighted player, else the first player (normally Blue's top
- * laner).
+ * Whose build to show for a requested participant id, or with none (the
+ * header's build link): the player `build` names, else the highlighted
+ * player, else the first player (normally Blue's top laner).
  */
 export function selectBuild(
 	detail: Pick<MatchDetail, 'teams' | 'builds'>,
@@ -219,6 +219,19 @@ export function selectBuild(
 		lines.find((l) => highlight && l.riotId && sameRiotId(l.riotId, highlight)) ??
 		lines[0];
 	return detail.builds.find((b) => b.participantId === wanted?.participantId);
+}
+
+/**
+ * Which build the match page has open, as a participant id: the one shallow
+ * routing recorded when the visitor opened or closed a popup, else `?build=`
+ * from the URL the page was loaded with. null when none is open.
+ */
+export function openBuildId(
+	state: number | null | undefined,
+	fromUrl: string | null
+): string | null {
+	if (state === undefined) return fromUrl;
+	return state === null ? null : String(state);
 }
 
 /**

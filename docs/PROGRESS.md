@@ -33,7 +33,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 ## P3 — Match detail
 
 - [x] P3-01 Match load with timeline; scoreboard for both teams; profile rows link to it — #41 (ADR-023); the profile's own champion highlighted, "Herald" label — #42 (ADR-024); a back link to the profile — #43 (ADR-025)
-- [x] P3-02 Builds: item order, skill order, full rune page with stat shards (from CommunityDragon), summoner spells; one player at a time — #45 (ADR-026); repeat buys stacked, no spells or keystone in the panel header — #46 (ADR-027)
+- [x] P3-02 Builds: item order, skill order, full rune page with stat shards (from CommunityDragon), summoner spells; one player at a time — #45 (ADR-026); repeat buys stacked, no spells or keystone in the panel header — #46 (ADR-027); the build in a popup, other layouts kept in `docs/notes/match-layouts.md` — #47 (ADR-028)
 - [ ] P3-03 Timeline charts in SVG: gold difference and objective events
 - [ ] P3-04 Expand a match inline from the profile page without a full reload
 

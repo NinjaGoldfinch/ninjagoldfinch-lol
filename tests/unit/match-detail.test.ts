@@ -4,6 +4,7 @@ import {
 	formatMatchDate,
 	isMatchIdFor,
 	matchPath,
+	openBuildId,
 	selectBuild,
 	teamGold,
 	toMatchDetail
@@ -131,6 +132,19 @@ describe('teamGold', () => {
 		const [frame] = teamGold(timeline, match, [200, 100]).slice(-1);
 		const [last] = (detail.gold ?? []).slice(-1);
 		expect(frame.teamGold).toEqual([last.teamGold[1], last.teamGold[0]]);
+	});
+});
+
+describe('openBuildId', () => {
+	it('follows ?build= until the visitor opens or closes a popup', () => {
+		expect(openBuildId(undefined, '8')).toBe('8');
+		expect(openBuildId(undefined, null)).toBeNull();
+	});
+
+	it('then follows what they did', () => {
+		expect(openBuildId(9, null)).toBe('9');
+		expect(openBuildId(9, '8')).toBe('9');
+		expect(openBuildId(null, '8')).toBeNull();
 	});
 });
 
