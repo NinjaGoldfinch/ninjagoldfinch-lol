@@ -275,3 +275,18 @@ export function formatMatchDate(epochMs: number): string {
 	});
 	return `${day}, ${time} UTC`;
 }
+
+/**
+ * The match page's load data as `preloadData` hands it to a profile's inline
+ * view (ADR-030): the detail of `matchId`, or undefined for anything else,
+ * such as an error page's data.
+ */
+export function asMatchDetail(data: unknown, matchId: string): MatchDetail | undefined {
+	if (typeof data !== 'object' || data === null) return undefined;
+	const detail = data as Partial<MatchDetail>;
+	return detail.matchId === matchId &&
+		Array.isArray(detail.teams) &&
+		typeof detail.ddragonVersion === 'string'
+		? (data as MatchDetail)
+		: undefined;
+}

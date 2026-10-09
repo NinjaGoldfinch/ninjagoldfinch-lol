@@ -359,3 +359,19 @@ Date: 2026-10-10 · Task: P3-03
 - Hand-written SVG and HTML, with no chart library, as the plan says.
 
 **Consequences.** The page's data gains the objective list, about 24 entries (2 kB) for a 32-minute game. Arena is still untested: there is no recorded Arena match.
+
+## ADR-030: A profile row shows both teams in place, from the match page's own load
+
+Date: 2026-10-10 · Task: P3-04
+
+**Context.** P3-04 expands a match inline on the profile page without a full reload. CLAUDE.md rules out client-side fetching of proxy data, so the owner chose how the row gets its data, and what it shows.
+
+**Decision.**
+
+- **With JavaScript**, each match row has a button under its Details link ("Show the teams", `aria-expanded`). It opens a compact view of both teams inside the row: one line per player with champion, Riot ID (a link to their profile), KDA, a damage bar and items. The profile's player is highlighted as on the match page (ADR-024). Both teams are one table, so their columns line up, and it scrolls sideways on narrow screens rather than squeezing the items. Builds and the timeline stay on the match page, one click away through Details.
+- **The data is the match page's own load**, through SvelteKit's `preloadData(matchPath(…))`. That is the request a client-side navigation to the match page makes (`__data.json`), so the browser only ever asks the site, never riot-proxy, and nothing new runs on the server. The response carries the match page's Cache-Control (a day at the edge, ADR-023), so an expanded match is served from Cloudflare like the page. `asMatchDetail` checks that the data is the detail of the match asked for. The row keeps it, so hiding and showing again asks for nothing.
+- If the match can't be loaded (an error page's data, a network failure), the row says so and links to the match page.
+- **Without JavaScript** there is no button; the Details link goes to the match page as before. The button is added once the page has hydrated, so no control is ever shown that does nothing.
+- The URL doesn't change when a row expands.
+
+**Consequences.** Expanding a row downloads the whole match page's data, builds and timeline gold included: 34 kB before compression for the recorded ranked game, though the inline view uses only the teams. A slimmer route would mean a second server load for the same match, so it is left as is. Two synthetic fixtures make the profile's second match fail, for the error state's test.
