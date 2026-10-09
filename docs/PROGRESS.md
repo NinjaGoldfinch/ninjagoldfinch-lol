@@ -120,3 +120,42 @@ Items that waited on riot-proxy, closed after its changes (ADR-018):
 Still for later: Cloudflare serving the second request is checked in P5-02.
 
 `phase-P2` was first tagged on 2026-10-09 with the two riot-proxy items open, at the owner's request. It was moved on the same day to the commit that closes them.
+
+### P3 exit check — passed 2026-10-10
+
+Production build of `main` at 143ab9c (`node build`, `NODE_ENV=production`, `ORIGIN` set), driven in Chromium through Playwright.
+
+**From a profile row and directly by URL**, against the real dev proxy (auth off, placeholder `PROXY_KEY`):
+
+```text
+/summoner/oce/NinjaGoldfinch-OCENZ, JavaScript on → first row's Details link
+  link            /match/oce/OC1_712412716?player=NinjaGoldfinch-OCENZ
+  requests        the profile document, then the match's __data.json only
+  h1              Ranked Solo
+  scoreboard      10 player rows
+  Timeline tab    ?tab=timeline, chart "Gold difference over 25:22: Red team +10,952 at the end"
+
+GET /match/oce/OC1_712412716?player=NinjaGoldfinch-OCENZ, JavaScript off
+  status          200
+  cache-control   public, s-maxage=86400, stale-while-revalidate=86400
+  h1              Ranked Solo
+  scoreboard      10 player rows
+  ?tab=timeline   200, 27 gold frames, 21 objectives
+```
+
+**Charts against the raw timeline fixture.** The production build against the mock proxy rendered `/match/oce/OC1_712351051?tab=timeline` without JavaScript. Each frame's `<title>` and the objectives table were compared with figures worked out separately, in Python, from `tests/fixtures/timeline-oc1-712351051.json`: per frame, the sum of `totalGold` by team (teams from the match fixture); `ELITE_MONSTER_KILL` credited to `killerTeamId`, and `BUILDING_KILL` to the team other than `teamId`.
+
+```text
+gold frames     fixture 34, page 34, mismatches 0
+largest leads   Blue +716 at 7:00, Red +8,153 at 32:32 (page: the same)
+final lead      Red team +8,153 (page: "Red team +8,153 at the end", end label −8.2k)
+objectives      fixture 24, page 24, mismatches 0 (time, team and kind)
+per team        Blue 5 towers, 1 Baron, 3 voidgrubs; Red 8 towers, 1 inhibitor,
+                4 dragons, 1 Baron, 1 Herald (equal to the match's team objectives)
+```
+
+The same comparison against the live match's raw timeline from the dev proxy (served from its archive): 27 of 27 frames and 21 of 21 objectives match.
+
+Gates at the same commit: `just check` passes (199 unit tests); `just e2e` 48 passed against the mock.
+
+Tagged `phase-P3` on the commit that records this check. Paused for owner review before P4.
