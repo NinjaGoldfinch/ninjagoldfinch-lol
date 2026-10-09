@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Objective } from '#lib/api/match.ts';
 	import type { TeamScoreboard } from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
@@ -10,6 +11,7 @@
 		leadPaths,
 		markerRows,
 		minuteTicks,
+		nearestFrame,
 		objectiveMarkers,
 		type GoldFrame,
 		type ObjectiveKill
@@ -36,7 +38,8 @@
 	const MID = HEIGHT / 2;
 
 	const points = $derived(gold ? goldLead(gold) : []);
-	const duration = $derived(points.at(-1)?.at ?? 0);
+	const last = $derived(points.at(-1));
+	const duration = $derived(last?.at ?? 0);
 	const axis = $derived(goldAxis(points));
 	const paths = $derived(
 		leadPaths(points, { width: WIDTH, height: HEIGHT, duration, limit: axis.limit })
@@ -81,19 +84,67 @@
 		riftHerald: 'H',
 		horde: 'V'
 	};
-	const KEY = (
-		[
-			['tower', 'tower'],
-			['inhibitor', 'inhibitor'],
-			['dragon', 'dragon'],
-			['baron', 'Baron'],
-			['riftHerald', 'Herald'],
-			['horde', 'voidgrubs']
-		] as const
-	)
-		.map(([kind, label]) => `${GLYPHS[kind]} ${label}`)
-		.join(', ');
+	const KEY = [
+		['tower', 'Tower'],
+		['inhibitor', 'Inhibitor'],
+		['dragon', 'Dragon'],
+		['baron', 'Baron'],
+		['riftHerald', 'Herald'],
+		['horde', 'Voidgrubs']
+	] as const;
+
+	// With JavaScript, pointing at the chart shows a crosshair on the nearest
+	// frame in place of the per-frame <title> bands.
+	let enhanced = $state(false);
+	let hovered = $state(-1);
+	const active = $derived(points[hovered]);
+	onMount(() => {
+		enhanced = true;
+	});
+
+	function point(event: PointerEvent) {
+		const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		if (box.width === 0) return;
+		hovered = nearestFrame(points, ((event.clientX - box.left) / box.width) * duration);
+	}
 </script>
+
+{#snippet dot(p: { at: number; lead: number })}
+	<span
+		class="pointer-events-none absolute size-2.5 -translate-1/2 rounded-full ring-2 ring-surface {p.lead >=
+		0
+			? 'bg-team-blue'
+			: 'bg-team-red'}"
+		style:left="{x(p.at)}%"
+		style:top="{y(Math.max(-axis.limit, Math.min(axis.limit, p.lead)))}%"
+		aria-hidden="true"
+	></span>
+{/snippet}
+
+<!-- One team's objective markers. Blue's rows stack up from the chart, Red's down.
+     The fill is opaque so markers that touch on a narrow screen stay legible. -->
+{#snippet lane(lane: (typeof lanes)[number] | undefined, side: (typeof SIDES)[number])}
+	<span></span>
+	<ul class="relative" style:height="{(lane?.rows ?? 1) * 1.25}rem" aria-hidden="true">
+		{#each lane?.markers ?? [] as marker, j (j)}
+			<li
+				class="absolute flex h-4 min-w-4 -translate-x-1/2 items-center justify-center rounded px-0.5 text-[10px] font-semibold ring-1 ring-surface {side ===
+				'blue'
+					? 'bg-[color-mix(in_oklab,var(--color-team-blue)_25%,var(--color-surface))] text-team-blue'
+					: 'bg-[color-mix(in_oklab,var(--color-team-red)_25%,var(--color-surface))] text-team-red'}"
+				style:left="{x(marker.at)}%"
+				style:top={side === 'red' ? `${marker.row * 1.25}rem` : undefined}
+				style:bottom={side === 'blue' ? `${marker.row * 1.25}rem` : undefined}
+				title="{formatDuration(marker.at)} · {marker.names.join(', ')}"
+			>
+				{GLYPHS[marker.kind]}{#if marker.names.length > 1}<sup class="font-normal"
+						>{marker.names.length}</sup
+					>{/if}
+			</li>
+		{/each}
+	</ul>
+	<span></span>
+{/snippet}
 
 <section aria-labelledby="timeline-heading" class="rounded border border-border bg-surface">
 	<div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-border px-4 py-3">
@@ -133,109 +184,173 @@
 				{/each}
 			</p>
 
-			<!-- The chart, the objective lanes and the minute labels share one time axis. -->
-			<div class="mt-3 grid grid-cols-[3rem_minmax(0,1fr)] gap-y-1">
+			<!-- The chart, the objective lanes and the minute labels share one time axis.
+			     Blue's objectives sit above the chart and Red's below, like their leads. -->
+			<div class="mt-3 grid grid-cols-[3rem_minmax(0,1fr)_3rem] gap-y-1.5">
+				{@render lane(lanes[0], 'blue')}
+
 				<div class="relative" aria-hidden="true">
 					{#each grid as g (g)}
 						<span
-							class="absolute right-2 -translate-y-1/2 text-[10px] text-muted"
+							class="absolute right-2 -translate-y-1/2 text-[11px] text-muted tabular-nums"
 							style:top="{y(g)}%">{formatLead(g)}</span
 						>
 					{/each}
 				</div>
-				<svg
-					viewBox="0 0 {WIDTH} {HEIGHT}"
-					preserveAspectRatio="none"
-					role="img"
-					aria-label="Gold difference over {formatDuration(duration)}: {leadText(
-						points.at(-1)?.lead ?? 0
-					)} at the end"
-					class="block h-44 w-full overflow-visible sm:h-56"
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="relative"
+					onpointermove={point}
+					onpointerdown={point}
+					onpointerleave={() => (hovered = -1)}
 				>
-					<defs>
-						<clipPath id="gold-above"><rect width={WIDTH} height={MID} /></clipPath>
-						<clipPath id="gold-below"><rect y={MID} width={WIDTH} height={MID} /></clipPath>
-					</defs>
-					{#each ticks as m (m)}
-						<line
-							x1={(m * 60 * WIDTH) / duration}
-							x2={(m * 60 * WIDTH) / duration}
-							y2={HEIGHT}
-							vector-effect="non-scaling-stroke"
-							class="stroke-border/50"
-						/>
-					{/each}
-					{#each grid as g (g)}
-						<line
-							y1={(y(g) * HEIGHT) / 100}
-							x2={WIDTH}
-							y2={(y(g) * HEIGHT) / 100}
-							vector-effect="non-scaling-stroke"
-							class={g === 0 ? 'stroke-muted' : 'stroke-border/50'}
-						/>
-					{/each}
-					{#each SIDES as side (side)}
-						<g clip-path="url(#gold-{side === 'blue' ? 'above' : 'below'})">
-							<path
-								d={paths.area}
-								class={side === 'blue' ? 'fill-team-blue/25' : 'fill-team-red/25'}
-							/>
-							<path
-								d={paths.line}
-								fill="none"
-								stroke-width="2"
-								stroke-linejoin="round"
-								vector-effect="non-scaling-stroke"
-								class={side === 'blue' ? 'stroke-team-blue' : 'stroke-team-red'}
-							/>
-						</g>
-					{/each}
-					<!-- One band per frame, so hovering shows that minute's lead without JavaScript. -->
-					{#each points as p, i (i)}
-						{@const from = i === 0 ? 0 : (points[i - 1].at + p.at) / 2}
-						{@const to = i === points.length - 1 ? duration : (p.at + points[i + 1].at) / 2}
-						<rect
-							x={(from / duration) * WIDTH}
-							width={((to - from) / duration) * WIDTH}
-							height={HEIGHT}
-							fill="transparent"><title>{formatDuration(p.at)} · {leadText(p.lead)}</title></rect
-						>
-					{/each}
-				</svg>
-
-				{#each lanes as lane, i (lane.team.teamId)}
-					<span class="self-center pr-2 text-right text-[10px] text-muted" aria-hidden="true"
-						>{lane.team.name.replace(/ team$/, '')}</span
+					<svg
+						viewBox="0 0 {WIDTH} {HEIGHT}"
+						preserveAspectRatio="none"
+						role="img"
+						aria-label="Gold difference over {formatDuration(duration)}: {leadText(
+							last?.lead ?? 0
+						)} at the end"
+						class="block h-44 w-full overflow-visible sm:h-56"
 					>
-					<ul class="relative" style:height="{lane.rows * 1.25}rem" aria-hidden="true">
-						{#each lane.markers as marker, j (j)}
-							<li
-								class="absolute flex h-4 min-w-4 -translate-x-1/2 items-center justify-center rounded px-0.5 text-[10px] font-semibold {i ===
-								0
-									? 'bg-team-blue/25 text-team-blue'
-									: 'bg-team-red/25 text-team-red'}"
-								style:left="{x(marker.at)}%"
-								style:top="{marker.row * 1.25}rem"
-								title="{formatDuration(marker.at)} · {marker.names.join(', ')}"
+						<defs>
+							<clipPath id="gold-above"><rect width={WIDTH} height={MID} /></clipPath>
+							<clipPath id="gold-below"><rect y={MID} width={WIDTH} height={MID} /></clipPath>
+							<!-- Each side's area fades out towards zero. -->
+							<linearGradient id="gold-fill-blue" gradientUnits="userSpaceOnUse" y2={MID} x2="0">
+								<stop style:stop-color="var(--color-team-blue)" stop-opacity="0.5" />
+								<stop offset="1" style:stop-color="var(--color-team-blue)" stop-opacity="0.04" />
+							</linearGradient>
+							<linearGradient
+								id="gold-fill-red"
+								gradientUnits="userSpaceOnUse"
+								y1={MID}
+								y2={HEIGHT}
+								x2="0"
 							>
-								{GLYPHS[marker.kind]}{#if marker.names.length > 1}<sup class="font-normal"
-										>{marker.names.length}</sup
-									>{/if}
-							</li>
+								<stop style:stop-color="var(--color-team-red)" stop-opacity="0.04" />
+								<stop offset="1" style:stop-color="var(--color-team-red)" stop-opacity="0.5" />
+							</linearGradient>
+						</defs>
+						{#each ticks as m (m)}
+							<line
+								x1={(m * 60 * WIDTH) / duration}
+								x2={(m * 60 * WIDTH) / duration}
+								y2={HEIGHT}
+								vector-effect="non-scaling-stroke"
+								class="stroke-border/40"
+							/>
 						{/each}
-					</ul>
-				{/each}
+						{#each grid as g (g)}
+							<line
+								y1={(y(g) * HEIGHT) / 100}
+								x2={WIDTH}
+								y2={(y(g) * HEIGHT) / 100}
+								vector-effect="non-scaling-stroke"
+								stroke-dasharray={g === 0 ? undefined : '3 4'}
+								class={g === 0 ? 'stroke-muted/60' : 'stroke-border/70'}
+							/>
+						{/each}
+						{#each SIDES as side (side)}
+							<g clip-path="url(#gold-{side === 'blue' ? 'above' : 'below'})">
+								<path d={paths.area} fill="url(#gold-fill-{side})" />
+								<path
+									d={paths.line}
+									fill="none"
+									stroke-width="2"
+									stroke-linejoin="round"
+									stroke-linecap="round"
+									vector-effect="non-scaling-stroke"
+									class={side === 'blue' ? 'stroke-team-blue' : 'stroke-team-red'}
+								/>
+							</g>
+						{/each}
+						<!-- Without JavaScript, one band per frame shows that minute's lead on hover. -->
+						{#if !enhanced}
+							{#each points as p, i (i)}
+								{@const from = i === 0 ? 0 : (points[i - 1].at + p.at) / 2}
+								{@const to = i === points.length - 1 ? duration : (p.at + points[i + 1].at) / 2}
+								<rect
+									x={(from / duration) * WIDTH}
+									width={((to - from) / duration) * WIDTH}
+									height={HEIGHT}
+									class="fill-transparent hover:fill-text/5"
+									><title>{formatDuration(p.at)} · {leadText(p.lead)}</title></rect
+								>
+							{/each}
+						{/if}
+					</svg>
+
+					{#if last}
+						{@render dot(last)}
+					{/if}
+					{#if active}
+						<div
+							class="pointer-events-none absolute inset-y-0 w-px bg-muted/50"
+							style:left="{x(active.at)}%"
+							aria-hidden="true"
+						></div>
+						{@render dot(active)}
+						<div
+							class="pointer-events-none absolute top-1 z-10 rounded border border-border bg-bg/95 px-2 py-1 text-xs whitespace-nowrap shadow-lg {x(
+								active.at
+							) > 60
+								? '-ml-2 -translate-x-full'
+								: 'ml-2'}"
+							style:left="{x(active.at)}%"
+							aria-hidden="true"
+						>
+							<div class="text-muted tabular-nums">{formatDuration(active.at)}</div>
+							<div class="flex items-center gap-1.5 font-semibold">
+								{#if active.lead !== 0}
+									<span
+										class="size-2 rounded-full {active.lead > 0 ? 'bg-team-blue' : 'bg-team-red'}"
+									></span>
+								{/if}
+								{leadText(active.lead)}
+							</div>
+						</div>
+					{/if}
+				</div>
+				<!-- The lead at the end, level with the line's last point. -->
+				<div class="relative" aria-hidden="true">
+					{#if last}
+						<span
+							class="absolute left-2 -translate-y-1/2 text-xs font-semibold tabular-nums"
+							style:top="{y(Math.max(-axis.limit, Math.min(axis.limit, last.lead)))}%"
+							>{formatLead(last.lead)}</span
+						>
+					{/if}
+				</div>
+
+				{@render lane(lanes[1], 'red')}
 
 				<span></span>
 				<div class="relative h-4" aria-hidden="true">
 					{#each ticks as m (m)}
-						<span class="absolute -translate-x-1/2 text-[10px] text-muted" style:left="{x(m * 60)}%"
-							>{m}</span
+						<span
+							class="absolute -translate-x-1/2 text-[11px] text-muted tabular-nums"
+							style:left="{x(m * 60)}%">{m === 0 ? '0' : `${m}m`}</span
 						>
 					{/each}
 				</div>
+				<span></span>
 			</div>
-			<p class="mt-1 text-right text-[10px] text-muted" aria-hidden="true">Minutes · {KEY}</p>
+
+			<ul
+				class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted sm:pl-12"
+				aria-hidden="true"
+			>
+				{#each KEY as [kind, label] (kind)}
+					<li class="flex items-center gap-1">
+						<span
+							class="flex size-4 items-center justify-center rounded bg-border/70 text-[10px] font-semibold text-text"
+							>{GLYPHS[kind]}</span
+						>
+						{label}
+					</li>
+				{/each}
+			</ul>
 		{/if}
 
 		{#if objectives && objectives.length > 0}

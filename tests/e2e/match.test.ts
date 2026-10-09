@@ -255,6 +255,9 @@ test.describe('timeline tab without JavaScript', () => {
 		await expect(chart.getByRole('img', { name: /^Gold difference/ })).toHaveAccessibleName(
 			'Gold difference over 32:32: Red team +8,153 at the end'
 		);
+		// Without JavaScript each frame's lead (0–32 minutes and the end) is a hover title.
+		await expect(chart.getByRole('img').locator('title')).toHaveCount(34);
+		await expect(chart.getByText('−8.2k', { exact: true })).toBeVisible();
 
 		await chart.getByText('Objectives taken (24)').click();
 		const rows = chart.getByRole('table').getByRole('row');
@@ -376,6 +379,27 @@ test.describe('inline match on the profile', () => {
 			await expect(row.getByRole('link', { name: 'Details of this match' })).toBeVisible();
 		});
 	});
+});
+
+test('with JavaScript, pointing at the gold chart reads out the nearest minute', async ({
+	page
+}) => {
+	await page.goto(`${MATCH}?tab=timeline`);
+	const chart = page.getByRole('region', { name: 'Gold difference' });
+	const plot = chart.getByRole('img', { name: /^Gold difference/ });
+	// The crosshair replaces the per-frame <title> bands.
+	await expect(plot.locator('title')).toHaveCount(0);
+	await expect(chart.getByText('Red team +5,519')).toHaveCount(0);
+
+	// The recorded game lasts 32:32; 24:00 is Red's lead before Blue's Baron.
+	const box = await plot.boundingBox();
+	if (!box) throw new Error('the chart has no box');
+	await page.mouse.move(box.x + box.width * ((24 * 60) / 1952), box.y + box.height / 2);
+	await expect(chart.getByText('24:00')).toBeVisible();
+	await expect(chart.getByText('Red team +5,519')).toBeVisible();
+
+	await page.mouse.move(0, 0);
+	await expect(chart.getByText('Red team +5,519')).toHaveCount(0);
 });
 
 test('a match page is cacheable at the edge for a day', async ({ request }) => {
