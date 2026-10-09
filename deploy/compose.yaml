@@ -3,7 +3,11 @@
 # publishing the port.
 services:
   web:
-    build: ..
+    build:
+      context: ..
+      # From deploy/.env; baked into the build (ADR-014).
+      args:
+        ORIGIN: ${ORIGIN:?set ORIGIN in deploy/.env}
     image: ninjagoldfinch-web:local
     restart: unless-stopped
     env_file: .env

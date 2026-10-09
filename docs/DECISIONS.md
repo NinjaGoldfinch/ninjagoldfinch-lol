@@ -167,3 +167,17 @@ Date: 2026-10-09 · Task: P2-03
 Queue names come from Riot's descriptions with the team size and "games" removed (`5v5 Ranked Solo games` → `Ranked Solo`), so there is no hand-kept queue table. Names are resolved on the server, so the page carries only the names it shows. Something the patch doesn't know falls back to the name in the match (champions) or `Item 1234` / `Queue 1234`.
 
 Test fixtures for these files are trimmed to the IDs the other fixtures use, with `just fixture <name> <path> --keep id,id,…`.
+
+## ADR-014: The site's origin is set at build time
+
+Date: 2026-10-09 · Task: P5-01 (fix)
+
+**Context.** The plan (and P0's `.env.example`) says adapter-node reads `ORIGIN` at runtime. adapter-node 6 doesn't. SvelteKit 3 takes the origin from `paths.origin` in the build config, and otherwise derives it from the `Host` header, assuming `https`. On the HTTP preview VM, the browser's `Origin: http://192.168.68.47:3000` never matched the derived `https://…`, so every form `POST` (the Refresh button) was refused as cross-site with a 403. The e2e tests missed it because they ran on `vite preview`, which derives the origin correctly.
+
+**Decision.**
+
+- `vite.config.ts` sets `paths.origin` from `ORIGIN` when it is present at build time. `just dev` and local builds without it fall back to the header.
+- The Docker build takes `ORIGIN` as a build argument, which `deploy/compose.yaml` passes from `deploy/.env` (required). Changing it means rebuilding, which `ninjagoldfinch-update` always does.
+- Playwright now runs the real production server (`pnpm build && node build`, with `ORIGIN` and `NODE_ENV=production`) instead of `vite preview`. Without this fix, the two refresh e2e tests fail on it.
+
+**Consequences.** A cross-origin form `POST` is still refused (checked: 403). The plan's configuration table is out of date on `ORIGIN`: it is now build-time.
