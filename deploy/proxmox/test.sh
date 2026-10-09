@@ -31,7 +31,16 @@ for want in 'qm create 321 --name ninjagoldfinch-web ' \
   'http://192.168.68.60:3000'; do
   grep -qF -- "$want" <<<"$out" || fail "dry run is missing: $want"
 done
-if "$here/create-vm.sh" --dry-run >/dev/null 2>&1; then fail "--ssh-keys must be required"; fi
+if "$here/create-vm.sh" --dry-run >/dev/null 2>&1; then fail "--ssh-keys or --generate-key must be required"; fi
+
+# --generate-key: a per-VM login key on the host, used for the VM's authorized keys.
+out=$("$here/create-vm.sh" --dry-run --generate-key --vmid 321 --key-dir /root/.ssh/ngf-test)
+for want in 'ssh-keygen -q -t ed25519' \
+  '-f /root/.ssh/ngf-test/ninjagoldfinch-web-321' \
+  'sshkeys /root/.ssh/ngf-test/ninjagoldfinch-web-321.pub' \
+  'ssh -i /root/.ssh/ngf-test/ninjagoldfinch-web-321 web@<vm-ip>'; do
+  grep -qF -- "$want" <<<"$out" || fail "--generate-key dry run is missing: $want"
+done
 
 # ninjagoldfinch-update against a throwaway repo, with fake docker and hostname.
 git() { command git -c user.name=test -c user.email=test@example.com "$@"; }
