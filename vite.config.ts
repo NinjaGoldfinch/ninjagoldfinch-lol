@@ -17,8 +17,6 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
-		// Removed once the first unit tests land (P0-05).
-		passWithNoTests: true,
 		projects: [
 			{
 				extends: './vite.config.ts',
