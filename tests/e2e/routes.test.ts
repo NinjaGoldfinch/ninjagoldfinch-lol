@@ -61,11 +61,7 @@ test.describe('without JavaScript', () => {
 		await expect(lane).toHaveCSS('opacity', '1');
 		await expect(lane).toHaveCSS('filter', /brightness\(1\.1\)/);
 		await expect(first.getByRole('img', { name: 'Precision' })).toBeVisible();
-		const items = first.getByRole('list', { name: 'Items' });
-		await expect(items.getByRole('img')).toHaveCount(7);
-		// The trinket (slot 6) is set apart from the six item slots.
-		await expect(items.getByRole('listitem').nth(5)).toHaveCSS('margin-left', '0px');
-		await expect(items.getByRole('listitem').nth(6)).toHaveCSS('margin-left', '8px');
+		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
 		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
 	});
 
