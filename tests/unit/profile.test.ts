@@ -6,7 +6,7 @@ import { loadProfile } from '#lib/server/profile.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
 import { createMockProxy, loadFixtures, type Fixture } from '../mock-proxy/mock.ts';
-import { PROFILE_PATH } from './fixtures.ts';
+import { MATCHES_PATH, PROFILE_PATH, fixtureBody } from './fixtures.ts';
 
 const oce = findRegion('oce') as Region;
 
@@ -54,11 +54,11 @@ describe('loadProfile', () => {
 
 	it('loads a later page and a single queue', async () => {
 		const page2 = await loadProfile(oce, me, mock.client, { filter: { queue: null, page: 2 } });
-		expect(page2.matches[0].matchId).toBe('OC1_712213427');
+		expect(page2.matches?.[0].matchId).toBe('OC1_712213427');
 		expect(page2.filter).toEqual({ queue: null, page: 2 });
 
 		const solo = await loadProfile(oce, me, mock.client, { filter: { queue: 420, page: 1 } });
-		expect(solo.matches.every((m) => m.queueId === 420)).toBe(true);
+		expect(solo.matches?.every((m) => m.queueId === 420)).toBe(true);
 		expect(solo.queueOptions[0]).toEqual({ id: 420, name: 'Ranked Solo' });
 	});
 
@@ -87,5 +87,69 @@ describe('loadProfile with a part riot-proxy could not fetch', () => {
 		} finally {
 			mock.server.close();
 		}
+	});
+});
+
+describe('loadProfile when parts fail', () => {
+	/** A client answering from fixtures, with some paths overridden. */
+	function client(override: (path: string) => Response | undefined) {
+		const fixtures = loadFixtures();
+		return createProxyClient('http://proxy.test', undefined, async (request) => {
+			const url = new URL(request.url);
+			const path = url.pathname + url.search;
+			const custom = override(path);
+			if (custom) return custom;
+			const f = fixtures.find((x) => x.request.path === path);
+			return new Response(JSON.stringify(f?.response.body ?? {}), {
+				status: f?.response.status ?? 500,
+				headers: { 'content-type': 'application/json' }
+			});
+		});
+	}
+	const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
+		new Response(JSON.stringify(body), {
+			status,
+			headers: { 'content-type': 'application/json', ...headers }
+		});
+
+	it('still returns the profile when the match page is rate limited', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const limited = client((path) =>
+			path.includes('/matches')
+				? json(503, { error: { code: 'RATE_LIMITED', message: 'x', retryAfter: 30 } })
+				: undefined
+		);
+		const profile = await loadProfile(oce, me, limited);
+
+		expect(profile.summoner?.summonerLevel).toBe(458);
+		expect(profile.matches).toBeNull();
+		expect(profile.matchesError).toEqual({ status: 429, retryAfter: 30 });
+		expect(profile.hasMore).toBe(false);
+	});
+
+	it('leaves custom games out and says so', async () => {
+		const body = fixtureBody(MATCHES_PATH) as { matches: { queueId: number | null }[] };
+		const withCustom = {
+			...body,
+			matches: body.matches.map((m, i) => (i < 2 ? { ...m, queueId: i === 0 ? 0 : null } : m))
+		};
+		const custom = client((path) => (path === MATCHES_PATH ? json(200, withCustom) : undefined));
+		const profile = await loadProfile(oce, me, custom);
+
+		expect(profile.matches).toHaveLength(8);
+		expect(profile.customHidden).toBe(true);
+	});
+
+	it('falls back to plain names when the Data Dragon lookups fail', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const noStatic = client((path) =>
+			path.startsWith('/v1/static/') && path !== '/v1/static/versions'
+				? json(503, { error: { code: 'UPSTREAM_ERROR', message: 'x' } })
+				: undefined
+		);
+		const profile = await loadProfile(oce, me, noStatic);
+
+		expect(profile.matches?.[0].champion).toMatchObject({ key: null, name: 'Ahri' });
+		expect(profile.matches?.[0].queue).toBe('Queue 420');
 	});
 });

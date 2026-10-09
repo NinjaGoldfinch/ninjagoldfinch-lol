@@ -1,0 +1,157 @@
+{
+	"_note": "Synthetic: the recorded NinjaGoldfinch profile renamed, for a player whose match history fails. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/players/by-riot-id/Synthetic/TEST/profile?platform=oc1"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8"
+		},
+		"body": {
+			"puuid": "fixture-puuid-synthetic",
+			"platform": "oc1",
+			"region": "sea",
+			"account": {
+				"puuid": "fixture-puuid-synthetic",
+				"gameName": "Synthetic",
+				"tagLine": "TEST"
+			},
+			"summoner": {
+				"puuid": "fixture-puuid-synthetic",
+				"profileIconId": 7173,
+				"revisionDate": 1791521088445,
+				"summonerLevel": 458
+			},
+			"league": [
+				{
+					"queueType": "RANKED_SOLO_5x5",
+					"tier": "EMERALD",
+					"rank": "III",
+					"puuid": "fixture-puuid-synthetic",
+					"leaguePoints": 67,
+					"wins": 475,
+					"losses": 464,
+					"veteran": true,
+					"inactive": false,
+					"freshBlood": false,
+					"hotStreak": false
+				}
+			],
+			"mastery": [
+				{
+					"puuid": "fixture-puuid-synthetic",
+					"championId": 234,
+					"championLevel": 185,
+					"championPoints": 2122324,
+					"lastPlayTime": 1791518818000,
+					"championPointsSinceLastLevel": 121724,
+					"championPointsUntilNextLevel": -110724,
+					"markRequiredForNextLevel": 2,
+					"tokensEarned": 1,
+					"championSeasonMilestone": 3,
+					"milestoneGrades": [],
+					"nextSeasonMilestone": {
+						"requireGradeCounts": {
+							"S-": 1
+						},
+						"rewardMarks": 2,
+						"bonus": false,
+						"totalGamesRequires": 1
+					}
+				},
+				{
+					"puuid": "fixture-puuid-synthetic",
+					"championId": 56,
+					"championLevel": 26,
+					"championPoints": 252829,
+					"lastPlayTime": 1788142406000,
+					"championPointsSinceLastLevel": 1229,
+					"championPointsUntilNextLevel": 9771,
+					"markRequiredForNextLevel": 2,
+					"tokensEarned": 9,
+					"championSeasonMilestone": 0,
+					"nextSeasonMilestone": {
+						"requireGradeCounts": {
+							"A-": 1
+						},
+						"rewardMarks": 1,
+						"bonus": false,
+						"totalGamesRequires": 1
+					}
+				},
+				{
+					"puuid": "fixture-puuid-synthetic",
+					"championId": 203,
+					"championLevel": 22,
+					"championPoints": 209614,
+					"lastPlayTime": 1787341553000,
+					"championPointsSinceLastLevel": 2014,
+					"championPointsUntilNextLevel": 8986,
+					"markRequiredForNextLevel": 2,
+					"tokensEarned": 30,
+					"championSeasonMilestone": 0,
+					"nextSeasonMilestone": {
+						"requireGradeCounts": {
+							"A-": 1
+						},
+						"rewardMarks": 1,
+						"bonus": false,
+						"totalGamesRequires": 1
+					}
+				},
+				{
+					"puuid": "fixture-puuid-synthetic",
+					"championId": 102,
+					"championLevel": 12,
+					"championPoints": 105325,
+					"lastPlayTime": 1791482197000,
+					"championPointsSinceLastLevel": 7725,
+					"championPointsUntilNextLevel": 3275,
+					"markRequiredForNextLevel": 2,
+					"tokensEarned": 6,
+					"championSeasonMilestone": 0,
+					"milestoneGrades": ["B"],
+					"nextSeasonMilestone": {
+						"requireGradeCounts": {
+							"A-": 1
+						},
+						"rewardMarks": 1,
+						"bonus": false,
+						"totalGamesRequires": 1
+					}
+				},
+				{
+					"puuid": "fixture-puuid-synthetic",
+					"championId": 141,
+					"championLevel": 11,
+					"championPoints": 91993,
+					"lastPlayTime": 1774976020000,
+					"championPointsSinceLastLevel": 5393,
+					"championPointsUntilNextLevel": 5607,
+					"markRequiredForNextLevel": 2,
+					"tokensEarned": 10,
+					"championSeasonMilestone": 0,
+					"nextSeasonMilestone": {
+						"requireGradeCounts": {
+							"A-": 1
+						},
+						"rewardMarks": 1,
+						"bonus": false,
+						"totalGamesRequires": 1
+					}
+				}
+			],
+			"ageSeconds": {
+				"account": 213,
+				"summoner": 0,
+				"league": 0,
+				"mastery": 0
+			},
+			"refreshed": false,
+			"refreshAvailableIn": 0,
+			"warnings": []
+		}
+	}
+}

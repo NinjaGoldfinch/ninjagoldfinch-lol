@@ -202,3 +202,14 @@ Date: 2026-10-09 · Task: P2-02 (fix)
 **Decision.** The profile shows "Updated just now" only when this response's data came from Riot (`refreshed: true` on the profile or the match page, which only a refresh can cause), and otherwise no age. The cooldown is still shown.
 
 **Needed from riot-proxy (not changed here).** A per-part time since the proxy last read that part from Riot, whether or not it changed. For example, `fetchedAgeSeconds` with the same shape as `ageSeconds` on `ProfileBody`, and the equivalent for `MatchPage`'s id list. With that, the header can say "Updated N minutes ago" truthfully, and the plan's data-age requirement can be met.
+
+## ADR-017: Custom games hidden, partial profiles, central cache rules
+
+Date: 2026-10-09 · Task: P2-06
+
+**Decision.**
+
+- **Custom games** (queue 0) are dropped before anything renders, per Riot policy (custom-queue history stays private without the player's opt-in). So is a match with no queue ID, since it can't be shown not to be custom. They never reach the match list or the champion panel, and the list says "Custom games are not shown" without a count. The queue filter never offers queue 0 (P2-04).
+- **Only the profile call is essential.** If the match page fails, the page renders the header and rank with a match-history notice ("Too many requests … Try again in 30 seconds"), using the same mapping as `toHttpError`. If the Data Dragon lookups fail, it renders with plain fallbacks. A failed profile call still fails the page.
+- **Cache rules are applied centrally** in the `handle` hook, whatever a load set. Form posts and error responses get `no-store`, except 404, which gets `public, s-maxage=60` so repeated misses don't all reach riot-proxy. A profile whose match page failed sets `no-store` itself, so a passing rate limit isn't cached at the edge.
+- **Synthetic fixtures** (`tests/fixtures/synthetic-*.json`, each with a `_note`) are allowed for failure states that can't be recorded on demand. They follow riot-proxy's documented shapes, and recorded fixtures stay unedited.

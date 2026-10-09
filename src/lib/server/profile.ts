@@ -5,11 +5,12 @@ import {
 	type LeagueEntry,
 	type Summoner
 } from '#lib/api/riot.ts';
+import type { StaticNames } from '#lib/api/ddragon.ts';
 import { FILTER_QUEUES, MATCHES_PER_PAGE, type MatchFilter } from '#lib/domain/match-filters.ts';
-import { toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
+import { isCustomGame, toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
-import { toHttpError } from './errors.ts';
+import { classifyProxyError, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
 import { staticNames } from './static-data.ts';
@@ -30,7 +31,11 @@ export interface ProfileData {
 	 */
 	refreshed: boolean;
 	refreshAvailableIn: number;
-	matches: MatchRow[];
+	/** null when the match page could not be loaded; `matchesError` says why. */
+	matches: MatchRow[] | null;
+	matchesError: { status: number; retryAfter?: number } | null;
+	/** Custom games were left out of this page (Riot policy). */
+	customHidden: boolean;
 	hasMore: boolean;
 	filter: MatchFilter;
 	/** The queue filter's choices, named for this patch. */
@@ -39,9 +44,15 @@ export interface ProfileData {
 	patch: string;
 }
 
+const NO_NAMES: StaticNames = { champions: {}, items: {}, spells: {}, queues: {}, runes: {} };
+
 /**
- * One profile call by Riot ID, then the first page of matches and the patch.
+ * One profile call by Riot ID, then the page of matches and the patch.
  * Two round trips: the match page needs the puuid from the profile.
+ *
+ * Only the profile call is essential. If the match page fails, the page still
+ * renders with `matches: null`; if the Data Dragon lookups fail, plain
+ * fallbacks are used.
  *
  * `refresh` asks riot-proxy to re-read both from Riot, spending quota; it
  * allows that once a minute per player and otherwise answers from cache.
@@ -63,7 +74,7 @@ export async function loadProfile(
 	if (!profile.response.ok || !profile.data) toHttpError(profile.response, profile.error);
 	const body = profile.data;
 
-	const [matches, patch] = await Promise.all([
+	const [page, patch] = await Promise.all([
 		client.GET('/v1/players/{puuid}/matches', {
 			params: {
 				path: { puuid: body.puuid },
@@ -78,14 +89,23 @@ export async function loadProfile(
 		}),
 		currentPatch(client)
 	]);
-	if (!matches.response.ok || !matches.data) toHttpError(matches.response, matches.error);
 
-	const names = await staticNames(patch, client);
+	const names = await staticNames(patch, client).catch((error: unknown) => {
+		console.error('Data Dragon lookups unavailable; using fallbacks:', error);
+		return NO_NAMES;
+	});
+
+	const label = `${region.slug}/${id.gameName}#${id.tagLine}`;
+	const matches = page.response.ok && page.data ? page.data : null;
+	const warnings = [...body.warnings, ...(matches?.warnings ?? [])];
+	if (warnings.length > 0) console.error(`profile ${label} warnings: ${warnings.join('; ')}`);
+
 	const account = parseAccount(body.account);
-	if (body.warnings.length > 0 || matches.data.warnings.length > 0) {
-		console.error(
-			`profile ${region.slug}/${id.gameName}#${id.tagLine} warnings: ${[...body.warnings, ...matches.data.warnings].join('; ')}`
-		);
+	const shown = matches?.matches.filter((m) => !isCustomGame(m));
+	let matchesError: ProfileData['matchesError'] = null;
+	if (!matches) {
+		const failure = classifyProxyError(page.response.status, page.error, page.response.headers);
+		matchesError = { status: failure.status, retryAfter: failure.body.retryAfter };
 	}
 
 	return {
@@ -96,10 +116,12 @@ export async function loadProfile(
 		},
 		summoner: parseSummoner(body.summoner) ?? null,
 		ranks: parseLeagueEntries(body.league) ?? null,
-		refreshed: body.refreshed || matches.data.refreshed,
-		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches.data.refreshAvailableIn),
-		matches: toMatchRows(matches.data.matches, names),
-		hasMore: matches.data.hasMore,
+		refreshed: body.refreshed || Boolean(matches?.refreshed),
+		refreshAvailableIn: Math.max(body.refreshAvailableIn, matches?.refreshAvailableIn ?? 0),
+		matches: shown ? toMatchRows(shown, names) : null,
+		matchesError,
+		customHidden: Boolean(matches && shown && shown.length < matches.matches.length),
+		hasMore: matches?.hasMore ?? false,
 		filter,
 		queueOptions: FILTER_QUEUES.map((id) => ({ id, name: names.queues[id] ?? `Queue ${id}` })),
 		patch

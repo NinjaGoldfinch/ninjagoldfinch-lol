@@ -3,6 +3,7 @@ import type { components } from '#lib/api/schema.d.ts';
 import {
 	csPerMinute,
 	formatDuration,
+	isCustomGame,
 	kdaRatio,
 	patchOf,
 	toMatchRows
@@ -113,5 +114,14 @@ describe('match formatting', () => {
 	it('gives CS per minute', () => {
 		expect(csPerMinute(181, 1952)).toBe('5.6');
 		expect(csPerMinute(0, 0)).toBe('0.0');
+	});
+});
+
+describe('isCustomGame', () => {
+	it('treats queue 0 and a missing queue as custom', () => {
+		expect(isCustomGame({ matchId: 'a', queueId: 0 })).toBe(true);
+		expect(isCustomGame({ matchId: 'b', queueId: null })).toBe(true);
+		expect(isCustomGame({ matchId: 'c' })).toBe(true);
+		expect(isCustomGame({ matchId: 'd', queueId: 420 })).toBe(false);
 	});
 });

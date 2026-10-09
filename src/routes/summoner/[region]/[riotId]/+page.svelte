@@ -8,6 +8,7 @@
 	import ProfileHeader from '#lib/components/ProfileHeader.svelte';
 	import RankBadge from '#lib/components/RankBadge.svelte';
 	import { summariseChampions } from '#lib/domain/champion-summary.ts';
+	import { describeError } from '#lib/domain/error-view.ts';
 	import { actionUrl } from '#lib/domain/match-filters.ts';
 	import { describeRanks } from '#lib/domain/ranks.ts';
 	import { rememberSearch } from '#lib/recent-storage.ts';
@@ -18,7 +19,11 @@
 	// After a refresh, the action's result is the freshest copy.
 	const profile = $derived(form?.profile ?? data);
 	const ranks = $derived(profile.ranks && describeRanks(profile.ranks));
-	const champions = $derived(summariseChampions(profile.matches));
+	const champions = $derived(profile.matches && summariseChampions(profile.matches));
+	const matchesError = $derived(
+		profile.matchesError &&
+			describeError(profile.matchesError.status, profile.matchesError.retryAfter)
+	);
 	const queueName = $derived(profile.queueOptions.find((q) => q.id === profile.filter.queue)?.name);
 
 	onMount(() => {
@@ -58,7 +63,9 @@
 			{/if}
 		</section>
 
-		<ChampionSummary {champions} patch={profile.patch} matchCount={profile.matches.length} />
+		{#if champions && profile.matches}
+			<ChampionSummary {champions} patch={profile.patch} matchCount={profile.matches.length} />
+		{/if}
 	</aside>
 
 	<section class="min-w-0" aria-labelledby="matches">
@@ -68,15 +75,25 @@
 			</h2>
 			<MatchFilters filter={profile.filter} options={profile.queueOptions} />
 		</div>
-		<ul class="mt-2 space-y-2">
-			{#each profile.matches as match (match.matchId)}
-				<li><MatchRow {match} patch={profile.patch} /></li>
-			{:else}
-				<li class="text-muted">
-					{queueName ? `No ${queueName} matches here.` : 'No matches here.'}
-				</li>
-			{/each}
-		</ul>
-		<Pagination path={page.url.pathname} filter={profile.filter} hasMore={profile.hasMore} />
+		{#if profile.matches === null}
+			<div role="status" class="mt-2 rounded border border-border bg-surface px-4 py-3">
+				<p class="font-medium">Match history: {matchesError?.title}</p>
+				<p class="mt-1 text-sm text-muted">{matchesError?.detail}</p>
+			</div>
+		{:else}
+			<ul class="mt-2 space-y-2">
+				{#each profile.matches as match (match.matchId)}
+					<li><MatchRow {match} patch={profile.patch} /></li>
+				{:else}
+					<li class="text-muted">
+						{queueName ? `No ${queueName} matches here.` : 'No matches here.'}
+					</li>
+				{/each}
+			</ul>
+			{#if profile.customHidden}
+				<p class="mt-2 text-xs text-muted">Custom games are not shown.</p>
+			{/if}
+			<Pagination path={page.url.pathname} filter={profile.filter} hasMore={profile.hasMore} />
+		{/if}
 	</section>
 </div>
