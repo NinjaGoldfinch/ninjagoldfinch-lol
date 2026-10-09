@@ -25,7 +25,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 - [x] P2-01 Profile load: composite profile (account, summoner, rank), first page of 10 matches, current patch; test data from NinjaGoldfinch#OCENZ — #15
 - [x] P2-02 `RankBadge` and profile header with data age and refresh cooldown; header search follows the profile's region — #16
-- [ ] P2-03 `MatchRow`: champion, KDA, items, result, duration, queue
+- [x] P2-03 `MatchRow`: champion, spells, KDA, CS/min, items, result, duration, queue, time ago — #17
 - [ ] P2-04 Queue and champion filters as query parameters; pagination
 - [ ] P2-05 Champion summary panel from the loaded matches
 - [ ] P2-06 Hide custom-queue matches; cache headers; error states

@@ -35,9 +35,22 @@ test.describe('without JavaScript', () => {
 		await expect(rank).toContainText('Ranked Solo/Duo');
 		await expect(rank).toContainText('Emerald III 67 LP');
 		await expect(rank).toContainText('475W 464L · 51%');
-		const matches = page.getByRole('region', { name: 'Recent matches' }).getByRole('listitem');
+		const matches = page.getByRole('region', { name: 'Recent matches' }).getByRole('article');
 		await expect(matches).toHaveCount(10);
-		await expect(matches.first()).toContainText('win · Ahri · 8/8/10');
+
+		const first = page.getByRole('article', { name: 'Victory as Ahri' }).first();
+		await expect(first).toContainText('Ranked Solo');
+		await expect(first).toContainText('32:32');
+		await expect(first).toContainText('8 / 8 / 10');
+		await expect(first).toContainText('2.25 KDA');
+		await expect(first).toContainText('181 CS (5.6/min)');
+		await expect(first.getByRole('img', { name: 'Ahri' })).toHaveAttribute(
+			'src',
+			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png'
+		);
+		await expect(first.getByRole('img', { name: 'Flash' })).toBeVisible();
+		await expect(first.getByRole('list', { name: 'Items' }).getByRole('img')).toHaveCount(7);
+		await expect(first.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
 	});
 
 	test('refresh re-reads the profile and starts the cooldown', async ({ page }) => {

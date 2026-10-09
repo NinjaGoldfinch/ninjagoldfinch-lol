@@ -1,0 +1,48 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createProxyClient } from '#lib/server/proxy.ts';
+import { clearStaticNames, staticNames } from '#lib/server/static-data.ts';
+import { findFixture, loadFixtures } from '../mock-proxy/mock.ts';
+
+const fixtures = loadFixtures();
+
+/** A client that answers from fixtures and counts requests. */
+function countingClient(status?: number) {
+	let requests = 0;
+	const client = createProxyClient('http://proxy.test', undefined, async (request) => {
+		requests += 1;
+		const url = new URL(request.url);
+		const fixture = findFixture(fixtures, 'GET', url.pathname + url.search);
+		return new Response(JSON.stringify(fixture?.response.body ?? {}), {
+			status: status ?? fixture?.response.status ?? 500,
+			headers: { 'content-type': 'application/json' }
+		});
+	});
+	return { client, requests: () => requests };
+}
+
+afterEach(() => {
+	clearStaticNames();
+	vi.restoreAllMocks();
+});
+
+describe('staticNames', () => {
+	it('fetches the four files once per patch', async () => {
+		const { client, requests } = countingClient();
+		const first = await staticNames('16.20.1', client);
+		await staticNames('16.20.1', client);
+
+		expect(requests()).toBe(4);
+		expect(first.champions[103].id).toBe('Ahri');
+		expect(first.queues[420]).toBe('Ranked Solo');
+	});
+
+	it('does not keep a failed fetch', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const failing = countingClient(503);
+		await expect(staticNames('16.20.1', failing.client)).rejects.toThrow();
+
+		const working = countingClient();
+		await expect(staticNames('16.20.1', working.client)).resolves.toBeTruthy();
+		expect(working.requests()).toBe(4);
+	});
+});

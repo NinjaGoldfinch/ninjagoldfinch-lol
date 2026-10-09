@@ -155,3 +155,15 @@ Date: 2026-10-09 · Task: P2-02
 - The button is disabled while riot-proxy's `refreshAvailableIn` (the larger of the profile's and the match page's) is above zero. With JavaScript the cooldown counts down; without it, the server-rendered value is shown.
 
 **Consequences.** A refreshed page sits at the action URL. Reloading it asks the browser to resubmit the form, and riot-proxy answers from cache inside the cooldown. The P5 Cloudflare cache rule may cache `__data.json` alongside the HTML; refresh doesn't depend on it either way.
+
+## ADR-013: Data Dragon lookups are held in memory for the current patch
+
+Date: 2026-10-09 · Task: P2-03
+
+**Context.** A match row needs Data Dragon's champion IDs (`103` → `Ahri`, for image URLs), item and summoner-spell names, and queue names. riot-proxy mirrors these files, but `item.json` is about 700 kB and `champion.json` about 160 kB. The plan says the site adds no cache of its own.
+
+**Decision.** `src/lib/server/static-data.ts` fetches `champion`, `item` and `summoner` for the current patch, plus `queues`, reduces them to small lookups, and holds them in memory for that one patch. A new patch replaces them, and a failed fetch isn't kept. This bends the no-cache rule only for data that can't change within a patch. Riot player data is still never cached by the site. Measured against the dev proxy: 831 ms for the first profile view after start-up, 56 ms after that.
+
+Queue names come from Riot's descriptions with the team size and "games" removed (`5v5 Ranked Solo games` → `Ranked Solo`), so there is no hand-kept queue table. Names are resolved on the server, so the page carries only the names it shows. Something the patch doesn't know falls back to the name in the match (champions) or `Item 1234` / `Queue 1234`.
+
+Test fixtures for these files are trimmed to the IDs the other fixtures use, with `just fixture <name> <path> --keep id,id,…`.
