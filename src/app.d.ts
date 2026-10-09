@@ -2,7 +2,10 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		// interface Error {}
+		interface Error {
+			/** Seconds to wait before retrying, when riot-proxy says. */
+			retryAfter?: number;
+		}
 		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
