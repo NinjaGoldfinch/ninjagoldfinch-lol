@@ -167,3 +167,33 @@ The same comparison against the live match's raw timeline from the dev proxy (se
 Gates at the same commit: `just check` passes (199 unit tests); `just e2e` 48 passed against the mock.
 
 Tagged `phase-P3` on the commit that records this check. Paused for owner review before P4.
+
+### P4 exit check — passed 2026-10-10
+
+Production build of `main` at a784835 (`node build`, `NODE_ENV=production`, `ORIGIN` set), against the real dev proxy (auth off, placeholder `PROXY_KEY`), in Chromium **with JavaScript disabled**.
+
+**Every figure traced to riot-proxy.** A script read each figure off the rendered pages and compared it with riot-proxy's response to the same query, fetched directly and worked out independently of the site's code: the summed `stats` row for the header; each set build's `winRate`, `games` and core item ids for its tab; the top `runes`, `spells`, `skillOrder`, `starter` and `boots` of each build, and every 3rd–5th item option (item ids read from the icon URLs, rune and spell names from Data Dragon); every matchup in the builds' role (or the role asked for); every `byTier` row, in ladder order; and every row of the champion table. Each games count was also checked for a "Low sample" mark exactly when under 100 games.
+
+```text
+page                          builds  role     matchups  tiers  "Low sample" marks
+/champions                         –  –             173 rows, 0 marked (all ≥ 100 games)
+/champions?patch=16.20             –  –             171 rows, 171 marked
+/champions/ahri                    3  Mid           123      6  132
+/champions/ahri?role=mid           3  Mid           123      6  132
+/champions/kaisa                   3  Bot            83      6   76
+/champions/ahri?patch=16.20        3  Mid            12      2   22
+/champions/viego?patch=16.20       3  Jungle         17      3   29
+
+figures compared   885
+mismatches           0
+cache-control      public, s-maxage=600, stale-while-revalidate=600 on each page
+server log         no proxy failures
+```
+
+Gates at the same commit: `just check` passes (280 unit tests); `just e2e` 69 passed against the mock.
+
+Since P3, also: the match page's build follows riot-proxy's BLD-04 definitions (P3-05, #53) and its skill grid shows every point taken (#57); search finds a player's region from the Riot ID, and profile and match URLs drop it (P4-04, #59).
+
+Open with riot-proxy: Viego's possession can log skill points he didn't spend. A writeup and a handoff for a Viego-only rule went to riot-proxy on 2026-10-10; the site will mirror the rule once it lands.
+
+Tagged `phase-P4` on the commit that records this check. Paused for owner review before P5.
