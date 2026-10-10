@@ -426,3 +426,23 @@ Date: 2026-10-10 · Task: P4-01
 - The header has a "Champions" link.
 
 **Consequences.** No sample sizes or minimum-games threshold yet; the games column is the raw count, and P4-03 adds the marking. Flex queue, a region picker and champion pages (P4-02) are not part of this task. The match page's tab links use `data-sveltekit-noscroll`, which SvelteKit 3 has renamed (`data-sveltekit-reset="false"`). The champion table uses the new name. The match page is left for a separate fix.
+
+## ADR-034: Champion pages, and a search that takes a champion's name
+
+Date: 2026-10-10 · Task: P4-02
+
+**Context.** riot-proxy serves what a champion page needs in three routes: the detail (`stats` summed over every tier, `byTier`, and the most played items, runes and spells), set builds (BLD-03: the first two finished items, then later steps, starter, boots, skill order, runes and spells) and lane matchups. Its showcase is the reference layout. It also searches champions by name from one box (SITE-10). The owner chose to put that search in this task, and to make the region come from the Riot ID later, in P4-04.
+
+**Decision.**
+
+- **URL.** `/champions/{id}`, where `{id}` is Data Dragon's champion id lower-cased (`/champions/monkeyking`). Any spelling of the id or the display name (`/champions/Wukong`, `/champions/AHRI`) redirects there with a 308, and so do defaults and unknown query values. A champion nobody has data for still has a page; an unknown name is not found.
+- **Filters.** The table's role tabs and patch picker (ADR-033), now one component, `AnalyticsFilters`. The patch list is the champion's own (`/v1/lol/analytics/patches?championId=`). The table links each champion to its page, and the page links back, both keeping the role and patch.
+- **Loads.** Once the champion is resolved, the detail, set builds, matchups and patch list are fetched in parallel. Only the detail is essential. When the set builds fail, the builds card says so and shows the detail's lists. When the matchups fail, only that card says so.
+- **Set builds.** No `role` means riot-proxy picks the champion's most-played role and names it, and builds are never summed across roles. Up to three tabs, each its two core items with win rate and games. Row one has the top keystone and secondary path, spells, skill order (`Q › W › E`), starter and boots. Row two is the item path, `item1 › item2 › 3rd › 4th › 5th`, each later step stacking its options with win rate and games. Tabs are links (`?build=2#builds`), read by the page without the load tracking them, so with JavaScript switching asks the server for nothing, as the table's sort does. With no set builds (no timelines archived for the slice), the card shows the detail's items, runes and spells.
+- **Matchups.** For the role asked for; without one, for the set builds' role, and every lane if there is none. Most games first, scrolling inside the card.
+- **By tier.** `byTier`, top tier first. `UNKNOWN` is labelled "Unplaced" and comes last, with a note on what it means.
+- **Search.** The header box takes a Riot ID or a champion's name. Input with `#` is a Riot ID, as before; anything else is a champion name. Matching follows riot-proxy's showcase (`findChampion` in `src/lib/domain/champion-search.ts`): lower case, accents, spaces and punctuation dropped; display name and Data Dragon id both match; an exact match wins, else a unique prefix. One match redirects to `/champions/{id}#builds`. Otherwise the search page says what matched ("'sy' matches Sylas, Syndra. Keep typing.") or that a Riot ID needs its #TAG. The field is now `q`; `riotId` is still read. The region picker stays until P4-04.
+- **Suggestions.** Pages that already hold Data Dragon's names (the champion pages and a search that found nothing) pass the champion names to the header's `<datalist>`. A root layout load would add a proxy call to every page and run at build time for the prerendered `/about`.
+- **Cache.** The `analytics` policy (ADR-033).
+
+**Consequences.** Every figure on the page is a field from riot-proxy's response, shown as sent (P4-03's exit check). Low-sample marking is still P4-03's. The home page has no suggestions, since it has no load. The static item fixture gained six items the recorded builds use; its existing entries are unchanged.

@@ -5,6 +5,7 @@ import {
 	toChampionTable
 } from '#lib/domain/champion-stats.ts';
 import type { ChampionFilter, ChampionTable } from '#lib/domain/champion-stats.ts';
+import { championNames } from '#lib/domain/champion-search.ts';
 import { toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
@@ -18,6 +19,8 @@ export interface ChampionsPage {
 	patches: string[];
 	/** The Data Dragon version for champion icons. */
 	ddragonVersion: string;
+	/** For the header search's suggestions. */
+	championNames: string[];
 }
 
 /**
@@ -48,6 +51,7 @@ export async function loadChampions(
 	return {
 		table: toChampionTable(champions.data, names),
 		patches: patchOptions(patches.response.ok ? patches.data : undefined),
-		ddragonVersion
+		ddragonVersion,
+		championNames: championNames(names.champions)
 	};
 }

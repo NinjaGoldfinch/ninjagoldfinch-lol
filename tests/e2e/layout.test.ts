@@ -6,7 +6,7 @@ test('every page has the search form and the Riot legal notice', async ({ page }
 	await page.goto('/');
 	const search = page.getByRole('banner').getByRole('search');
 	await expect(search.getByRole('combobox', { name: 'Region' })).toHaveValue('oce');
-	await expect(search.getByRole('textbox', { name: 'Riot ID' })).toBeVisible();
+	await expect(search.getByRole('textbox', { name: 'Riot ID or champion' })).toBeVisible();
 	await expect(page.locator('footer')).toContainText(LEGAL);
 });
 

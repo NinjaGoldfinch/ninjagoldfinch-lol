@@ -71,15 +71,23 @@ export function championQuery(filter: ChampionFilter, sort: ChampionSort = DEFAU
 	return query ? `?${query}` : '';
 }
 
-/** riot-proxy's query for a filter. `limit` is its most, so every champion is listed. */
-export function proxyQuery(filter: ChampionFilter) {
+/**
+ * riot-proxy's analytics query for a filter, keys in a fixed order (the mock
+ * proxy matches recorded paths exactly). No tier: rows summed over every tier.
+ */
+export function analyticsQuery(filter: ChampionFilter, limit?: number) {
 	const role = ROLES.find((r) => r.slug === filter.role)?.proxy;
 	return {
 		queue: ANALYTICS_QUEUE,
 		...(filter.patch !== null && { patch: filter.patch }),
 		...(role && { role }),
-		limit: 500
+		...(limit !== undefined && { limit })
 	};
+}
+
+/** The table's query. `limit` is riot-proxy's most, so every champion is listed. */
+export function proxyQuery(filter: ChampionFilter) {
+	return analyticsQuery(filter, 500);
 }
 
 /** One champion's line in the table. Rates are 0–1; null when riot-proxy has none. */
@@ -155,4 +163,14 @@ export function sortRows(rows: ChampionRow[], sort: ChampionSort): ChampionRow[]
 /** `51.3%`; `–` when there is no rate. */
 export function formatRate(rate: number | null): string {
 	return rate === null ? '–' : `${(rate * 100).toFixed(1)}%`;
+}
+
+/** `All patches`, `Patch 16.19`, or `Newest patch` before riot-proxy names it. */
+export function patchLabel(patch: string | null): string {
+	return patch === 'all' ? 'All patches' : patch ? `Patch ${patch}` : 'Newest patch';
+}
+
+/** The patches a picker offers: riot-proxy's list, plus the one shown when the list lacks it. */
+export function pickerPatches(shown: string | null, patches: string[]): string[] {
+	return shown && shown !== 'all' && !patches.includes(shown) ? [shown, ...patches] : patches;
 }

@@ -9,7 +9,7 @@
 </svelte:head>
 
 <h1 class="text-3xl font-semibold">League of Legends player stats</h1>
-<p class="mt-2 text-muted">Look up any player by Riot ID.</p>
+<p class="mt-2 text-muted">Look up any player by Riot ID, or a champion's builds by name.</p>
 <div class="mt-6 max-w-xl">
 	<SearchForm />
 </div>

@@ -9,7 +9,7 @@
 			"content-type": "application/json; charset=utf-8",
 			"x-cache": "HIT",
 			"x-cache-age": "0",
-			"x-request-id": "01M4G5HSB6ZPAJHE8QA3NZYYGX"
+			"x-request-id": "01M4HMYQ0JCKR60R6AN4QJKGVF"
 		},
 		"body": {
 			"type": "item",
@@ -887,6 +887,45 @@
 						"PercentLifeStealMod": 0.07
 					},
 					"depth": 2
+				},
+				"1054": {
+					"name": "Doran's Shield",
+					"description": "<mainText><stats><attention>110</attention> Health</stats><br><br><passive>Enduring Focus</passive><br>Restore <healing>4 Health</healing> every 5 seconds. <br>After taking damage from a champion, restore <healing>Health</healing> over 8 seconds.<br><br><passive>Helping Hand</passive><br>Attacks deal <physicalDamage>5 bonus physical damage</physicalDamage> to minions.</mainText>",
+					"colloq": ";dshield",
+					"plaintext": "Good defensive starting item",
+					"image": {
+						"full": "1054.png",
+						"sprite": "item0.png",
+						"group": "item",
+						"x": 48,
+						"y": 96,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 450,
+						"purchasable": true,
+						"total": 450,
+						"sell": 180
+					},
+					"tags": ["Health", "HealthRegen", "Lane"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatHPPoolMod": 110,
+						"FlatHPRegenMod": 0.8
+					},
+					"effect": {
+						"Effect1Amount": "8",
+						"Effect2Amount": "5",
+						"Effect3Amount": "45",
+						"Effect4Amount": "0.66"
+					}
 				},
 				"1055": {
 					"name": "Doran's Blade",
@@ -2095,6 +2134,41 @@
 					},
 					"depth": 3
 				},
+				"3041": {
+					"name": "Mejai's Soulstealer",
+					"description": "<mainText><stats><attention>20</attention> Ability Power<br><attention>100</attention> Health</stats><br><br><passive>Glory</passive><br><keyword>Takedowns</keyword> grant <passive>Glory</passive>, up to 25. 10 <passive>Glory</passive> is lost on death.<br>Gain <scaleAP>5 Ability Power</scaleAP> per <passive>Glory</passive> and <speed>10% Move Speed</speed> at 10 or higher <passive>Glory</passive>.</mainText>",
+					"colloq": ";",
+					"plaintext": "Grants Ability Power for kills and assists",
+					"from": ["1082"],
+					"image": {
+						"full": "3041.png",
+						"sprite": "item3.png",
+						"group": "item",
+						"x": 384,
+						"y": 144,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 1150,
+						"purchasable": true,
+						"total": 1500,
+						"sell": 1050
+					},
+					"tags": ["Health", "SpellDamage", "NonbootsMovement"],
+					"maps": {
+						"11": true,
+						"12": false,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatHPPoolMod": 100,
+						"FlatMagicDamageMod": 20
+					},
+					"depth": 2
+				},
 				"3042": {
 					"name": "Muramana",
 					"description": "<mainText><stats><attention>35</attention> Attack Damage<br><attention>1000</attention> Mana<br><attention>15</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain <scaleAD>2% max Mana as bonus Attack Damage</scaleAD>.<br><br><passive>Shock</passive><br>Attacks against champions deal <physicalDamage>1.2% max Mana as bonus physical damage</physicalDamage> <OnHit>On-Hit</OnHit>. <br>Damaging Abilities against champions deal <physicalDamage>3% - 4% max Mana as bonus physical damage</physicalDamage>.</mainText>",
@@ -2901,6 +2975,41 @@
 					},
 					"depth": 3
 				},
+				"3118": {
+					"name": "Malignance",
+					"description": "<mainText><stats><attention>90</attention> Ability Power<br><attention>600</attention> Mana<br><attention>15</attention> Ability Haste</stats><br><br><passive>Scorn</passive><br>Gain 20 Ultimate Ability Haste.<br><br><passive>Hatefog</passive><br>Damaging a champion with your Ultimate burns the ground beneath them for 3s, dealing <magicDamage>magic damage</magicDamage> per second and reducing their <scaleMR>Magic Resist</scaleMR>. <br></mainText>",
+					"colloq": ";",
+					"plaintext": "Partner with an ally to protect each other",
+					"from": ["3802", "1026"],
+					"image": {
+						"full": "3118.png",
+						"sprite": "item3.png",
+						"group": "item",
+						"x": 192,
+						"y": 384,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 650,
+						"purchasable": true,
+						"total": 2700,
+						"sell": 1890
+					},
+					"tags": ["SpellDamage", "Mana", "AbilityHaste"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatMPPoolMod": 600,
+						"FlatMagicDamageMod": 90
+					},
+					"depth": 3
+				},
 				"3124": {
 					"name": "Guinsoo's Rageblade",
 					"description": "<mainText><stats><attention>30</attention> Attack Damage<br><attention>30</attention> Ability Power<br><attention>25%</attention> Attack Speed</stats><br><br><passive>Wrath</passive><br>Attacks deal <magicDamage>30 bonus magic damage <OnHit>On-Hit</OnHit></magicDamage>.<br><br><passive>Seething Strike</passive><br>Attacks grant <attackSpeed>8% Attack Speed</attackSpeed> for 4 seconds. (stacks 4 times). <br>While fully stacked, every third Attack applies <OnHit>On-Hit</OnHit> effects twice.</mainText>",
@@ -3007,6 +3116,74 @@
 						"FlatPhysicalDamageMod": 20
 					},
 					"depth": 2
+				},
+				"3135": {
+					"name": "Void Staff",
+					"description": "<mainText><stats><attention>95</attention> Ability Power<br><attention>40%</attention> Magic Penetration</stats><br><br></mainText>",
+					"colloq": ";",
+					"plaintext": "Increases magic damage",
+					"from": ["4630", "1026"],
+					"image": {
+						"full": "3135.png",
+						"sprite": "item3.png",
+						"group": "item",
+						"x": 144,
+						"y": 432,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 1050,
+						"purchasable": true,
+						"total": 3000,
+						"sell": 2100
+					},
+					"tags": ["MagicPenetration", "SpellDamage"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatMagicDamageMod": 95
+					},
+					"depth": 3
+				},
+				"3137": {
+					"name": "Cryptbloom",
+					"description": "<mainText><stats><attention>75</attention> Ability Power<br><attention>30%</attention> Magic Penetration<br><attention>20</attention> Ability Haste</stats><br><br><passive>Life from Death</passive><br>When a champion that you damaged within 3 seconds dies, a nova spreads from their corpse that <healing>heals</healing>.</mainText>",
+					"colloq": ";",
+					"plaintext": "Activate to remove all debuffs and grant massive Move Speed",
+					"from": ["4630", "3108", "3108"],
+					"image": {
+						"full": "3137.png",
+						"sprite": "item3.png",
+						"group": "item",
+						"x": 192,
+						"y": 432,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 200,
+						"purchasable": true,
+						"total": 3000,
+						"sell": 2100
+					},
+					"tags": ["SpellDamage", "MagicPenetration", "AbilityHaste"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatMagicDamageMod": 75
+					},
+					"depth": 3
 				},
 				"3140": {
 					"name": "Quicksilver Sash",
@@ -3220,6 +3397,46 @@
 					"stats": {
 						"FlatSpellBlockMod": 40,
 						"FlatPhysicalDamageMod": 60
+					},
+					"depth": 3
+				},
+				"3157": {
+					"name": "Zhonya's Hourglass",
+					"description": "<mainText><stats><attention>105</attention> Ability Power<br><attention>50</attention> Armor</stats><br><br><br><br><active>Time Stop</active><br>Enter <keyword>Stasis</keyword> for 2.5 seconds.</mainText>",
+					"colloq": ";zhg;zonyas",
+					"plaintext": "Activate to become invincible but unable to take actions",
+					"from": ["1058", "2420"],
+					"image": {
+						"full": "3157.png",
+						"sprite": "item4.png",
+						"group": "item",
+						"x": 336,
+						"y": 0,
+						"w": 48,
+						"h": 48
+					},
+					"gold": {
+						"base": 450,
+						"purchasable": true,
+						"total": 3250,
+						"sell": 2275
+					},
+					"tags": ["Armor", "SpellDamage", "Active"],
+					"maps": {
+						"11": true,
+						"12": true,
+						"22": false,
+						"30": false,
+						"453": true
+					},
+					"stats": {
+						"FlatMagicDamageMod": 105,
+						"FlatArmorMod": 50
+					},
+					"effect": {
+						"Effect1Amount": "0",
+						"Effect2Amount": "2.5",
+						"Effect3Amount": "120"
 					},
 					"depth": 3
 				},

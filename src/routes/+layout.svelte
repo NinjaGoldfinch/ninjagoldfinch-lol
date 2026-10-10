@@ -12,6 +12,12 @@
 
 	// On a profile, the header search starts at that profile's region.
 	const region = $derived(page.params.region && findRegion(page.params.region)?.slug);
+	// Pages that have Data Dragon's names pass them on, so the search suggests champions.
+	const champions = $derived(
+		Array.isArray(page.data.championNames)
+			? page.data.championNames.filter((n: unknown): n is string => typeof n === 'string')
+			: []
+	);
 </script>
 
 <svelte:head>
@@ -29,7 +35,7 @@
 					<a href="/champions" class="text-sm hover:text-accent">Champions</a>
 				</nav>
 			</div>
-			<SearchForm region={region || undefined} />
+			<SearchForm region={region || undefined} {champions} />
 		</div>
 	</header>
 

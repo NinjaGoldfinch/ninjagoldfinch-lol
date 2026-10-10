@@ -1,0 +1,25 @@
+{
+	"_note": "Synthetic: riot-proxy's documented empty set builds (no timelines archived for the slice), so the page falls back to the detail's lists. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HMYDJ6WD0B30SVN07GN2Q2"
+		},
+		"body": {
+			"championId": 103,
+			"championName": "Ahri",
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"patch": "all",
+			"role": "BOTTOM",
+			"computedAt": "2026-10-10T00:10:23.886Z",
+			"totalGames": 0,
+			"builds": []
+		}
+	}
+}

@@ -1,0 +1,952 @@
+{
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/matchups?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&limit=200"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HMYE6NVK3NJ66QFXHJSFAD"
+		},
+		"body": {
+			"championId": 103,
+			"championName": "Ahri",
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"patch": "all",
+			"role": "MIDDLE",
+			"computedAt": "2026-10-10T00:10:22.637Z",
+			"matchups": [
+				{
+					"role": "MIDDLE",
+					"opponentId": 517,
+					"opponentName": "Sylas",
+					"games": 126,
+					"wins": 60,
+					"winRate": 0.4762
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 134,
+					"opponentName": "Syndra",
+					"games": 94,
+					"wins": 54,
+					"winRate": 0.5745
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 112,
+					"opponentName": "Viktor",
+					"games": 91,
+					"wins": 48,
+					"winRate": 0.5275
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 238,
+					"opponentName": "Zed",
+					"games": 88,
+					"wins": 41,
+					"winRate": 0.4659
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 157,
+					"opponentName": "Yasuo",
+					"games": 83,
+					"wins": 43,
+					"winRate": 0.5181
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 55,
+					"opponentName": "Katarina",
+					"games": 79,
+					"wins": 40,
+					"winRate": 0.5063
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 90,
+					"opponentName": "Malzahar",
+					"games": 70,
+					"wins": 41,
+					"winRate": 0.5857
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 777,
+					"opponentName": "Yone",
+					"games": 67,
+					"wins": 32,
+					"winRate": 0.4776
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 3,
+					"opponentName": "Galio",
+					"games": 63,
+					"wins": 37,
+					"winRate": 0.5873
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 4,
+					"opponentName": "Twisted Fate",
+					"games": 59,
+					"wins": 33,
+					"winRate": 0.5593
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 910,
+					"opponentName": "Hwei",
+					"games": 59,
+					"wins": 29,
+					"winRate": 0.4915
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 61,
+					"opponentName": "Orianna",
+					"games": 56,
+					"wins": 33,
+					"winRate": 0.5893
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 84,
+					"opponentName": "Akali",
+					"games": 55,
+					"wins": 24,
+					"winRate": 0.4364
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 105,
+					"opponentName": "Fizz",
+					"games": 55,
+					"wins": 26,
+					"winRate": 0.4727
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 127,
+					"opponentName": "Lissandra",
+					"games": 54,
+					"wins": 27,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 8,
+					"opponentName": "Vladimir",
+					"games": 53,
+					"wins": 25,
+					"winRate": 0.4717
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 166,
+					"opponentName": "Akshan",
+					"games": 48,
+					"wins": 19,
+					"winRate": 0.3958
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 99,
+					"opponentName": "Lux",
+					"games": 47,
+					"wins": 24,
+					"winRate": 0.5106
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 893,
+					"opponentName": "Aurora",
+					"games": 47,
+					"wins": 24,
+					"winRate": 0.5106
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 800,
+					"opponentName": "Mel",
+					"games": 46,
+					"wins": 23,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 101,
+					"opponentName": "Xerath",
+					"games": 42,
+					"wins": 23,
+					"winRate": 0.5476
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 7,
+					"opponentName": "LeBlanc",
+					"games": 41,
+					"wins": 25,
+					"winRate": 0.6098
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 34,
+					"opponentName": "Anivia",
+					"games": 40,
+					"wins": 18,
+					"winRate": 0.45
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 45,
+					"opponentName": "Veigar",
+					"games": 40,
+					"wins": 25,
+					"winRate": 0.625
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 142,
+					"opponentName": "Zoe",
+					"games": 37,
+					"wins": 14,
+					"winRate": 0.3784
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 131,
+					"opponentName": "Diana",
+					"games": 36,
+					"wins": 16,
+					"winRate": 0.4444
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 13,
+					"opponentName": "Ryze",
+					"games": 34,
+					"wins": 20,
+					"winRate": 0.5882
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 39,
+					"opponentName": "Irelia",
+					"games": 33,
+					"wins": 14,
+					"winRate": 0.4242
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 805,
+					"opponentName": "Locke",
+					"games": 33,
+					"wins": 14,
+					"winRate": 0.4242
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 1,
+					"opponentName": "Annie",
+					"games": 31,
+					"wins": 15,
+					"winRate": 0.4839
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 245,
+					"opponentName": "Ekko",
+					"games": 31,
+					"wins": 14,
+					"winRate": 0.4516
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 950,
+					"opponentName": "Naafiri",
+					"games": 31,
+					"wins": 15,
+					"winRate": 0.4839
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 38,
+					"opponentName": "Kassadin",
+					"games": 30,
+					"wins": 22,
+					"winRate": 0.7333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 163,
+					"opponentName": "Taliyah",
+					"games": 30,
+					"wins": 14,
+					"winRate": 0.4667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 711,
+					"opponentName": "Vex",
+					"games": 25,
+					"wins": 8,
+					"winRate": 0.32
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 91,
+					"opponentName": "Talon",
+					"games": 24,
+					"wins": 11,
+					"winRate": 0.4583
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 14,
+					"opponentName": "Sion",
+					"games": 22,
+					"wins": 8,
+					"winRate": 0.3636
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 268,
+					"opponentName": "Azir",
+					"games": 22,
+					"wins": 14,
+					"winRate": 0.6364
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 136,
+					"opponentName": "Aurelion Sol",
+					"games": 20,
+					"wins": 9,
+					"winRate": 0.45
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 246,
+					"opponentName": "Qiyana",
+					"games": 20,
+					"wins": 9,
+					"winRate": 0.45
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 63,
+					"opponentName": "Brand",
+					"games": 19,
+					"wins": 10,
+					"winRate": 0.5263
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 69,
+					"opponentName": "Cassiopeia",
+					"games": 17,
+					"wins": 8,
+					"winRate": 0.4706
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 50,
+					"opponentName": "Swain",
+					"games": 15,
+					"wins": 2,
+					"winRate": 0.1333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 126,
+					"opponentName": "Jayce",
+					"games": 15,
+					"wins": 10,
+					"winRate": 0.6667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 80,
+					"opponentName": "Pantheon",
+					"games": 13,
+					"wins": 7,
+					"winRate": 0.5385
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 115,
+					"opponentName": "Ziggs",
+					"games": 12,
+					"wins": 8,
+					"winRate": 0.6667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 518,
+					"opponentName": "Neeko",
+					"games": 11,
+					"wins": 4,
+					"winRate": 0.3636
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 92,
+					"opponentName": "Riven",
+					"games": 10,
+					"wins": 6,
+					"winRate": 0.6
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 133,
+					"opponentName": "Quinn",
+					"games": 10,
+					"wins": 6,
+					"winRate": 0.6
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 42,
+					"opponentName": "Corki",
+					"games": 9,
+					"wins": 4,
+					"winRate": 0.4444
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 81,
+					"opponentName": "Ezreal",
+					"games": 9,
+					"wins": 3,
+					"winRate": 0.3333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 96,
+					"opponentName": "Kog'Maw",
+					"games": 9,
+					"wins": 6,
+					"winRate": 0.6667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 10,
+					"opponentName": "Kayle",
+					"games": 8,
+					"wins": 4,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 18,
+					"opponentName": "Tristana",
+					"games": 8,
+					"wins": 2,
+					"winRate": 0.25
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 41,
+					"opponentName": "Gangplank",
+					"games": 8,
+					"wins": 3,
+					"winRate": 0.375
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 5,
+					"opponentName": "Xin Zhao",
+					"games": 7,
+					"wins": 4,
+					"winRate": 0.5714
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 26,
+					"opponentName": "Zilean",
+					"games": 7,
+					"wins": 3,
+					"winRate": 0.4286
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 74,
+					"opponentName": "Heimerdinger",
+					"games": 7,
+					"wins": 3,
+					"winRate": 0.4286
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 75,
+					"opponentName": "Nasus",
+					"games": 7,
+					"wins": 1,
+					"winRate": 0.1429
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 86,
+					"opponentName": "Garen",
+					"games": 7,
+					"wins": 2,
+					"winRate": 0.2857
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 240,
+					"opponentName": "Kled",
+					"games": 7,
+					"wins": 4,
+					"winRate": 0.5714
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 901,
+					"opponentName": "Smolder",
+					"games": 7,
+					"wins": 5,
+					"winRate": 0.7143
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 79,
+					"opponentName": "Gragas",
+					"games": 6,
+					"wins": 3,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 85,
+					"opponentName": "Kennen",
+					"games": 6,
+					"wins": 3,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 145,
+					"opponentName": "Kai'Sa",
+					"games": 6,
+					"wins": 5,
+					"winRate": 0.8333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 799,
+					"opponentName": "Ambessa",
+					"games": 6,
+					"wins": 3,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 23,
+					"opponentName": "Tryndamere",
+					"games": 5,
+					"wins": 3,
+					"winRate": 0.6
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 25,
+					"opponentName": "Morgana",
+					"games": 5,
+					"wins": 1,
+					"winRate": 0.2
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 20,
+					"opponentName": "Nunu & Willump",
+					"games": 4,
+					"wins": 1,
+					"winRate": 0.25
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 56,
+					"opponentName": "Nocturne",
+					"games": 4,
+					"wins": 1,
+					"winRate": 0.25
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 82,
+					"opponentName": "Mordekaiser",
+					"games": 4,
+					"wins": 2,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 83,
+					"opponentName": "Yorick",
+					"games": 4,
+					"wins": 2,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 110,
+					"opponentName": "Varus",
+					"games": 4,
+					"wins": 3,
+					"winRate": 0.75
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 147,
+					"opponentName": "Seraphine",
+					"games": 4,
+					"wins": 2,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 161,
+					"opponentName": "Vel'Koz",
+					"games": 4,
+					"wins": 2,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 233,
+					"opponentName": "Briar",
+					"games": 4,
+					"wins": 3,
+					"winRate": 0.75
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 17,
+					"opponentName": "Teemo",
+					"games": 3,
+					"wins": 2,
+					"winRate": 0.6667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 19,
+					"opponentName": "Warwick",
+					"games": 3,
+					"wins": 2,
+					"winRate": 0.6667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 27,
+					"opponentName": "Singed",
+					"games": 3,
+					"wins": 1,
+					"winRate": 0.3333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 30,
+					"opponentName": "Karthus",
+					"games": 3,
+					"wins": 2,
+					"winRate": 0.6667
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 36,
+					"opponentName": "Dr. Mundo",
+					"games": 3,
+					"wins": 1,
+					"winRate": 0.3333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 51,
+					"opponentName": "Caitlyn",
+					"games": 3,
+					"wins": 3,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 54,
+					"opponentName": "Malphite",
+					"games": 3,
+					"wins": 1,
+					"winRate": 0.3333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 104,
+					"opponentName": "Graves",
+					"games": 3,
+					"wins": 3,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 236,
+					"opponentName": "Lucian",
+					"games": 3,
+					"wins": 1,
+					"winRate": 0.3333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 266,
+					"opponentName": "Aatrox",
+					"games": 3,
+					"wins": 1,
+					"winRate": 0.3333
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 29,
+					"opponentName": "Twitch",
+					"games": 2,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 31,
+					"opponentName": "Cho'Gath",
+					"games": 2,
+					"wins": 2,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 43,
+					"opponentName": "Karma",
+					"games": 2,
+					"wins": 2,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 58,
+					"opponentName": "Renekton",
+					"games": 2,
+					"wins": 1,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 60,
+					"opponentName": "Elise",
+					"games": 2,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 68,
+					"opponentName": "Rumble",
+					"games": 2,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 114,
+					"opponentName": "Fiora",
+					"games": 2,
+					"wins": 2,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 154,
+					"opponentName": "Zac",
+					"games": 2,
+					"wins": 2,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 234,
+					"opponentName": "Viego",
+					"games": 2,
+					"wins": 1,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 897,
+					"opponentName": "K'Sante",
+					"games": 2,
+					"wins": 1,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 12,
+					"opponentName": "Alistar",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 24,
+					"opponentName": "Jax",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 48,
+					"opponentName": "Trundle",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 57,
+					"opponentName": "Maokai",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 59,
+					"opponentName": "Jarvan IV",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 62,
+					"opponentName": "Wukong",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 77,
+					"opponentName": "Udyr",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 98,
+					"opponentName": "Shen",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 102,
+					"opponentName": "Shyvana",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 111,
+					"opponentName": "Nautilus",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 164,
+					"opponentName": "Camille",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 221,
+					"opponentName": "Zeri",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 222,
+					"opponentName": "Jinx",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 235,
+					"opponentName": "Senna",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 420,
+					"opponentName": "Illaoi",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 427,
+					"opponentName": "Ivern",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 555,
+					"opponentName": "Pyke",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 875,
+					"opponentName": "Sett",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 887,
+					"opponentName": "Gwen",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 904,
+					"opponentName": "Zaahen",
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				}
+			]
+		}
+	}
+}
