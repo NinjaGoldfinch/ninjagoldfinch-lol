@@ -23,7 +23,12 @@
 		<div
 			class="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-6"
 		>
-			<a href="/" class="font-semibold text-accent">{PUBLIC_SITE_NAME}</a>
+			<div class="flex items-center gap-6">
+				<a href="/" class="font-semibold text-accent">{PUBLIC_SITE_NAME}</a>
+				<nav aria-label="Site">
+					<a href="/champions" class="text-sm hover:text-accent">Champions</a>
+				</nav>
+			</div>
 			<SearchForm region={region || undefined} />
 		</div>
 	</header>

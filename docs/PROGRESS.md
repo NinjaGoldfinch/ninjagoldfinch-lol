@@ -36,7 +36,11 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] P3-02 Builds: item order, skill order, full rune page with stat shards (from CommunityDragon), summoner spells; one player at a time — #45 (ADR-026); repeat buys stacked, no spells or keystone in the panel header — #46 (ADR-027); the build in a popup, other layouts kept in `docs/notes/match-layouts.md` — #47 (ADR-028)
 - [x] P3-03 Timeline charts in SVG: gold difference and objective events, in a Timeline tab — #48 (ADR-029); objective strips above and below the chart in place of the "Blue" and "Red" labels, fading fills, end label, a crosshair with JavaScript — #50 (ADR-031)
 - [x] P3-04 Expand a match inline from the profile page without a full reload: both teams in the row, from the match page's load — #49 (ADR-030)
-- [ ] P3-05 One player's build by riot-proxy's definitions (BLD-04): starter, boots, finished items with times, skill order, 18-level grid, shop visits; tested against riot-proxy's golden fixture (ADR-032)
+- [x] P3-05 One player's build by riot-proxy's definitions (BLD-04): starter, boots, finished items with times, skill order, 18-level grid, shop visits; tested against riot-proxy's golden fixture — #53 (ADR-032)
+
+## P4 — Champion analytics
+
+- [x] P4-01 `/champions` table: win, pick and ban rate summed over every tier, sortable without a request, role tabs, patch picker defaulting to all patches — #54 (ADR-033); riot-proxy spec with summed tiers and set builds — #52
 
 ## Brought forward
 

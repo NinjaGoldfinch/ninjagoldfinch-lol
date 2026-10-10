@@ -407,3 +407,22 @@ Date: 2026-10-10 · Task: P3-05 (added after the P3 exit check, owner request; s
 - `tests/fixtures/builds/` holds riot-proxy's timeline, its cut-down item.json and its golden answers, copied unchanged. `playerBuild` must match all ten players.
 
 **Consequences.** Sales are no longer shown. The player's build and the champion pages' set builds (P4-02) use one definition, so they agree. If riot-proxy changes a definition, its fixtures are copied again and the golden test shows what moved.
+
+## ADR-033: The champion table: summed tiers, all patches by default, sorted in the page
+
+Date: 2026-10-10 · Task: P4-01
+
+**Context.** riot-proxy's `/v1/lol/analytics/champions` now returns one row per champion when no `tier` is named. The row is summed over every tier, and its pick and ban rates are over every match in the slice, each match counted once (SITE-08). Adding up per-tier rows on the site would count a match with players in several tiers more than once, so the owner asked riot-proxy for the summed row rather than summing here or forcing a tier picker. On 2026-10-10 the newest patch held about 1,400 games and all patches together about 210,000.
+
+**Decision.**
+
+- `/champions` asks for Ranked Solo/Duo with no `tier` and no `platform` (every region), and `limit=500` so every champion is listed. Any row that carries a tier is dropped, so per-tier rows can't be shown as summed ones by mistake.
+- **Default patch.** `DEFAULT_PATCH` in `src/lib/domain/champion-stats.ts` is `'all'`. It is the only switch: set it to `'newest'` and the bare URL shows riot-proxy's newest patch, and `?patch=all` becomes the explicit choice. The picker lists `/v1/lol/analytics/patches`, newest first. Without that list it offers the default and the patch shown. A patch riot-proxy has no games for shows an empty table, not an error.
+- **Role.** Tabs are links with URL values `top`, `jungle`, `mid`, `bot` and `support`, mapped to riot-proxy's `TOP` … `UTILITY`, plus "All roles" (no `role`).
+- **Sort.** Pick rate (the default), win rate or ban rate, highest first. A missing rate sorts last, and ties go to more games, then the name. The column headers are links (`?sort=win`) with `aria-sort`. The load reads the sort without tracking it, so with JavaScript a sort changes the URL and sorts in the page without a request. Without JavaScript, the server renders the sorted page.
+- **One URL per view.** Defaults and unknown values redirect to the clean URL (`?role=&patch=all` → `/champions`), as the profile does.
+- **Names.** Champion names and icon keys come from the current patch's Data Dragon lookups. riot-proxy's `championName` is the fallback, and a champion with no icon key gets an empty box.
+- **Cache.** `analytics`: `s-maxage=600, stale-while-revalidate=600`, the plan's 10 minutes. riot-proxy recomputes the tables when a crawl completes.
+- The header has a "Champions" link.
+
+**Consequences.** No sample sizes or minimum-games threshold yet; the games column is the raw count, and P4-03 adds the marking. Flex queue, a region picker and champion pages (P4-02) are not part of this task. The match page's tab links use `data-sveltekit-noscroll`, which SvelteKit 3 has renamed (`data-sveltekit-reset="false"`). The champion table uses the new name. The match page is left for a separate fix.
