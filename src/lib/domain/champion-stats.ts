@@ -11,6 +11,21 @@ type AnalyticsPatchesResponse = components['schemas']['AnalyticsPatchesResponse'
  */
 export const DEFAULT_PATCH: 'all' | 'newest' = 'all';
 
+/**
+ * Games below which riot-proxy leaves a row out: none. Every row is shown,
+ * and small ones are marked instead (LOW_SAMPLE_GAMES). Sent on every
+ * analytics route, so riot-proxy's own default doesn't decide. ADR-035.
+ */
+export const MIN_GAMES = 0;
+
+/** Games below which a rate is marked as a low sample. ADR-035. */
+export const LOW_SAMPLE_GAMES = 100;
+
+/** Whether a rate over this many games is a low sample. */
+export function isLowSample(games: number): boolean {
+	return games < LOW_SAMPLE_GAMES;
+}
+
 /** The queue the champion pages read. */
 export const ANALYTICS_QUEUE = 'RANKED_SOLO_5x5';
 
@@ -81,6 +96,7 @@ export function analyticsQuery(filter: ChampionFilter, limit?: number) {
 		queue: ANALYTICS_QUEUE,
 		...(filter.patch !== null && { patch: filter.patch }),
 		...(role && { role }),
+		minGames: MIN_GAMES,
 		...(limit !== undefined && { limit })
 	};
 }

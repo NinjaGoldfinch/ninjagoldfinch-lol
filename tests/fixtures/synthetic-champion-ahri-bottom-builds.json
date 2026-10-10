@@ -2,7 +2,7 @@
 	"_note": "Synthetic: riot-proxy's documented empty set builds (no timelines archived for the slice), so the page falls back to the detail's lists. Not a recording.",
 	"request": {
 		"method": "GET",
-		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM"
+		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM&minGames=0"
 	},
 	"response": {
 		"status": 200,

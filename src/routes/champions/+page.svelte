@@ -2,10 +2,13 @@
 	import { page } from '$app/state';
 	import AnalyticsFilters from '#lib/components/AnalyticsFilters.svelte';
 	import ChampionIcon from '#lib/components/ChampionIcon.svelte';
+	import LowSample from '#lib/components/LowSample.svelte';
 	import { championPath } from '#lib/domain/champion-search.ts';
 	import {
+		LOW_SAMPLE_GAMES,
 		championQuery,
 		formatRate,
+		isLowSample,
 		parseSort,
 		patchLabel,
 		sortRows,
@@ -79,6 +82,7 @@
 			</thead>
 			<tbody>
 				{#each rows as row, i (row.id)}
+					{@const rate = isLowSample(row.games) ? 'text-muted' : ''}
 					<tr class="border-b border-border last:border-0">
 						<td class="hidden px-3 py-1.5 text-right text-muted tabular-nums sm:table-cell"
 							>{i + 1}</td
@@ -99,16 +103,19 @@
 								{/if}
 							</span>
 						</th>
-						<td class="px-3 py-1.5 text-right tabular-nums">{formatRate(row.winRate)}</td>
-						<td class="px-3 py-1.5 text-right tabular-nums">{formatRate(row.pickRate)}</td>
-						<td class="px-3 py-1.5 text-right tabular-nums">{formatRate(row.banRate)}</td>
-						<td class="px-3 py-1.5 text-right text-muted tabular-nums"
-							>{row.games.toLocaleString('en')}</td
+						<td class="px-3 py-1.5 text-right tabular-nums {rate}">{formatRate(row.winRate)}</td>
+						<td class="px-3 py-1.5 text-right tabular-nums {rate}">{formatRate(row.pickRate)}</td>
+						<td class="px-3 py-1.5 text-right tabular-nums {rate}">{formatRate(row.banRate)}</td>
+						<td class="px-3 py-1.5 text-right whitespace-nowrap text-muted tabular-nums"
+							>{row.games.toLocaleString('en')}{#if rate}<LowSample />{/if}</td
 						>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
-	<p class="mt-3 text-xs text-muted">From archived ranked games. Each rate counts every tier.</p>
+	<p class="mt-3 text-xs text-muted">
+		From archived ranked games. Each rate counts every tier. Low sample: fewer than {LOW_SAMPLE_GAMES}
+		games, so its rates can swing widely.
+	</p>
 {/if}

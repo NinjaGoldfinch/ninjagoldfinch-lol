@@ -48,9 +48,18 @@ test.describe('without JavaScript', () => {
 		await expect(matchups.getByRole('heading')).toHaveText('Matchups · Mid');
 		await expect(matchups.locator('tbody tr')).toHaveCount(116);
 		await expect(matchups.locator('tbody tr').first()).toContainText('Sylas47.6%126');
+		// Only Sylas has 100 games or more in Mid.
+		await expect(matchups.locator('tbody tr').filter({ hasText: 'Low sample' })).toHaveCount(115);
+		// The summed row and the three builds clear 100 games; later item options may not.
+		await expect(page.locator('dl[aria-label="Rates"]')).not.toContainText('Low sample');
+		await expect(tabs.filter({ hasText: 'Low sample' })).toHaveCount(0);
+		await expect(path.getByRole('list', { name: 'Item 5 options' })).toContainText('Low sample');
 
 		const tiers = page.getByRole('region', { name: 'By tier' }).locator('tbody tr');
-		await expect(tiers).toHaveCount(5);
+		await expect(tiers).toHaveCount(6);
+		// Challenger 38, Grandmaster 43, Emerald 13 and Platinum 1 game are low samples.
+		await expect(tiers.filter({ hasText: 'Low sample' })).toHaveCount(4);
+		await expect(tiers.filter({ hasText: 'Master' }).last()).not.toContainText('Low sample');
 		await expect(tiers.first().getByRole('rowheader')).toHaveText('Challenger');
 		await expect(tiers.last().getByRole('rowheader')).toHaveText('Unplaced');
 		await expect(page.locator('footer')).toContainText(LEGAL);
@@ -91,7 +100,7 @@ test.describe('without JavaScript', () => {
 		await expect(page.getByRole('region', { name: /^Matchups/ })).toContainText(
 			'Matchups are unavailable right now.'
 		);
-		await expect(page.getByRole('region', { name: 'By tier' }).locator('tbody tr')).toHaveCount(5);
+		await expect(page.getByRole('region', { name: 'By tier' }).locator('tbody tr')).toHaveCount(6);
 	});
 
 	test('the table links to a champion page, keeping the role and patch', async ({ page }) => {

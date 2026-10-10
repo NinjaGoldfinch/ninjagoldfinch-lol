@@ -1,13 +1,13 @@
 {
 	"request": {
 		"method": "GET",
-		"path": "/v1/lol/analytics/champions/103/matchups?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&limit=200"
+		"path": "/v1/lol/analytics/champions/103/matchups?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0&limit=200"
 	},
 	"response": {
 		"status": 200,
 		"headers": {
 			"content-type": "application/json; charset=utf-8",
-			"x-request-id": "01M4HMYE6NVK3NJ66QFXHJSFAD"
+			"x-request-id": "01M4HQ03N3BDVJPD8WDZEAPBA9"
 		},
 		"body": {
 			"championId": 103,

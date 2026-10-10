@@ -38,7 +38,7 @@ describe('loadChampions', () => {
 		const page = await loadChampions({ role: 'mid', patch: 'all' }, { client: proxy });
 
 		expect(asked).toContain(
-			'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&limit=500'
+			'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0&limit=500'
 		);
 		expect(page.table.rows.length).toBeGreaterThan(100);
 		expect(page.patches[0]).toBe('16.20');

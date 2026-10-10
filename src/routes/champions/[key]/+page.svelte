@@ -2,10 +2,18 @@
 	import { page } from '$app/state';
 	import AnalyticsFilters from '#lib/components/AnalyticsFilters.svelte';
 	import ChampionIcon from '#lib/components/ChampionIcon.svelte';
+	import LowSample from '#lib/components/LowSample.svelte';
 	import SetBuilds from '#lib/components/SetBuilds.svelte';
 	import { openBuild, roleLabel } from '#lib/domain/champion-page.ts';
 	import { championPath } from '#lib/domain/champion-search.ts';
-	import { ROLES, championQuery, formatRate, patchLabel } from '#lib/domain/champion-stats.ts';
+	import {
+		LOW_SAMPLE_GAMES,
+		ROLES,
+		championQuery,
+		formatRate,
+		isLowSample,
+		patchLabel
+	} from '#lib/domain/champion-stats.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -36,6 +44,7 @@
 				]
 			: []
 	);
+	const lowStats = $derived(data.stats !== null && isLowSample(data.stats.games));
 	const heading = 'text-xs font-medium tracking-wide text-muted uppercase';
 </script>
 
@@ -56,7 +65,9 @@
 			{#each stats as [term, value] (term)}
 				<div>
 					<dt class={heading}>{term}</dt>
-					<dd class="text-lg font-semibold tabular-nums">{value}</dd>
+					<dd class="text-lg font-semibold tabular-nums {lowStats ? 'text-muted' : ''}">
+						{value}{#if lowStats && term === 'Games'}<LowSample />{/if}
+					</dd>
 				</div>
 			{/each}
 		</dl>
@@ -127,9 +138,13 @@
 										</span>
 									</th>
 									{#if !data.matchupRole}<td class="px-2 py-1.5">{roleLabel(m.role)}</td>{/if}
-									<td class="px-2 py-1.5 text-right tabular-nums">{formatRate(m.winRate)}</td>
-									<td class="px-4 py-1.5 text-right text-muted tabular-nums"
-										>{m.games.toLocaleString('en')}</td
+									<td
+										class="px-2 py-1.5 text-right tabular-nums {isLowSample(m.games)
+											? 'text-muted'
+											: ''}">{formatRate(m.winRate)}</td
+									>
+									<td class="px-4 py-1.5 text-right whitespace-nowrap text-muted tabular-nums"
+										>{m.games.toLocaleString('en')}{#if isLowSample(m.games)}<LowSample />{/if}</td
 									>
 								</tr>
 							{/each}
@@ -164,13 +179,18 @@
 						</thead>
 						<tbody>
 							{#each data.tiers as t (t.tier)}
+								{@const rate = isLowSample(t.games) ? 'text-muted' : ''}
 								<tr class="border-t border-border">
 									<th scope="row" class="px-4 py-1.5 text-left font-medium">{t.label}</th>
-									<td class="px-2 py-1.5 text-right tabular-nums">{formatRate(t.winRate)}</td>
-									<td class="px-2 py-1.5 text-right tabular-nums">{formatRate(t.pickRate)}</td>
-									<td class="px-2 py-1.5 text-right tabular-nums">{formatRate(t.banRate)}</td>
-									<td class="px-4 py-1.5 text-right text-muted tabular-nums"
-										>{t.games.toLocaleString('en')}</td
+									<td class="px-2 py-1.5 text-right tabular-nums {rate}">{formatRate(t.winRate)}</td
+									>
+									<td class="px-2 py-1.5 text-right tabular-nums {rate}"
+										>{formatRate(t.pickRate)}</td
+									>
+									<td class="px-2 py-1.5 text-right tabular-nums {rate}">{formatRate(t.banRate)}</td
+									>
+									<td class="px-4 py-1.5 text-right whitespace-nowrap text-muted tabular-nums"
+										>{t.games.toLocaleString('en')}{#if rate}<LowSample />{/if}</td
 									>
 								</tr>
 							{/each}
@@ -184,3 +204,8 @@
 		</section>
 	</div>
 </div>
+
+<p class="mt-6 text-xs text-muted">
+	From archived ranked games. Each rate counts every tier unless its row names one. Low sample:
+	fewer than {LOW_SAMPLE_GAMES} games, so its rates can swing widely.
+</p>

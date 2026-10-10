@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { components } from '#lib/api/schema.d.ts';
 import {
 	DEFAULT_PATCH,
+	LOW_SAMPLE_GAMES,
+	MIN_GAMES,
+	isLowSample,
 	championQuery,
 	formatRate,
 	parseChampionFilter,
@@ -21,7 +24,7 @@ type Stats = components['schemas']['ChampionStatsResponse'];
 type Patches = components['schemas']['AnalyticsPatchesResponse'];
 
 const names = recordedNames();
-const ALL = '/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&limit=500';
+const ALL = '/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=500';
 const recorded = fixtureBody(ALL) as Stats;
 
 const params = (query: string) => new URLSearchParams(query);
@@ -74,6 +77,7 @@ describe('proxyQuery', () => {
 			queue: 'RANKED_SOLO_5x5',
 			patch: 'all',
 			role: 'MIDDLE',
+			minGames: 0,
 			limit: 500
 		});
 	});
@@ -81,6 +85,7 @@ describe('proxyQuery', () => {
 	it("leaves the patch out for riot-proxy's newest, and the role out for every role", () => {
 		expect(proxyQuery({ role: null, patch: null })).toEqual({
 			queue: 'RANKED_SOLO_5x5',
+			minGames: 0,
 			limit: 500
 		});
 	});
@@ -184,11 +189,13 @@ describe('analyticsQuery', () => {
 		expect(analyticsQuery({ role: 'top', patch: '16.19' })).toEqual({
 			queue: 'RANKED_SOLO_5x5',
 			patch: '16.19',
-			role: 'TOP'
+			role: 'TOP',
+			minGames: 0
 		});
 		expect(analyticsQuery({ role: null, patch: 'all' }, 10)).toEqual({
 			queue: 'RANKED_SOLO_5x5',
 			patch: 'all',
+			minGames: 0,
 			limit: 10
 		});
 	});
@@ -205,5 +212,15 @@ describe('patchLabel and pickerPatches', () => {
 		expect(pickerPatches('16.10', ['16.20', '16.19'])).toEqual(['16.10', '16.20', '16.19']);
 		expect(pickerPatches('16.19', ['16.20', '16.19'])).toEqual(['16.20', '16.19']);
 		expect(pickerPatches('all', [])).toEqual([]);
+	});
+});
+
+describe('sample size', () => {
+	it('hides nothing and marks rates under 100 games', () => {
+		expect(MIN_GAMES).toBe(0);
+		expect(LOW_SAMPLE_GAMES).toBe(100);
+		expect(isLowSample(99)).toBe(true);
+		expect(isLowSample(100)).toBe(false);
+		expect(isLowSample(0)).toBe(true);
 	});
 });

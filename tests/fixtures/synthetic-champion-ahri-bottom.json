@@ -2,7 +2,7 @@
 	"_note": "Synthetic: the recorded all-roles Ahri detail relabelled BOTTOM, so the Bot tab has a page whose set builds are empty and whose matchups fail. Not a recording.",
 	"request": {
 		"method": "GET",
-		"path": "/v1/lol/analytics/champions/103?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM&limit=10"
+		"path": "/v1/lol/analytics/champions/103?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM&minGames=0&limit=10"
 	},
 	"response": {
 		"status": 200,
@@ -55,7 +55,7 @@
 					"games": 1590,
 					"wins": 783,
 					"winRate": 0.4925,
-					"share": 0.6608,
+					"share": 0.6606,
 					"pickRate": 0.0755,
 					"banRate": 0.0449,
 					"avgKda": 2.6327,
@@ -72,7 +72,7 @@
 					"games": 722,
 					"wins": 381,
 					"winRate": 0.5277,
-					"share": 0.3001,
+					"share": 0.3,
 					"pickRate": 0.0411,
 					"banRate": 0.0426,
 					"avgKda": 2.8618,
@@ -131,6 +131,23 @@
 					"avgVision": 23.2308,
 					"csPerMin": 6.0879,
 					"goldPerMin": 381.8247
+				},
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "PLATINUM",
+					"patch": "all",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0,
+					"share": 0.0004,
+					"pickRate": 0.002,
+					"banRate": 0.066,
+					"avgKda": 1.0833,
+					"avgDamage": 24118,
+					"avgVision": 34,
+					"csPerMin": 5.625,
+					"goldPerMin": 324.7108
 				}
 			],
 			"matchups": [
@@ -377,6 +394,34 @@
 					"games": 12,
 					"wins": 7,
 					"winRate": 0.5833
+				},
+				{
+					"spellA": 4,
+					"spellB": 7,
+					"games": 3,
+					"wins": 0,
+					"winRate": 0
+				},
+				{
+					"spellA": 1,
+					"spellB": 4,
+					"games": 2,
+					"wins": 1,
+					"winRate": 0.5
+				},
+				{
+					"spellA": 4,
+					"spellB": 6,
+					"games": 2,
+					"wins": 1,
+					"winRate": 0.5
+				},
+				{
+					"spellA": 12,
+					"spellB": 14,
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
 				}
 			]
 		}

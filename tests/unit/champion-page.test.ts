@@ -16,14 +16,14 @@ type Schemas = components['schemas'];
 const names = recordedNames();
 const BASE = '/v1/lol/analytics/champions/103';
 const detail = fixtureBody(
-	`${BASE}?queue=RANKED_SOLO_5x5&patch=all&limit=10`
+	`${BASE}?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=10`
 ) as Schemas['ChampionDetailResponse'];
 const builds = fixtureBody(
-	`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all`
+	`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&minGames=0`
 ) as Schemas['ChampionBuildsResponse'];
 const matchups = (
 	fixtureBody(
-		`${BASE}/matchups?queue=RANKED_SOLO_5x5&patch=all&limit=200`
+		`${BASE}/matchups?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=200`
 	) as Schemas['ChampionMatchupsResponse']
 ).matchups;
 
@@ -50,6 +50,7 @@ describe('toTierRows', () => {
 			['Grandmaster', 43],
 			['Master', 722],
 			['Emerald', 13],
+			['Platinum', 1],
 			['Unplaced', 1590]
 		]);
 	});
