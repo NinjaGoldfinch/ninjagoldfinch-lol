@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "riot-proxy",
-    "description": "A self-hosted proxy between [Riot's public API](https://developer.riotgames.com/) and everything downstream of it. It holds one Riot key, spends it carefully, and gives its consumers their own keys and quotas.\n\n- **Rate limits:** read from Riot's own response headers. Requests a user is waiting on go ahead of background work.\n- **Caching and archive:** repeated reads are served from cache; matches are immutable and archived.\n- **One error envelope:** `{\"error\":{\"code\",\"message\",\"requestId\",\"retryAfter?\"}}`.\n\n### Response headers\n\n| Header | Meaning |\n|---|---|\n| `X-Cache` | `HIT`, `MISS`, `STALE`, `HIT-NEG` (a cached 404), `ARCHIVE` (from the match archive), `BYPASS` (`?refresh=true`) |\n| `X-Cache-Age` | Age of the **content** in seconds, not of the last fetch |\n| `X-Cache-Fetched-Age` | Seconds since the proxy last read it from Riot, changed or not. Not sent for `ARCHIVE` |\n| `X-RateLimit-Limit` / `-Remaining` / `-Reset` | Your consumer quota |\n| `X-Request-Id` | Quote this when reporting a problem |\n| `Retry-After` | On `QUOTA_EXCEEDED` (429) and `RATE_LIMITED` (503): seconds to wait |\n\nEach response in this document declares the headers it sends.\n\n### Images\n\n`/v1/static/*` serves Data Dragon's JSON. Its images are mirrored too, at `/ddragon/<version>/img/<kind>/<file>`: Data Dragon's own `/cdn/<version>/img/<kind>/<file>` layout, for `champion`, `profileicon`, `item` and `spell` (summoner spells). Rune icons are at `/ddragon/<version>/img/<icon>`, `icon` being `runesReforged.json`'s `perk-images/…` path. `<version>` must be a patch the mirror holds (`/v1/static/versions`), and the file one that patch's data lists. An image is fetched from Riot's CDN on first request, then served from disk. `/ddragon` needs no key. CommunityDragon assets are not mirrored.\n",
+    "description": "A self-hosted proxy between [Riot's public API](https://developer.riotgames.com/) and everything downstream of it. It holds one Riot key, spends it carefully, and gives its consumers their own keys and quotas.\n\n- **Rate limits:** read from Riot's own response headers. Requests a user is waiting on go ahead of background work.\n- **Caching and archive:** repeated reads are served from cache; matches are immutable and archived.\n- **One error envelope:** `{\"error\":{\"code\",\"message\",\"requestId\",\"retryAfter?\"}}`.\n\n### Response headers\n\n| Header | Meaning |\n|---|---|\n| `X-Cache` | `HIT`, `MISS`, `STALE`, `HIT-NEG` (a cached 404), `ARCHIVE` (from the match archive), `BYPASS` (`?refresh=true`) |\n| `X-Cache-Age` | Age of the **content** in seconds, not of the last fetch |\n| `X-Cache-Fetched-Age` | Seconds since the proxy last read it from Riot, changed or not. Not sent for `ARCHIVE` |\n| `X-RateLimit-Limit` / `-Remaining` / `-Reset` | Your consumer quota |\n| `X-Request-Id` | Quote this when reporting a problem |\n| `Retry-After` | On `QUOTA_EXCEEDED` (429) and `RATE_LIMITED` (503): seconds to wait |\n\nEach response in this document declares the headers it sends.\n\n### Images\n\n`/v1/static/*` serves Data Dragon's JSON. Its images are mirrored too, at `/ddragon/<version>/img/<kind>/<file>`: Data Dragon's own `/cdn/<version>/img/<kind>/<file>` layout, for `champion`, `profileicon`, `item` and `spell` (summoner spells). Rune icons are at `/ddragon/<version>/img/<icon>`, `icon` being `runesReforged.json`'s `perk-images/…` path. Both are declared under **Static data**. `<version>` may be any version in Riot's list (`/v1/static/versions`), so a match can use its own patch's icons (`ddragonVersion`); for a patch the mirror hasn't synced, the data file that lists the image is fetched first. The file must be one that version's data lists. An image is fetched from Riot's CDN on first request, then served from disk; the bytes never change, and are sent `immutable` for a year. `/ddragon` needs no key, and its errors have an empty body. CommunityDragon assets are not mirrored.\n",
     "license": {
       "name": "MIT",
       "identifier": "MIT"
@@ -32,6 +32,182 @@
     }
   ],
   "paths": {
+    "/ddragon/{version}/img/perk-images/{icon}": {
+      "get": {
+        "tags": [
+          "static"
+        ],
+        "summary": "A rune or rune style icon",
+        "description": "No key. The image is Data Dragon's own, fetched from Riot's CDN on its first request and served from disk after that.\n\n**Versions.** Any version in Riot's version list (`/v1/static/versions`) works, not only the current one, so a match can draw its own patch's icons (`ddragonVersion` on the match page). For a version the mirror hasn't synced, the one data file that lists the image (that patch's `item.json` for an item) is fetched first and kept. A version Riot doesn't list is a 404 with no fetch.\n\n**Immutable.** The bytes at a given version and path never change once served, so they are sent with `Cache-Control: public, max-age=31536000, immutable`. A response that isn't a 200 has no `Cache-Control`.\n\n**What can be fetched.** Only a file the version's own data lists, so a request can't make the proxy fetch anything else. Concurrent first requests for one file share one fetch, and a data file Riot has no copy of isn't asked for twice.\n\n**Errors** have an empty body, not the JSON error envelope.",
+        "operationId": "ddragon_rune_image",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "description": "A Data Dragon version from Riot's list, e.g. `16.19.1`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)*$"
+            },
+            "example": "16.19.1"
+          },
+          {
+            "name": "icon",
+            "in": "path",
+            "description": "runesReforged.json's `icon` without its leading `perk-images/`, e.g. `Styles/Domination/Electrocute/Electrocute.png`. It spans several path segments: send its slashes as they are, or percent-encoded (`%2F`, as a generated client does). Both are served.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Styles/Domination/Electrocute/Electrocute.png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The PNG.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/Cache-Control"
+              },
+              "Last-Modified": {
+                "$ref": "#/components/headers/Last-Modified"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/Png"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified since `If-Modified-Since`, for a copy already on disk.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          },
+          "404": {
+            "description": "Not a version Riot lists, not an icon that version's runesReforged.json lists, or an icon Riot doesn't have. Empty body.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          },
+          "502": {
+            "description": "Riot's CDN failed on the first fetch (unreachable, an error status, or not a PNG). Nothing was kept, so the next request tries again. Empty body.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
+    "/ddragon/{version}/img/{kind}/{file}": {
+      "get": {
+        "tags": [
+          "static"
+        ],
+        "summary": "A champion, item, summoner spell or profile icon image",
+        "description": "No key. The image is Data Dragon's own, fetched from Riot's CDN on its first request and served from disk after that.\n\n**Versions.** Any version in Riot's version list (`/v1/static/versions`) works, not only the current one, so a match can draw its own patch's icons (`ddragonVersion` on the match page). For a version the mirror hasn't synced, the one data file that lists the image (that patch's `item.json` for an item) is fetched first and kept. A version Riot doesn't list is a 404 with no fetch.\n\n**Immutable.** The bytes at a given version and path never change once served, so they are sent with `Cache-Control: public, max-age=31536000, immutable`. A response that isn't a 200 has no `Cache-Control`.\n\n**What can be fetched.** Only a file the version's own data lists, so a request can't make the proxy fetch anything else. Concurrent first requests for one file share one fetch, and a data file Riot has no copy of isn't asked for twice.\n\n**Errors** have an empty body, not the JSON error envelope.",
+        "operationId": "ddragon_image",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "description": "A Data Dragon version from Riot's list, e.g. `16.19.1`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)*$"
+            },
+            "example": "16.19.1"
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Data Dragon's image directory: `spell` is summoner spells.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ImageKind"
+            }
+          },
+          {
+            "name": "file",
+            "in": "path",
+            "description": "The image's file name as that version's data lists it: `image.full` in champion.json, item.json, summoner.json or profileicon.json.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.]+\\.png$"
+            },
+            "example": "3078.png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The PNG.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/Cache-Control"
+              },
+              "Last-Modified": {
+                "$ref": "#/components/headers/Last-Modified"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/Png"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified since `If-Modified-Since`, for a copy already on disk.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          },
+          "404": {
+            "description": "Not a version Riot lists, not a kind served, not a file that version's data lists, or a file Riot doesn't have. Empty body.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          },
+          "502": {
+            "description": "Riot's CDN failed on the first fetch (unreachable, an error status, or not a PNG). Nothing was kept, so the next request tries again. Empty body.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "tags": [
@@ -98,7 +274,7 @@
           "ops"
         ],
         "summary": "Readiness",
-        "description": "SQLite can take a write and the limiter checkpoint is restored. **The 503 carries the same body as the 200**, so the booleans name what is not ready.",
+        "description": "SQLite can take a write and the limiter checkpoint is restored. **The 503 carries the same body as the 200**, so the booleans name what is not ready. `sqliteReadersFree` counts the idle read connections; it doesn't affect `ok`.",
         "operationId": "readyz",
         "responses": {
           "200": {
@@ -5405,8 +5581,8 @@
         "tags": [
           "lol"
         ],
-        "summary": "Champion pick and win rates by tier",
-        "description": "Aggregated from every archived match on the platform. Each participant is placed at the tier the ladder crawl or the latest league lookup of that player found them at, whichever is newer, and under `UNKNOWN` when neither has. Recomputed per (platform, queue) when a crawl completes. Sends an `ETag`; a matching `If-None-Match` gets 304. Games Riot flagged as remakes are left out unless `remakes=include`.",
+        "summary": "Champion pick, ban and win rates",
+        "description": "Aggregated from every archived match on the platform. Each participant is placed at the tier the ladder crawl or the latest league lookup of that player found them at, whichever is newer, and under `UNKNOWN` when neither has. Without `tier`, one row per champion summed over every tier (`tier: null`): pick and ban rates over every match in the slice (platform, queue, patch), each match counted once however many tiers its players were in, and averages over all the champion's games. With `tier`, a row per champion at that tier, its rates over the matches that had a player at the tier. `minGames` and `limit` apply to the rows returned. Recomputed per (platform, queue) when a crawl completes. Sends an `ETag`; a matching `If-None-Match` gets 304. Games Riot flagged as remakes are left out unless `remakes=include`.",
         "operationId": "champions",
         "parameters": [
           {
@@ -5430,7 +5606,7 @@
           {
             "name": "tier",
             "in": "query",
-            "description": "IRON … CHALLENGER, or UNKNOWN; default every tier",
+            "description": "IRON … CHALLENGER, or UNKNOWN: that tier's rows. Omitted: one row per champion summed over every tier, pick and ban rates over every match in the slice",
             "required": false,
             "schema": {
               "type": "string"
@@ -5640,7 +5816,7 @@
           "lol"
         ],
         "summary": "Champion detail composite",
-        "description": "Sends an `ETag`; a matching `If-None-Match` gets 304. The stat row(s) at this slice plus this champion's top lane matchups, items, runes and summoner spells — one call for a champion page. Each section is independently trimmed by `minGames`/`limit`; a champion nobody has data for yet still returns 200 with empty arrays rather than a 404.",
+        "description": "Sends an `ETag`; a matching `If-None-Match` gets 304. The champion's stat row at this slice, its rows per tier, and its top lane matchups, items, runes and summoner spells — one call for a champion page. Without `tier`, `stats` is one row summed over every tier (`tier: null`), its pick and ban rates over every match in the slice, and `byTier` has a row per tier; with `tier`, both hold that tier's row. Each section is independently trimmed by `minGames`/`limit` (`stats` and `byTier` by `minGames` only); a champion nobody has data for yet still returns 200 with empty arrays rather than a 404.",
         "operationId": "champion_detail",
         "parameters": [
           {
@@ -5674,7 +5850,7 @@
           {
             "name": "tier",
             "in": "query",
-            "description": "IRON … CHALLENGER, or UNKNOWN; applies to `stats`",
+            "description": "IRON … CHALLENGER, or UNKNOWN: `stats` and `byTier` are that tier's row. Omitted: `stats` is one row summed over every tier, pick and ban rates over every match in the slice, and `byTier` a row per tier",
             "required": false,
             "schema": {
               "type": "string"
@@ -5749,6 +5925,241 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ChampionDetailResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region).",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid key.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key lacks a scope, or the admin IP allowlist refused the caller.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Your consumer quota is spent (`QUOTA_EXCEEDED`).",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/Retry-After"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/lol/analytics/champions/{championId}/builds": {
+      "get": {
+        "tags": [
+          "lol"
+        ],
+        "summary": "Champion set builds",
+        "description": "The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice, named in `role`. Sends an `ETag`; a matching `If-None-Match` gets 304. A champion nobody has builds for yet still returns 200 with an empty `builds`.",
+        "operationId": "champion_builds",
+        "parameters": [
+          {
+            "name": "championId",
+            "in": "path",
+            "description": "Champion id, ≥ 1",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "description": "Only this platform's ladder. Omitted sums every platform",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "queue",
+            "in": "query",
+            "description": "RANKED_SOLO_5x5 or RANKED_FLEX_SR",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "patch",
+            "in": "query",
+            "description": "`major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minGames",
+            "in": "query",
+            "description": "≥ 0, games a build needs; default `AGGREGATE_MIN_GAMES`",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "1–10 builds, default 3",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "remakes",
+            "in": "query",
+            "description": "`exclude` (default) or `include`",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The champion's builds, most played first",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChampionBuildsResponse"
                 }
               }
             }
@@ -11609,6 +12020,133 @@
           }
         }
       },
+      "BuildItemOption": {
+        "type": "object",
+        "description": "One choice at one step of a set build: an item (BLD-03).",
+        "required": [
+          "itemId",
+          "games",
+          "winRate"
+        ],
+        "properties": {
+          "itemId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "games": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BuildRuneOption": {
+        "type": "object",
+        "description": "A keystone and secondary tree.",
+        "required": [
+          "keystoneId",
+          "subStyleId",
+          "games",
+          "winRate"
+        ],
+        "properties": {
+          "keystoneId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "subStyleId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "games": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BuildSkillOrderOption": {
+        "type": "object",
+        "description": "A skill order: Q, W and E in the order they were maxed, `\"QWE\"`.",
+        "required": [
+          "order",
+          "games",
+          "winRate"
+        ],
+        "properties": {
+          "order": {
+            "type": "string"
+          },
+          "games": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BuildSpellOption": {
+        "type": "object",
+        "description": "A summoner spell pair, `spellA <= spellB`.",
+        "required": [
+          "spellA",
+          "spellB",
+          "games",
+          "winRate"
+        ],
+        "properties": {
+          "spellA": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "spellB": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "games": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BuildStarterOption": {
+        "type": "object",
+        "description": "A starter: the items bought before 60 s, trinkets left out, sorted.",
+        "required": [
+          "items",
+          "games",
+          "winRate"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "games": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "CacheCounts": {
         "type": "object",
         "required": [
@@ -11673,6 +12211,157 @@
           }
         }
       },
+      "ChampionBuildEntry": {
+        "type": "object",
+        "description": "One set build (BLD-03): its two core items, then what its players chose\nat each later step, at most three options each, most played first.",
+        "required": [
+          "core",
+          "games",
+          "wins",
+          "winRate",
+          "pickRate",
+          "next",
+          "starter",
+          "boots",
+          "skillOrder",
+          "runes",
+          "spells"
+        ],
+        "properties": {
+          "core": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "The first two finished items, in purchase order."
+          },
+          "games": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "pickRate": {
+            "type": "number",
+            "format": "double",
+            "description": "The build's share of the champion's games that had a build (`totalGames`)."
+          },
+          "next": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/BuildItemOption"
+              }
+            },
+            "description": "The 3rd, 4th and 5th finished items: three lists, each possibly empty."
+          },
+          "starter": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildStarterOption"
+            }
+          },
+          "boots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildItemOption"
+            }
+          },
+          "skillOrder": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSkillOrderOption"
+            }
+          },
+          "runes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildRuneOption"
+            }
+          },
+          "spells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSpellOption"
+            }
+          }
+        }
+      },
+      "ChampionBuildsResponse": {
+        "type": "object",
+        "description": "A champion's set builds in one role (BLD-03).",
+        "required": [
+          "championId",
+          "platform",
+          "queue",
+          "patch",
+          "role",
+          "computedAt",
+          "totalGames",
+          "builds"
+        ],
+        "properties": {
+          "championId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "championName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "platform": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`null` when the request named no platform: every platform summed."
+          },
+          "queue": {
+            "type": "string"
+          },
+          "patch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The role asked for, else the champion's most-played role in the slice;\n`null` when it has no games."
+          },
+          "computedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "totalGames": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The champion's games in this role that had a build: `pickRate`'s denominator."
+          },
+          "builds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChampionBuildEntry"
+            },
+            "description": "Most played first."
+          }
+        }
+      },
       "ChampionDetailResponse": {
         "type": "object",
         "description": "v1 `ChampionDetailResponse`.",
@@ -11687,6 +12376,7 @@
           "sectionsComputedAt",
           "totalGames",
           "stats",
+          "byTier",
           "matchups",
           "items",
           "runes",
@@ -11743,13 +12433,22 @@
           },
           "totalGames": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "description": "The games of `stats`."
           },
           "stats": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ChampionStatEntry"
-            }
+            },
+            "description": "One row summed over every tier, or the named `tier`'s row; empty when\nthe champion has fewer than `minGames` games in the slice."
+          },
+          "byTier": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChampionStatEntry"
+            },
+            "description": "A row per tier, most played first: every tier's, or only the named\n`tier`'s. `minGames` applies to each row."
           },
           "matchups": {
             "type": "array",
@@ -12046,7 +12745,7 @@
       },
       "ChampionStatEntry": {
         "type": "object",
-        "description": "One champion at one tier (v1 `ChampionStatEntry`).",
+        "description": "One champion at one tier, or summed over every tier (v1 `ChampionStatEntry`).\nThe averages are the row's sums over its games, so on a summed row every\ngame weighs the same, whatever its tier.",
         "required": [
           "championId",
           "tier",
@@ -12068,7 +12767,11 @@
             ]
           },
           "tier": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The row's tier; `null` on a row summed over every tier, which the\nroutes return when the request names no `tier`."
           },
           "patch": {
             "type": "string"
@@ -12096,14 +12799,15 @@
               "null"
             ],
             "format": "double",
-            "description": "Matches picked over the tier's matches, capped at 1. Absent without a slice."
+            "description": "Matches picked over the slice's matches that had a player at the\nrow's tier, capped at 1; on a row summed over every tier, over every\nmatch in the slice, each counted once. Absent when there are none."
           },
           "banRate": {
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "description": "Matches it was banned in over the same matches as `pickRate`."
           },
           "avgKda": {
             "type": [
@@ -12751,6 +13455,16 @@
             "format": "int64"
           }
         }
+      },
+      "ImageKind": {
+        "type": "string",
+        "description": "The image kinds `/ddragon` serves, as the OpenAPI document names them:\nData Dragon's own directory names, `spell` being summoner spells. The\nhandler matches the path segment against `IMAGE_KINDS`; a test keeps the\ntwo lists the same.",
+        "enum": [
+          "champion",
+          "profileicon",
+          "item",
+          "spell"
+        ]
       },
       "JobActivity": {
         "type": "object",
@@ -14066,6 +14780,11 @@
           }
         }
       },
+      "Png": {
+        "type": "string",
+        "format": "binary",
+        "description": "A PNG's bytes, for the OpenAPI document."
+      },
       "ProbeBody": {
         "type": "object",
         "description": "`POST /v1/admin/ladder/probe` body.",
@@ -14328,12 +15047,14 @@
       },
       "Ready": {
         "type": "object",
-        "description": "v1 returned `{ok, redis, postgres, keyScope}`. v2 has one store, so `sqlite` replaces\nthe two backend booleans, and `limiter` says the checkpoint was restored\n(design/07). `keyScope` is v1's (ADR-011).",
+        "description": "v1 returned `{ok, redis, postgres, keyScope}`. v2 has one store, so `sqlite` replaces\nthe two backend booleans, and `limiter` says the checkpoint was restored\n(design/07). `keyScope` is v1's (ADR-011). `sqliteReaders`/`sqliteReadersFree`\nshow the read pool, so a leak shows before reads fail (ADR-113).",
         "required": [
           "ok",
           "sqlite",
           "limiter",
-          "keyScope"
+          "keyScope",
+          "sqliteReaders",
+          "sqliteReadersFree"
         ],
         "properties": {
           "ok": {
@@ -14347,6 +15068,16 @@
           },
           "keyScope": {
             "type": "string"
+          },
+          "sqliteReaders": {
+            "type": "integer",
+            "description": "SQLite read connections in the pool.",
+            "minimum": 0
+          },
+          "sqliteReadersFree": {
+            "type": "integer",
+            "description": "Of those, how many are idle now. Informational: 0 under load is normal and\ndoesn't make the probe fail.",
+            "minimum": 0
           }
         }
       },
@@ -15020,6 +15751,18 @@
       }
     },
     "headers": {
+      "Cache-Control": {
+        "schema": {
+          "type": "string"
+        },
+        "description": "`public, max-age=31536000, immutable`: the bytes at this path never change."
+      },
+      "Last-Modified": {
+        "schema": {
+          "type": "string"
+        },
+        "description": "When the copy on disk was written, for `If-Modified-Since`. Not sent by the response that first fetched it."
+      },
       "Retry-After": {
         "schema": {
           "type": "integer"
