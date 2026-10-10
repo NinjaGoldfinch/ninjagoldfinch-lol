@@ -121,7 +121,7 @@ test.describe('builds without JavaScript', () => {
 		await expect(items.first()).toContainText('10:49');
 
 		await expect(build).toContainText('Skill order · Q › W › E');
-		const grid = build.getByRole('table', { name: 'Skill points by champion level' });
+		const grid = build.getByRole('table', { name: 'Skill points in the order taken' });
 		await expect(grid.getByRole('columnheader')).toHaveCount(18);
 		await expect(grid.getByRole('row', { name: /^W/ }).getByRole('cell').first()).toHaveText('W');
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { itemIconUrl, runeIconUrl, statShardIconUrl } from '#lib/assets.ts';
-	import { SKILL_KEYS, SKILL_LEVELS, type Build, type StackedItem } from '#lib/domain/builds.ts';
+	import { SKILL_KEYS, skillColumns, type Build, type StackedItem } from '#lib/domain/builds.ts';
 	import type { ScoreboardLine } from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
@@ -28,7 +28,7 @@
 	const who = $derived(
 		line.riotId ? `${line.riotId.gameName}#${line.riotId.tagLine}` : line.champion.name
 	);
-	const levels = Array.from({ length: SKILL_LEVELS }, (_, i) => i + 1);
+	const columns = $derived(skillColumns(build.timeline?.skills.length ?? 0));
 	const paths = $derived([
 		{ label: 'Primary', ...build.runes.primary },
 		{ label: 'Secondary', ...build.runes.secondary }
@@ -146,12 +146,12 @@
 					<!-- Narrow screens scroll the grid inside its box, not the page. -->
 					<div class="mt-2 overflow-x-auto">
 						<table class="border-separate border-spacing-0.5 text-center text-xs">
-							<caption class="sr-only">Skill points by champion level</caption>
+							<caption class="sr-only">Skill points in the order taken</caption>
 							<thead>
 								<tr>
 									<td></td>
-									{#each levels as level (level)}
-										<th scope="col" class="w-6 font-normal text-muted">{level}</th>
+									{#each columns as n (n)}
+										<th scope="col" class="w-6 font-normal text-muted">{n}</th>
 									{/each}
 								</tr>
 							</thead>
@@ -159,8 +159,8 @@
 								{#each SKILL_KEYS as key, slot (key)}
 									<tr>
 										<th scope="row" class="w-6 pr-1 text-left font-semibold">{key}</th>
-										{#each levels as level (level)}
-											{@const up = skills[level - 1]}
+										{#each columns as n (n)}
+											{@const up = skills[n - 1]}
 											{#if up?.slot === slot + 1}
 												<td
 													class="size-6 rounded-sm bg-accent font-semibold text-bg"

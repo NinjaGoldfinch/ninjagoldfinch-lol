@@ -14,6 +14,7 @@ import {
 	SKILL_KEYS,
 	playerBuild,
 	shopVisits,
+	skillColumns,
 	skillOrder,
 	stackItems,
 	toRunePage,
@@ -145,6 +146,13 @@ describe('playerBuild', () => {
 		).toEqual([1, 2]);
 	});
 
+	it('keeps every skill point, past 18 and four of R included', () => {
+		// Udyr with Triple Tonic can take 19 points; Nidalee can rank R four times.
+		const slots = [4, 1, 2, 3, 1, 4, 2, 3, 1, 2, 4, 3, 1, 2, 3, 4, 1, 2, 3];
+		const build = of(slots.map((slot, i) => skill(i * 1000, slot)));
+		expect(build.levelUps.map((l) => l.slot)).toEqual(slots);
+	});
+
 	it('is empty for a player not in the timeline', () => {
 		const build = playerBuild(
 			{ participants: [at(1, 'me')], events: [buy(0, 1055)] },
@@ -241,5 +249,13 @@ describe('toRunePage', () => {
 
 	it('leaves the shards unnamed without CommunityDragon', () => {
 		expect(toRunePage(ahri.runePage, names, {}).shards).toEqual([null, null, null]);
+	});
+});
+
+describe('skillColumns', () => {
+	it('numbers at least 18 columns, and one per point past that', () => {
+		expect(skillColumns(0)).toHaveLength(18);
+		expect(skillColumns(18)).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
+		expect(skillColumns(19).at(-1)).toBe(19);
 	});
 });
