@@ -4,14 +4,11 @@
 	import { PUBLIC_SITE_NAME } from '$app/env/public';
 	import favicon from '#lib/assets/favicon.svg';
 	import SearchForm from '#lib/components/SearchForm.svelte';
-	import { findRegion } from '#lib/domain/regions.ts';
 	import { LEGAL_NOTICE } from '#lib/legal.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
 
-	// On a profile, the header search starts at that profile's region.
-	const region = $derived(page.params.region && findRegion(page.params.region)?.slug);
 	// Pages that have Data Dragon's names pass them on, so the search suggests champions.
 	const champions = $derived(
 		Array.isArray(page.data.championNames)
@@ -35,7 +32,7 @@
 					<a href="/champions" class="text-sm hover:text-accent">Champions</a>
 				</nav>
 			</div>
-			<SearchForm region={region || undefined} {champions} />
+			<SearchForm {champions} />
 		</div>
 	</header>
 

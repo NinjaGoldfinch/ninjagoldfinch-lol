@@ -1,20 +1,18 @@
 import { error, redirect } from '@sveltejs/kit';
 import { filterQuery, parseMatchFilter } from '#lib/domain/match-filters.ts';
-import { findRegion } from '#lib/domain/regions.ts';
 import { parseRiotId } from '#lib/domain/riot-id.ts';
 import { cacheControl } from '#lib/server/cache.ts';
 import { loadProfile } from '#lib/server/profile.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-function target(params: { region: string; riotId: string }) {
-	const region = findRegion(params.region);
+function target(params: { riotId: string }) {
 	const id = parseRiotId(params.riotId);
-	if (!region || !id) error(404, 'Not found');
-	return { region, id };
+	if (!id) error(404, 'Not found');
+	return id;
 }
 
 export const load: PageServerLoad = async ({ params, url, request, setHeaders }) => {
-	const { region, id } = target(params);
+	const id = target(params);
 	const filter = parseMatchFilter(url.searchParams);
 
 	// The filter form submits every select, so an unused one arrives empty
@@ -23,7 +21,7 @@ export const load: PageServerLoad = async ({ params, url, request, setHeaders })
 	const query = filterQuery(filter);
 	if (request.method === 'GET' && url.search !== query) redirect(307, url.pathname + query);
 
-	const profile = await loadProfile(region, id, undefined, { filter });
+	const profile = await loadProfile(id, undefined, { filter });
 	// A page whose match history failed is not kept at the edge.
 	setHeaders(cacheControl(profile.matches ? 'profile' : 'none'));
 	return profile;
@@ -33,8 +31,8 @@ export const actions: Actions = {
 	// Returns the refreshed profile itself, so the page shows it even when a
 	// cache in front of the site still holds the previous one. ADR-012.
 	refresh: async ({ params, url }) => {
-		const { region, id } = target(params);
+		const id = target(params);
 		const filter = parseMatchFilter(url.searchParams);
-		return { profile: await loadProfile(region, id, undefined, { refresh: true, filter }) };
+		return { profile: await loadProfile(id, undefined, { refresh: true, filter }) };
 	}
 };

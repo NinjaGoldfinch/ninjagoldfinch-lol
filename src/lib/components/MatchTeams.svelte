@@ -7,17 +7,15 @@
 	/**
 	 * Both teams of a match, one short line per player: the profile's inline
 	 * view of a match (ADR-030). The match page has the full scoreboard.
-	 * `region` is the URL slug; `highlight` is whose line to mark.
+	 * `highlight` is whose line to mark.
 	 */
 	let {
 		teams,
 		version,
-		region,
 		highlight
 	}: {
 		teams: TeamScoreboard[];
 		version: string;
-		region: string;
 		highlight: RiotId;
 	} = $props();
 
@@ -64,7 +62,7 @@
 								{/if}
 								{#if player.riotId}
 									<a
-										href={profilePath(region, player.riotId)}
+										href={profilePath(player.riotId)}
 										class="block max-w-36 truncate hover:underline"
 										>{player.riotId.gameName}<span class="text-muted">#{player.riotId.tagLine}</span
 										></a

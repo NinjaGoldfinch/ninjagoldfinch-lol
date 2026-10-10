@@ -1,13 +1,9 @@
 <script lang="ts">
-	import { DEFAULT_REGION, REGIONS } from '#lib/domain/regions.ts';
-
 	let {
-		region = DEFAULT_REGION,
 		query = '',
 		message = null,
 		champions = []
 	}: {
-		region?: string;
 		query?: string;
 		/** Why the last search found nothing, shown under the box. */
 		message?: string | null;
@@ -19,20 +15,10 @@
 </script>
 
 <!-- A plain GET form, so search works without JavaScript. A query with # is a
-     Riot ID; anything else is a champion's name. -->
+     Riot ID, whose region riot-proxy finds (ADR-037); anything else is a
+     champion's name. -->
 <form method="GET" action="/search" role="search" class="flex w-full flex-col gap-1 sm:flex-1">
 	<div class="flex w-full gap-2">
-		<label>
-			<span class="sr-only">Region</span>
-			<select
-				name="region"
-				class="h-9 w-28 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none sm:w-auto"
-			>
-				{#each REGIONS as r (r.slug)}
-					<option value={r.slug} selected={r.slug === region}>{r.label}</option>
-				{/each}
-			</select>
-		</label>
 		<label class="min-w-0 flex-1">
 			<span class="sr-only">Riot ID or champion</span>
 			<input

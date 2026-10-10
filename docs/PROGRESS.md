@@ -43,6 +43,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] P4-01 `/champions` table: win, pick and ban rate summed over every tier, sortable without a request, role tabs, patch picker defaulting to all patches — #54 (ADR-033); riot-proxy spec with summed tiers and set builds — #52
 - [x] P4-02 `/champions/[key]`: summed rates, set builds in tabs (the detail's lists when there are none), lane matchups, rates by tier; the header search takes a champion's name — #55 (ADR-034)
 - [x] P4-03 Every rate shows its games; nothing hidden (`minGames=0` on every analytics route), rates under 100 games marked "Low sample" — #56 (ADR-035)
+- [x] P4-04 Search without a region: profiles at `/summoner/Name-TAG` find their platform through riot-proxy, matches at `/match/{matchId}` from the id; old URLs redirect (308) — #59 (ADR-037); riot-proxy spec for SITE-09 — #58
 
 ## Brought forward
 

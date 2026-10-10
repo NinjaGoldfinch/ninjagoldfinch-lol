@@ -27,7 +27,7 @@
 	const queueName = $derived(profile.queueOptions.find((q) => q.id === profile.filter.queue)?.name);
 
 	onMount(() => {
-		rememberSearch({ region: data.region.slug, ...data.riotId });
+		rememberSearch(data.riotId);
 	});
 </script>
 
@@ -88,12 +88,7 @@
 			<ul class="mt-2 space-y-2">
 				{#each profile.matches as match (match.matchId)}
 					<li>
-						<MatchRow
-							{match}
-							patch={profile.patch}
-							region={profile.region.slug}
-							player={profile.riotId}
-						/>
+						<MatchRow {match} patch={profile.patch} player={profile.riotId} />
 					</li>
 				{:else}
 					<li class="text-muted">

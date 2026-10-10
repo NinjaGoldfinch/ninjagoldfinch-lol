@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
-const MATCH = '/match/oce/OC1_712351051';
+const MATCH = '/match/OC1_712351051';
 
 test.describe('without JavaScript', () => {
 	test.use({ javaScriptEnabled: false });
@@ -45,11 +45,11 @@ test.describe('without JavaScript', () => {
 		).toHaveAccessibleName('Ionian Boots of Lucidity');
 
 		await ahri.getByRole('link', { name: 'NinjaGoldfinch#OCENZ' }).click();
-		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ');
 	});
 
 	test('a profile row links to its match page', async ({ page }) => {
-		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 		const first = page.getByRole('article', { name: 'Victory as Ahri' }).first();
 		await first.getByRole('link', { name: 'Details of this match' }).click();
 
@@ -62,7 +62,7 @@ test.describe('without JavaScript', () => {
 
 		// Without JavaScript, back goes to the player's profile.
 		await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
-		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ');
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 });
@@ -211,7 +211,7 @@ test.describe('build popup', () => {
 	});
 
 	test('a build URL opens as a popup; closing it leaves the page in place', async ({ page }) => {
-		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+		await page.goto('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ&build=8`);
 		await expect(popup(page)).toBeVisible();
 		expect(await isModal(page)).toBe(true);
@@ -221,11 +221,11 @@ test.describe('build popup', () => {
 		await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
 		// Closing replaced the entry rather than adding one, so Back leaves the match.
 		await page.goBack();
-		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+		await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 	});
 
 	test('after a popup, back still leads to the profile', async ({ page }) => {
-		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+		await page.goto('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 		await page.getByRole('link', { name: 'Details of this match' }).first().click();
 		await page.getByRole('link', { name: "Show Kai'Sa's build" }).click();
 		await expect(popup(page)).toBeVisible();
@@ -233,7 +233,7 @@ test.describe('build popup', () => {
 		await expect(popup(page)).toHaveCount(0);
 
 		await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
-		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+		await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 	});
 });
 
@@ -296,7 +296,7 @@ test.describe('timeline tab without JavaScript', () => {
 test('with JavaScript, switching tab adds no history, so back still leaves the match', async ({
 	page
 }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 	await page.getByRole('link', { name: 'Details of this match' }).first().click();
 	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
 	// The load doesn't read the URL, so switching tab asks the server for nothing.
@@ -315,11 +315,11 @@ test('with JavaScript, switching tab adds no history, so back still leaves the m
 	expect(loads).toEqual([]);
 
 	await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
-	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 });
 
 test.describe('inline match on the profile', () => {
-	const PROFILE = '/summoner/oce/NinjaGoldfinch-OCENZ';
+	const PROFILE = '/summoner/NinjaGoldfinch-OCENZ';
 
 	test('a row shows both teams in place, from the match page cached at the edge', async ({
 		page
@@ -352,7 +352,7 @@ test.describe('inline match on the profile', () => {
 		// No navigation: the profile stays, and the match page's load answered.
 		await expect(page).toHaveURL(PROFILE);
 		expect(loads).toHaveLength(1);
-		expect(loads[0].url).toContain('/match/oce/OC1_712351051/__data.json');
+		expect(loads[0].url).toContain('/match/OC1_712351051/__data.json');
 		expect(loads[0].cacheControl).toBe('public, s-maxage=86400, stale-while-revalidate=86400');
 
 		// Hiding and showing again asks for nothing more.
@@ -365,7 +365,7 @@ test.describe('inline match on the profile', () => {
 		// A player in it links to their profile.
 		await expect(row.getByRole('link', { name: 'Demacia123#6666' })).toHaveAttribute(
 			'href',
-			'/summoner/oce/Demacia123-6666'
+			'/summoner/Demacia123-6666'
 		);
 	});
 
@@ -376,7 +376,7 @@ test.describe('inline match on the profile', () => {
 		await expect(row).toContainText("The teams couldn't be loaded.");
 		await expect(row.getByRole('link', { name: 'Open the match page' })).toHaveAttribute(
 			'href',
-			'/match/oce/OC1_712345690?player=NinjaGoldfinch-OCENZ'
+			'/match/OC1_712345690?player=NinjaGoldfinch-OCENZ'
 		);
 	});
 
@@ -422,26 +422,23 @@ test('a match page is cacheable at the edge for a day', async ({ request }) => {
 });
 
 test('with JavaScript, a profile row opens its match page', async ({ page }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 	await page.getByRole('link', { name: 'Details of this match' }).first().click();
 	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
 	await expect(page.locator('tr[aria-current="true"]')).toHaveAccessibleName('Ahri');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ranked Solo');
-	await expect(page.getByRole('banner').getByRole('combobox', { name: 'Region' })).toHaveValue(
-		'oce'
-	);
 });
 
 test('with JavaScript, back returns to the profile page the match was opened from', async ({
 	page
 }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 	await page.getByRole('link', { name: 'Details of this match' }).first().click();
 	await expect(page).toHaveURL(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
 
 	await page.getByRole('link', { name: 'Back to NinjaGoldfinch#OCENZ' }).click();
 	// The filter is kept, because this is the browser's own back.
-	await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420');
+	await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ?queue=420');
 	await expect(page.getByRole('combobox', { name: 'Queue' })).toHaveValue('420');
 });
 
@@ -453,14 +450,24 @@ test('a player link names the line to highlight, whatever its case', async ({ pa
 });
 
 test('an unknown match shows not found', async ({ page }) => {
-	const response = await page.goto('/match/oce/OC1_100000');
+	const response = await page.goto('/match/OC1_100000');
 	expect(response?.status()).toBe(404);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
 });
 
-test("a match id from another region's platform shows not found", async ({ page }) => {
-	for (const path of ['/match/euw/OC1_712351051', '/match/oce/nonsense', '/match/mars/OC1_1']) {
+test('a malformed match id, or an old URL with an unknown region, shows not found', async ({
+	page
+}) => {
+	for (const path of ['/match/nonsense', '/match/mars/OC1_1']) {
 		const response = await page.goto(path);
 		expect(response?.status(), path).toBe(404);
 	}
+});
+
+test('an old match URL with the wrong region still opens the match: its id names the region', async ({
+	page
+}) => {
+	await page.goto('/match/euw/OC1_712351051');
+	await expect(page).toHaveURL('/match/OC1_712351051');
+	await expect(page.getByRole('main')).toContainText('UTC · Oceania');
 });

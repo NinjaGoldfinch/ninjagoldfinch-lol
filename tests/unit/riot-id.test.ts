@@ -34,14 +34,14 @@ describe('parseRiotId', () => {
 
 describe('profilePath', () => {
 	it('URL-encodes the Riot ID as Name-TAG', () => {
-		expect(profilePath('kr', { gameName: 'Hide on bush', tagLine: 'KR1' })).toBe(
-			'/summoner/kr/Hide%20on%20bush-KR1'
+		expect(profilePath({ gameName: 'Hide on bush', tagLine: 'KR1' })).toBe(
+			'/summoner/Hide%20on%20bush-KR1'
 		);
 	});
 
 	it('round-trips through parseRiotId', () => {
 		const id = { gameName: 'Some-Name ñ', tagLine: 'OCE' };
-		const segment = decodeURIComponent(profilePath('oce', id).split('/').at(-1) ?? '');
+		const segment = decodeURIComponent(profilePath(id).split('/').at(-1) ?? '');
 		expect(parseRiotId(segment)).toEqual(id);
 	});
 });

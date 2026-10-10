@@ -219,7 +219,7 @@ export const proxy = createClient<paths>({
 ```
 
 ```ts
-// src/routes/summoner/[region]/[riotId]/+page.server.ts (shape only)
+// src/routes/summoner/[riotId]/+page.server.ts (shape only)
 export const load = async ({ params, setHeaders }) => {
   const [gameName, tagLine] = parseRiotId(params.riotId);
   const { data, error: apiError, response } = await proxy.GET(
@@ -259,8 +259,8 @@ v1 is seven routes. Every page renders on the server and works without client Ja
 | Route | Page | Data from riot-proxy | Phase |
 | --- | --- | --- | --- |
 | `/` | Search box, region picker, recent searches | None | 1 |
-| `/summoner/[region]/[riotId]` | Profile: rank, recent matches, champion summary | Account, league entries, match list | 2 |
-| `/match/[region]/[matchId]` | Scoreboard, builds, timeline graphs | Match and timeline | 3 |
+| `/summoner/[riotId]` | Profile: rank, recent matches, champion summary. The region comes from the account (ADR-037) | Account, league entries, match list | 2 |
+| `/match/[matchId]` | Scoreboard, builds, timeline graphs. The region comes from the match id (ADR-037) | Match and timeline | 3 |
 | `/champions` | Champion table: win, pick and ban rate | Champion analytics | 4 |
 | `/champions/[key]` | Champion detail: builds, runes, matchups | Champion analytics | 4 |
 | `/about` | What the site is, data freshness, legal text | None | 1 |
@@ -533,6 +533,7 @@ Six phases, each ending in a check you can run. One task is one branch and one P
 - [ ] P4-01 `/champions` table, sortable by win, pick and ban rate, filterable by role
 - [ ] P4-02 `/champions/[key]` builds, runes and matchups
 - [ ] P4-03 Sample-size display and a minimum-games threshold on every rate
+- [ ] P4-04 Search without a region: the platform comes from the Riot ID (riot-proxy SITE-09); profile and match URLs drop their region, old ones redirect
 
 **Exit check:** every figure on a champion page can be traced to a field in the proxy response, and low-sample rows are marked.
 

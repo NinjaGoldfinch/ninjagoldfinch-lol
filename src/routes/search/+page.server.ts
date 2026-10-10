@@ -5,7 +5,6 @@ import {
 	findChampion,
 	searchHint
 } from '#lib/domain/champion-search.ts';
-import { DEFAULT_REGION, findRegion } from '#lib/domain/regions.ts';
 import { parseRiotIdInput, profilePath } from '#lib/domain/riot-id.ts';
 import { cacheControl } from '#lib/server/cache.ts';
 import { currentPatch } from '#lib/server/patch.ts';
@@ -13,18 +12,15 @@ import { staticNames } from '#lib/server/static-data.ts';
 import type { PageServerLoad } from './$types';
 
 // The header search form submits here with GET. A query with `#` is a Riot ID
-// and redirects to its profile; anything else is a champion name and
-// redirects to that champion's builds (ADR-034). Otherwise the form
-// re-renders with a hint.
+// and redirects to its profile, which finds the player's region itself
+// (ADR-037); anything else is a champion name and redirects to that
+// champion's builds (ADR-034). Otherwise the form re-renders with a hint.
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	setHeaders(cacheControl('none'));
 
-	const regionSlug = url.searchParams.get('region') ?? DEFAULT_REGION;
-	const region = findRegion(regionSlug)?.slug ?? DEFAULT_REGION;
 	// `riotId` is the field's name before champions could be searched.
 	const query = (url.searchParams.get('q') ?? url.searchParams.get('riotId') ?? '').trim();
 	const page = (message: string | null, names: string[] = []) => ({
-		region,
 		query,
 		message,
 		championNames: names
@@ -33,7 +29,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	if (!query) return page(null);
 	if (query.includes('#')) {
 		const id = parseRiotIdInput(query);
-		if (id) redirect(303, profilePath(region, id));
+		if (id) redirect(303, profilePath(id));
 		return page('A Riot ID is Game name#TAG.');
 	}
 

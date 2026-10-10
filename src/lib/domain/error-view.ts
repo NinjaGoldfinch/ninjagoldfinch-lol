@@ -8,7 +8,7 @@ export function describeError(status: number, retryAfter?: number): ErrorView {
 	if (status === 404) {
 		return {
 			title: 'Not found',
-			detail: 'Nothing matches that. Check the spelling and the region.'
+			detail: 'Nothing matches that. Check the spelling and the #TAG.'
 		};
 	}
 

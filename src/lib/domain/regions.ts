@@ -36,3 +36,15 @@ export function findRegion(slug: string): Region | undefined {
 	const wanted = slug.toLowerCase();
 	return REGIONS.find((region) => region.slug === wanted);
 }
+
+/** The region for a platform routing value, as riot-proxy reports a player's (`oc1`). */
+export function regionForPlatform(platform: string): Region | undefined {
+	const wanted = platform.toLowerCase();
+	return REGIONS.find((region) => region.platform === wanted);
+}
+
+/** The region a Riot match id names in its prefix: `OC1_712351051` is Oceania's. */
+export function regionForMatchId(matchId: string): Region | undefined {
+	const prefix = /^([A-Za-z0-9]+)_[0-9]+$/.exec(matchId)?.[1];
+	return prefix ? regionForPlatform(prefix) : undefined;
+}
