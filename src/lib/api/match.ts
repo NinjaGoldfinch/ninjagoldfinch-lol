@@ -6,6 +6,8 @@
 /** One player's line in a match: the fields the site reads. */
 export interface Participant {
 	participantId: number;
+	/** Used on the server to find the player in the timeline; never rendered. */
+	puuid: string | null;
 	teamId: number;
 	riotIdGameName: string | null;
 	riotIdTagline: string | null;
@@ -90,8 +92,8 @@ export interface ItemEvent {
 }
 
 /**
- * An undone purchase or sale. Riot names the item in `beforeId` or `afterId`
- * (the other is 0), not consistently by which was undone.
+ * An undone purchase or sale: `afterId: 0` undoes a purchase of `beforeId`,
+ * and `beforeId: 0` undoes a sale of `afterId`.
  */
 export interface ItemUndoEvent {
 	type: 'ITEM_UNDO';
@@ -143,6 +145,8 @@ export type ObjectiveEvent = MonsterKillEvent | BuildingKillEvent;
 
 export interface Timeline {
 	matchId: string;
+	/** Who each participantId is; participantId 0 is no player and left out. */
+	participants: { participantId: number; puuid: string }[];
 	frames: TimelineFrame[];
 	/** The item and skill events the site reads, in game order. */
 	events: TimelineEvent[];
@@ -215,8 +219,15 @@ export function parseTimeline(body: unknown): Timeline | undefined {
 		return Array.isArray(events) ? events : [];
 	});
 
+	const participants = record(record(body)?.info)?.participants;
+
 	return {
 		matchId,
+		participants: (Array.isArray(participants) ? participants : []).flatMap((value) => {
+			const participantId = number(record(value)?.participantId);
+			const puuid = string(record(value)?.puuid);
+			return participantId && puuid ? [{ participantId, puuid }] : [];
+		}),
 		events: allEvents.flatMap(parseEvent),
 		objectives: allEvents.flatMap(parseObjective),
 		frames: frames.flatMap((value): TimelineFrame[] => {
@@ -341,6 +352,7 @@ function parseParticipant(value: unknown): Participant | undefined {
 
 	return {
 		participantId,
+		puuid: string(p.puuid) || null,
 		teamId,
 		riotIdGameName: string(p.riotIdGameName) || null,
 		riotIdTagline: string(p.riotIdTagline) || null,

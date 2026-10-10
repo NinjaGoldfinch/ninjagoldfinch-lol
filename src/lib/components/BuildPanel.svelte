@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { itemIconUrl, runeIconUrl, statShardIconUrl } from '#lib/assets.ts';
-	import { SKILL_KEYS, maxOrder, type Build } from '#lib/domain/builds.ts';
+	import { SKILL_KEYS, SKILL_LEVELS, type Build, type StackedItem } from '#lib/domain/builds.ts';
 	import type { ScoreboardLine } from '#lib/domain/match-detail.ts';
+	import { formatDuration } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 
 	/**
-	 * One player's build: item order, skill order and rune page. Summoner spells
-	 * and the keystone are on the scoreboard line, so the header leaves them out.
+	 * One player's build: starter, boots, skill order and finished items, the
+	 * skill grid, the shop visits and the rune page. Summoner spells and the
+	 * keystone are on the scoreboard line, so the header leaves them out.
 	 */
 	let {
 		build,
@@ -26,12 +28,37 @@
 	const who = $derived(
 		line.riotId ? `${line.riotId.gameName}#${line.riotId.tagLine}` : line.champion.name
 	);
-	const priority = $derived(build.skills && maxOrder(build.skills));
+	const levels = Array.from({ length: SKILL_LEVELS }, (_, i) => i + 1);
 	const paths = $derived([
 		{ label: 'Primary', ...build.runes.primary },
 		{ label: 'Secondary', ...build.runes.secondary }
 	]);
+
+	const label = 'text-xs font-medium tracking-wide text-muted uppercase';
 </script>
+
+{#snippet icon(item: StackedItem)}
+	{@const name = `${item.count > 1 ? `${item.count} × ` : ''}${item.name}`}
+	<!-- Repeat buys stack, with the count on the icon's corner. -->
+	<span class="relative block">
+		<img
+			src={itemIconUrl(version, item.id)}
+			alt={name}
+			title={name}
+			width="28"
+			height="28"
+			loading="lazy"
+			class="rounded-sm"
+		/>
+		{#if item.count > 1}
+			<span
+				aria-hidden="true"
+				class="absolute -right-1 -bottom-1 min-w-4 rounded-full border border-border bg-bg px-0.5 text-center text-[10px] leading-[14px] font-semibold"
+				>{item.count}</span
+			>
+		{/if}
+	</span>
+{/snippet}
 
 <section aria-labelledby="build-heading" class="rounded border border-border bg-surface">
 	<div class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
@@ -51,59 +78,71 @@
 
 	<div class="grid gap-6 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
 		<div class="flex min-w-0 flex-col gap-6">
-			<div>
-				<h3 class="text-xs font-medium tracking-wide text-muted uppercase">Item order</h3>
-				{#if build.items === null}
-					<p class="mt-2 text-sm text-muted">Item order is unavailable right now.</p>
-				{:else if build.items.length === 0}
-					<p class="mt-2 text-sm text-muted">No items bought.</p>
+			{#if build.timeline === null}
+				<p class="text-sm text-muted">Items and skills are unavailable right now.</p>
+			{:else if build.timeline.visits.length === 0 && build.timeline.skills.length === 0}
+				<p class="text-sm text-muted">No build for this player.</p>
+			{:else}
+				{@const { core, skillOrder, skills, visits } = build.timeline}
+				{#if core === null}
+					<p class="text-sm text-muted">
+						Item data is unavailable, so the starter, boots and finished items can't be told apart.
+					</p>
 				{:else}
-					<ol class="mt-2 flex flex-wrap items-start gap-x-2 gap-y-3" aria-label="Item order">
-						{#each build.items as step, i (i)}
-							<li class="flex items-start gap-2">
-								{#if i > 0}<span class="mt-1.5 text-muted" aria-hidden="true">›</span>{/if}
-								<div>
+					<dl
+						role="group"
+						class="flex flex-wrap items-start gap-x-6 gap-y-3"
+						aria-label="Build summary"
+					>
+						<div>
+							<dt class={label}>Starter</dt>
+							<dd class="mt-1">
+								{#if core.starter.length > 0}
 									<ul class="flex gap-0.5">
-										{#each step.items as item, j (j)}
-											{@const label = `${item.sold ? 'Sold ' : ''}${item.count > 1 ? `${item.count} × ` : ''}${item.name}`}
-											<!-- Repeat buys in one minute stack, with the count on the icon's corner. -->
-											<li class="relative">
-												<img
-													src={itemIconUrl(version, item.id)}
-													alt={label}
-													title={label}
-													width="28"
-													height="28"
-													loading="lazy"
-													class="rounded-sm {item.sold ? 'opacity-40 grayscale' : ''}"
-												/>
-												{#if item.count > 1}
-													<span
-														aria-hidden="true"
-														class="absolute -right-1 -bottom-1 min-w-4 rounded-full border border-border bg-bg px-0.5 text-center text-[10px] leading-[14px] font-semibold"
-														>{item.count}</span
-													>
-												{/if}
-											</li>
+										{#each core.starter as item (item.id)}
+											<li>{@render icon(item)}</li>
 										{/each}
 									</ul>
-									<p class="mt-0.5 text-[11px] text-muted">{step.minute} min</p>
-								</div>
-							</li>
-						{/each}
-					</ol>
+								{:else}<span class="text-muted">–</span>{/if}
+							</dd>
+						</div>
+						<div>
+							<dt class={label}>Boots</dt>
+							<dd class="mt-1">
+								{#if core.boots}{@render icon(core.boots)}{:else}<span class="text-muted">–</span
+									>{/if}
+							</dd>
+						</div>
+						<div>
+							<dt class={label}>Skills</dt>
+							<dd class="mt-1 text-sm font-semibold">
+								{skillOrder ? [...skillOrder].join(' › ') : '–'}
+							</dd>
+						</div>
+						<div>
+							<dt class={label}>Items</dt>
+							<dd class="mt-1">
+								{#if core.items.length > 0}
+									<ol class="flex flex-wrap gap-x-1.5 gap-y-2" aria-label="Finished items">
+										{#each core.items as item, i (i)}
+											<li class="text-center">
+												{@render icon({ ...item, count: 1 })}
+												<p class="text-[11px] text-muted">{formatDuration(item.at)}</p>
+											</li>
+										{/each}
+									</ol>
+								{:else}<span class="text-muted">–</span>{/if}
+							</dd>
+						</div>
+					</dl>
 				{/if}
-			</div>
 
-			<div>
-				<h3 class="text-xs font-medium tracking-wide text-muted uppercase">
-					Skill order{#if priority && priority.length > 0}<span class="normal-case"
-							>{` · ${priority.map((s) => SKILL_KEYS[s - 1]).join(' > ')}`}</span
-						>{/if}
-				</h3>
-				{#if build.skills === null}
-					<p class="mt-2 text-sm text-muted">Skill order is unavailable right now.</p>
-				{:else}
+				<div>
+					<h3 class={label}>
+						Skill order{#if skillOrder}<span class="normal-case"
+								>{` · ${[...skillOrder].join(' › ')}`}</span
+							>{/if}
+					</h3>
 					<!-- Narrow screens scroll the grid inside its box, not the page. -->
 					<div class="mt-2 overflow-x-auto">
 						<table class="border-separate border-spacing-0.5 text-center text-xs">
@@ -111,7 +150,7 @@
 							<thead>
 								<tr>
 									<td></td>
-									{#each build.skills.map((_, i) => i + 1) as level (level)}
+									{#each levels as level (level)}
 										<th scope="col" class="w-6 font-normal text-muted">{level}</th>
 									{/each}
 								</tr>
@@ -120,25 +159,52 @@
 								{#each SKILL_KEYS as key, slot (key)}
 									<tr>
 										<th scope="row" class="w-6 pr-1 text-left font-semibold">{key}</th>
-										{#each build.skills as skill, level (level)}
-											<td
-												class="size-6 rounded-sm {skill === slot + 1
-													? 'bg-accent font-semibold text-bg'
-													: 'bg-bg'}"
-												>{#if skill === slot + 1}{key}{/if}</td
-											>
+										{#each levels as level (level)}
+											{@const up = skills[level - 1]}
+											{#if up?.slot === slot + 1}
+												<td
+													class="size-6 rounded-sm bg-accent font-semibold text-bg"
+													title="{key} at {formatDuration(up.at)}">{key}</td
+												>
+											{:else}
+												<td class="size-6 rounded-sm bg-bg"></td>
+											{/if}
 										{/each}
 									</tr>
 								{/each}
 							</tbody>
 						</table>
 					</div>
-				{/if}
-			</div>
+				</div>
+
+				<div>
+					<h3 class={label}>Shop visits</h3>
+					{#if visits.length === 0}
+						<p class="mt-2 text-sm text-muted">No items bought.</p>
+					{:else}
+						<!-- Purchases less than 30 seconds apart are one visit (ADR-032). -->
+						<ol class="mt-2 flex flex-wrap items-start gap-x-2 gap-y-3" aria-label="Shop visits">
+							{#each visits as visit, i (i)}
+								<li class="flex items-start gap-2">
+									{#if i > 0}<span class="mt-1.5 text-muted" aria-hidden="true">›</span>{/if}
+									<div>
+										<ul class="flex gap-0.5">
+											{#each visit.items as item (item.id)}
+												<li>{@render icon(item)}</li>
+											{/each}
+										</ul>
+										<p class="mt-0.5 text-[11px] text-muted">{formatDuration(visit.at)}</p>
+									</div>
+								</li>
+							{/each}
+						</ol>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<div>
-			<h3 class="text-xs font-medium tracking-wide text-muted uppercase">Runes</h3>
+			<h3 class={label}>Runes</h3>
 			{#each paths as path (path.label)}
 				<div class="mt-2">
 					<p class="text-sm font-medium">{path.path?.name ?? `${path.label} path`}</p>

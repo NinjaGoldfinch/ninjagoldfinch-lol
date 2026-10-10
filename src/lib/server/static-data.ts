@@ -1,4 +1,5 @@
 import {
+	parseItemCatalog,
 	parseItemNames,
 	parseKeyedNames,
 	parseQueueNames,
@@ -16,7 +17,8 @@ export const NO_NAMES: StaticNames = {
 	items: {},
 	spells: {},
 	queues: {},
-	runes: {}
+	runes: {},
+	itemCatalog: null
 };
 
 // Data Dragon files cannot change within a patch, and item.json alone is
@@ -56,7 +58,8 @@ async function fetchNames(patch: string, client: ProxyClient): Promise<StaticNam
 		items: parseItemNames(items.data),
 		spells: parseKeyedNames(spells.data),
 		queues: parseQueueNames(queues.data),
-		runes: parseRunes(runes.data)
+		runes: parseRunes(runes.data),
+		itemCatalog: parseItemCatalog(items.data)
 	};
 }
 

@@ -7,7 +7,7 @@ import {
 	type Participant,
 	type Timeline
 } from '#lib/api/match.ts';
-import { itemSteps, skillOrder, toRunePage, type Build } from './builds.ts';
+import { playerBuild, toRunePage, toTimelineBuild, type Build } from './builds.ts';
 import type { Region } from './regions.ts';
 import { sameRiotId, type RiotId } from './riot-id.ts';
 import { loadoutOf, patchOf, type MatchRow } from './matches.ts';
@@ -143,8 +143,9 @@ export function toMatchDetail(
 		objectives: timeline ? objectiveKills(timeline.objectives, teamIds) : null,
 		builds: match.participants.map((p) => ({
 			participantId: p.participantId,
-			items: timeline ? itemSteps(timeline.events, p.participantId, names) : null,
-			skills: timeline ? skillOrder(timeline.events, p.participantId) : null,
+			timeline: timeline
+				? toTimelineBuild(playerBuild(timeline, p.puuid, names.itemCatalog), names)
+				: null,
 			runes: toRunePage(p.runePage, names, shards)
 		}))
 	};

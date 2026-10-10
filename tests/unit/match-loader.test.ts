@@ -51,7 +51,7 @@ describe('loadMatch', () => {
 		expect(match.teams).toHaveLength(2);
 		expect(match.gold).toHaveLength(34);
 		expect(match.builds).toHaveLength(10);
-		expect(match.builds[7].items?.[0].minute).toBe(0);
+		expect(match.builds[7].timeline?.visits[0].at).toBe(15);
 		expect(match.builds[7].runes.shards.map((s) => s?.name)).toEqual([
 			'Attack Speed',
 			'Adaptive Force',
@@ -112,7 +112,7 @@ describe('loadMatch', () => {
 		expect(match.teams).toHaveLength(2);
 		expect(match.gold).toBeNull();
 		expect(match.objectives).toBeNull();
-		expect(match.builds[0]).toMatchObject({ items: null, skills: null });
+		expect(match.builds[0]).toMatchObject({ timeline: null });
 	});
 
 	it('fails the page on a match payload it cannot read', async () => {

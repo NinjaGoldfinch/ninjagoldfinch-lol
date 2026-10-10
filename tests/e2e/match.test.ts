@@ -90,7 +90,7 @@ test.describe('builds without JavaScript', () => {
 		);
 	});
 
-	test('a build URL shows that build in the page: item order, skills and runes', async ({
+	test('a build URL shows that build in the page: items, skills, shop visits and runes', async ({
 		page
 	}) => {
 		await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ&build=8`);
@@ -107,19 +107,30 @@ test.describe('builds without JavaScript', () => {
 			'Deathfire Touch'
 		);
 
-		const steps = build.getByRole('list', { name: 'Item order' }).locator(':scope > li');
-		await expect(steps).toHaveCount(16);
-		await expect(steps.first()).toContainText('0 min');
-		await expect(steps.first().getByRole('img', { name: "Doran's Ring" })).toBeVisible();
-		// Two Health Potions at 0 min stack as one icon with a count.
-		await expect(steps.first().getByRole('img')).toHaveCount(3);
-		await expect(steps.first().getByRole('img', { name: '2 × Health Potion' })).toBeVisible();
-		await expect(build.getByRole('img', { name: /^Sold / })).toHaveCount(1);
+		// Starter, boots, skill order and finished items, by riot-proxy's definitions.
+		const summary = build.getByRole('group', { name: 'Build summary' });
+		await expect(summary.getByRole('img', { name: "Doran's Ring" })).toBeVisible();
+		await expect(summary.getByRole('img', { name: '2 × Health Potion' })).toBeVisible();
+		// The trinket bought with the starter isn't part of it.
+		await expect(summary.getByRole('img', { name: 'Stealth Ward' })).toHaveCount(0);
+		await expect(summary.getByRole('img', { name: 'Ionian Boots of Lucidity' })).toBeVisible();
+		await expect(summary).toContainText('Q › W › E');
+		const items = summary.getByRole('list', { name: 'Finished items' }).getByRole('listitem');
+		await expect(items).toHaveCount(3);
+		await expect(items.first().getByRole('img', { name: 'Blackfire Torch' })).toBeVisible();
+		await expect(items.first()).toContainText('10:49');
 
-		await expect(build).toContainText('Skill order · Q > W > E');
+		await expect(build).toContainText('Skill order · Q › W › E');
 		const grid = build.getByRole('table', { name: 'Skill points by champion level' });
-		await expect(grid.getByRole('columnheader')).toHaveCount(16);
+		await expect(grid.getByRole('columnheader')).toHaveCount(18);
 		await expect(grid.getByRole('row', { name: /^W/ }).getByRole('cell').first()).toHaveText('W');
+
+		// Purchases less than 30 s apart are one visit; sales aren't shown.
+		const visits = build.getByRole('list', { name: 'Shop visits' }).locator(':scope > li');
+		await expect(visits).toHaveCount(16);
+		await expect(visits.first()).toContainText('0:15');
+		await expect(visits.first().getByRole('img')).toHaveCount(3);
+		await expect(build.getByRole('img', { name: /^Sold / })).toHaveCount(0);
 
 		await expect(build.getByRole('list', { name: 'Primary runes' })).toContainText(
 			'Deathfire Touch'
