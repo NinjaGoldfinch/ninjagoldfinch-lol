@@ -1143,7 +1143,7 @@ export interface paths {
         };
         /**
          * A player's profile in one call
-         * @description Account, summoner, ranked entries and top mastery, fetched concurrently and each cached on its own. A part that fails is `null` and named in `warnings`; only every part failing is a 404. `refresh=true` re-reads every part upstream, at most once a minute per player.
+         * @description Account, summoner, ranked entries and top mastery, fetched concurrently and each cached on its own. A part that fails is `null` and named in `warnings`; only every part failing is a 404. `refresh=true` re-reads every part upstream, at most once a minute per player. Without `platform`, the proxy reads the player's platform from account-v1's active region (cached like an account) and echoes it as `platform`, so the player's other routes can be routed from the profile alone.
          */
         get: operations["profile"];
         put?: never;
@@ -1226,6 +1226,26 @@ export interface paths {
          * @description account-v1 by Riot ID. The body is Riot's, unmodified. `sea` is accepted and routed to `asia`, since account-v1 has no `sea` host.
          */
         get: operations["account_by_riot_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/riot/accounts/region/by-puuid/{puuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A player's League of Legends platform, any cluster
+         * @description account-v1's active region for `lol`: Riot's `AccountRegionDTO`, unmodified, whose `region` is the platform routing value the player plays on (`oc1`, `kr`). A Riot ID belongs to one platform, so this is how to route its summoner, league, mastery and match calls without asking. The cluster is picked as for the other account routes.
+         */
+        get: operations["account_region_by_puuid"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1620,7 +1640,7 @@ export interface components {
             totalGames: number;
             /**
              * @description One row summed over every tier, or the named `tier`'s row; empty when
-             *     the champion has fewer than `minGames` games in the slice.
+             *     the champion has no games in the slice, or fewer than `minGames`.
              */
             stats: components["schemas"]["ChampionStatEntry"][];
             /**
@@ -6132,7 +6152,7 @@ export interface operations {
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default every role summed */
                 role?: string;
-                /** @description ≥ 0; default `AGGREGATE_MIN_GAMES` */
+                /** @description ≥ 0; default 0, every row */
                 minGames?: number;
                 /** @description 1–500, default 200 */
                 limit?: number;
@@ -6244,7 +6264,7 @@ export interface operations {
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty */
                 role?: string;
-                /** @description ≥ 0; default `AGGREGATE_MIN_GAMES` */
+                /** @description ≥ 0; default 0, every row */
                 minGames?: number;
                 /** @description 1–50, default 10, per section */
                 limit?: number;
@@ -6357,7 +6377,7 @@ export interface operations {
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role */
                 role?: string;
-                /** @description ≥ 0, games a build needs; default `AGGREGATE_MIN_GAMES` */
+                /** @description ≥ 0, games a build needs; default 0, every build */
                 minGames?: number;
                 /** @description 1–10 builds, default 3 */
                 limit?: number;
@@ -6470,7 +6490,7 @@ export interface operations {
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM or UTILITY; default every lane */
                 role?: string;
-                /** @description ≥ 0; no default */
+                /** @description ≥ 0; default 0, every row */
                 minGames?: number;
                 /** @description 1–200, default 50 */
                 limit?: number;
@@ -8019,9 +8039,9 @@ export interface operations {
     };
     profile_by_riot_id: {
         parameters: {
-            query: {
-                /** @description Platform routing value, e.g. `oc1`. Required */
-                platform: string;
+            query?: {
+                /** @description Platform routing value, e.g. `oc1`. Optional: left out, it is the player's own, from account-v1's active region */
+                platform?: string;
                 /** @description 1–20, default 5 */
                 topMastery?: number;
                 /** @description Spend quota to re-read; once a minute per player */
@@ -8377,9 +8397,9 @@ export interface operations {
     };
     profile: {
         parameters: {
-            query: {
-                /** @description Platform routing value, e.g. `oc1`. Required */
-                platform: string;
+            query?: {
+                /** @description Platform routing value, e.g. `oc1`. Optional: left out, it is the player's own, from account-v1's active region */
+                platform?: string;
                 /** @description 1–20, default 5 */
                 topMastery?: number;
                 /** @description Spend quota to re-read; once a minute per player */
@@ -8887,6 +8907,124 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountDto"];
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found upstream; a cached 404 carries `X-Cache: HIT-NEG`. */
+            404: {
+                headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Riot failed or rejected the proxy's key (`UPSTREAM_ERROR`). */
+            502: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Riot's rate limit budget is exhausted (`RATE_LIMITED`, with `Retry-After`). */
+            503: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    account_region_by_puuid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Encrypted player UUID (60–128 characters, [A-Za-z0-9_-]) */
+                puuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Riot's payload, unmodified. `X-Cache` and `X-Cache-Age` describe where it came from. */
+            200: {
+                headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
+                    "X-Cache-Age": components["headers"]["X-Cache-Age"];
+                    "X-Cache-Fetched-Age": components["headers"]["X-Cache-Fetched-Age"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
