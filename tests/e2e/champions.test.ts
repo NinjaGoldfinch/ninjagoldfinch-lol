@@ -41,6 +41,11 @@ test.describe('without JavaScript', () => {
 			'aria-sort',
 			'descending'
 		);
+		// Every champion has 100 games or more over all patches: nothing is marked.
+		await expect(page.getByRole('table')).not.toContainText('Low sample');
+		await expect(page.getByRole('main')).toContainText(
+			'Low sample: fewer than 100 games, so its rates can swing widely.'
+		);
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 
@@ -64,7 +69,7 @@ test.describe('without JavaScript', () => {
 		await page.getByRole('link', { name: 'Mid' }).click();
 		await expect(page).toHaveURL('/champions?role=mid&sort=ban');
 		await expect(page.getByRole('link', { name: 'Mid' })).toHaveAttribute('aria-current', 'page');
-		await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(133);
+		await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(165);
 	});
 
 	test('the patch picker shows one patch', async ({ page }) => {
@@ -73,7 +78,10 @@ test.describe('without JavaScript', () => {
 		await page.getByRole('button', { name: 'Apply' }).click();
 		await expect(page).toHaveURL('/champions?patch=16.19');
 		await expect(page.getByRole('main')).toContainText('Patch 16.19');
-		await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(152);
+		const rows = page.getByRole('table').locator('tbody tr');
+		await expect(rows).toHaveCount(173);
+		// Every champion has under 100 games on one patch, so every row is marked.
+		await expect(rows.filter({ hasText: 'Low sample' })).toHaveCount(173);
 	});
 
 	test('a URL with defaults or unknown values redirects to the clean one', async ({ page }) => {

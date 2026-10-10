@@ -1,13 +1,13 @@
 {
 	"request": {
 		"method": "GET",
-		"path": "/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&limit=500"
+		"path": "/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=500"
 	},
 	"response": {
 		"status": 200,
 		"headers": {
 			"content-type": "application/json; charset=utf-8",
-			"x-request-id": "01M4HKA8KQHEV9NGYB1ANSSG7P"
+			"x-request-id": "01M4HQ02JVB2SJE8A57KPPZ9FB"
 		},
 		"body": {
 			"platform": null,

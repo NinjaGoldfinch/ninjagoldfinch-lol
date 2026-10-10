@@ -446,3 +446,17 @@ Date: 2026-10-10 · Task: P4-02
 - **Cache.** The `analytics` policy (ADR-033).
 
 **Consequences.** Every figure on the page is a field from riot-proxy's response, shown as sent (P4-03's exit check). Low-sample marking is still P4-03's. The home page has no suggestions, since it has no load. The static item fixture gained six items the recorded builds use; its existing entries are unchanged.
+
+## ADR-035: Every row shown, small samples marked
+
+Date: 2026-10-10 · Task: P4-03
+
+**Context.** riot-proxy leaves out analytics rows under `AGGREGATE_MIN_GAMES` (10 on the dev instance) unless a request names `minGames`. Its matchups route has no default, so 1-game matchups were shown while champions under 10 games were not. On the newest patch every champion has under 100 games. The owner chose how many games hide a rate and how many mark it.
+
+**Decision.**
+
+- **Nothing is hidden.** `MIN_GAMES = 0` in `src/lib/domain/champion-stats.ts` is sent as `minGames` on every analytics route the site calls (table, detail, set builds, matchups), so riot-proxy's default doesn't decide what the site shows.
+- **Under 100 games is a low sample.** `LOW_SAMPLE_GAMES = 100`. Wherever such a rate appears, it is muted and its games count carries a "Low sample" mark, with a title saying the rates can swing widely. That covers table rows, the champion's header, build tabs, later item options, the fallback lists, matchups and tiers. Each page explains the mark once under its content.
+- **Every rate shows its games.** Each rate on the champion pages already sat beside its games count; this task adds no new figure. The build summary (top runes, spells, skill order, starter, boots) shows choices, not rates, so it is not marked.
+
+**Consequences.** On the newest patch almost everything is marked. Over all patches, every champion row in the table clears 100 games, while most matchups and later item options do not. Both thresholds are one constant each.

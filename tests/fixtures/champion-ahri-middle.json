@@ -1,13 +1,13 @@
 {
 	"request": {
 		"method": "GET",
-		"path": "/v1/lol/analytics/champions/103?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&limit=10"
+		"path": "/v1/lol/analytics/champions/103?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0&limit=10"
 	},
 	"response": {
 		"status": 200,
 		"headers": {
 			"content-type": "application/json; charset=utf-8",
-			"x-request-id": "01M4HMYDXBMJ4ZN9MX6R9ZVA41"
+			"x-request-id": "01M4HQ039K6EGFVE0AAWHGE231"
 		},
 		"body": {
 			"championId": 103,
@@ -54,7 +54,7 @@
 					"games": 1529,
 					"wins": 751,
 					"winRate": 0.4912,
-					"share": 0.6593,
+					"share": 0.6591,
 					"pickRate": 0.0726,
 					"banRate": 0.0449,
 					"avgKda": 2.6543,
@@ -71,7 +71,7 @@
 					"games": 699,
 					"wins": 369,
 					"winRate": 0.5279,
-					"share": 0.3014,
+					"share": 0.3013,
 					"pickRate": 0.0397,
 					"banRate": 0.0426,
 					"avgKda": 2.9026,
@@ -130,6 +130,23 @@
 					"avgVision": 23.2308,
 					"csPerMin": 6.0879,
 					"goldPerMin": 381.8247
+				},
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "PLATINUM",
+					"patch": "all",
+					"games": 1,
+					"wins": 0,
+					"winRate": 0,
+					"share": 0.0004,
+					"pickRate": 0.002,
+					"banRate": 0.066,
+					"avgKda": 1.0833,
+					"avgDamage": 24118,
+					"avgVision": 34,
+					"csPerMin": 5.625,
+					"goldPerMin": 324.7108
 				}
 			],
 			"matchups": [
@@ -376,6 +393,27 @@
 					"games": 12,
 					"wins": 7,
 					"winRate": 0.5833
+				},
+				{
+					"spellA": 1,
+					"spellB": 4,
+					"games": 2,
+					"wins": 1,
+					"winRate": 0.5
+				},
+				{
+					"spellA": 4,
+					"spellB": 6,
+					"games": 1,
+					"wins": 1,
+					"winRate": 1
+				},
+				{
+					"spellA": 12,
+					"spellB": 14,
+					"games": 1,
+					"wins": 0,
+					"winRate": 0
 				}
 			]
 		}

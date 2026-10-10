@@ -81,9 +81,9 @@ describe('loadChampionPage', () => {
 		const { page, asked } = await load();
 		expect(asked).toEqual(
 			expect.arrayContaining([
-				`${BASE}?queue=RANKED_SOLO_5x5&patch=all&limit=10`,
-				`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all`,
-				`${BASE}/matchups?queue=RANKED_SOLO_5x5&patch=all&limit=200`,
+				`${BASE}?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=10`,
+				`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&minGames=0`,
+				`${BASE}/matchups?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=200`,
 				'/v1/lol/analytics/patches?queue=RANKED_SOLO_5x5&championId=103'
 			])
 		);
@@ -102,7 +102,9 @@ describe('loadChampionPage', () => {
 
 	it('uses the role asked for', async () => {
 		const { page, asked } = await load(undefined, { role: 'mid', patch: 'all' });
-		expect(asked).toContain(`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE`);
+		expect(asked).toContain(
+			`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0`
+		);
 		expect(page.matchupRole).toBe('MIDDLE');
 	});
 

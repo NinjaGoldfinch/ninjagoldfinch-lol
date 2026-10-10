@@ -1,13 +1,13 @@
 {
 	"request": {
 		"method": "GET",
-		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all"
+		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&minGames=0"
 	},
 	"response": {
 		"status": 200,
 		"headers": {
 			"content-type": "application/json; charset=utf-8",
-			"x-request-id": "01M4HMYDJ6WD0B30SVN07GN2Q2"
+			"x-request-id": "01M4HQ030P2YHYTZTQQPRRR2E7"
 		},
 		"body": {
 			"championId": 103,

@@ -8,8 +8,9 @@
 		type SetBuilds,
 		type SpellPair
 	} from '#lib/domain/champion-page.ts';
-	import { formatRate } from '#lib/domain/champion-stats.ts';
+	import { formatRate, isLowSample } from '#lib/domain/champion-stats.ts';
 	import ItemIcon from './ItemIcon.svelte';
+	import LowSample from './LowSample.svelte';
 
 	/**
 	 * A champion's set builds as tabs, each its two core items with win rate and
@@ -36,6 +37,14 @@
 	const label = 'text-xs font-medium tracking-wide text-muted uppercase';
 	const games = (n: number) => `${n.toLocaleString('en')} ${n === 1 ? 'game' : 'games'}`;
 </script>
+
+{#snippet rated(winRate: number, n: number)}
+	<span class="text-xs whitespace-nowrap tabular-nums"
+		><span class={isLowSample(n) ? 'text-muted' : ''}>{formatRate(winRate)}</span>
+		<span class="text-muted">· {n.toLocaleString('en')}</span>{#if isLowSample(n)}<LowSample
+			/>{/if}</span
+	>
+{/snippet}
 
 {#snippet runes(choice: RuneChoice)}
 	<span class="flex items-center gap-1">
@@ -105,8 +114,11 @@
 						{#each option.core as item (item.id)}<ItemIcon {version} {item} size={24} />{/each}
 					</span>
 					<span class="tabular-nums">
-						<span class="font-semibold">{formatRate(option.winRate)}</span>
-						<span class="text-xs text-muted">{games(option.games)}</span>
+						<span class="font-semibold {isLowSample(option.games) ? 'text-muted' : ''}"
+							>{formatRate(option.winRate)}</span
+						>
+						<span class="text-xs text-muted">{games(option.games)}</span
+						>{#if isLowSample(option.games)}<LowSample />{/if}
 					</span>
 				</a>
 			{/each}
@@ -180,10 +192,7 @@
 									{#each options as option (option.id)}
 										<li class="flex items-center gap-1.5">
 											<ItemIcon {version} item={option} />
-											<span class="text-xs tabular-nums"
-												>{formatRate(option.winRate)}
-												<span class="text-muted">· {option.games.toLocaleString('en')}</span></span
-											>
+											{@render rated(option.winRate, option.games)}
 										</li>
 									{/each}
 								</ul>
@@ -209,10 +218,7 @@
 						{#each popular.items as item (item.id)}
 							<li class="flex items-center gap-1.5">
 								<ItemIcon {version} {item} />
-								<span class="text-xs tabular-nums"
-									>{formatRate(item.winRate)}
-									<span class="text-muted">· {item.games.toLocaleString('en')}</span></span
-								>
+								{@render rated(item.winRate, item.games)}
 							</li>
 						{/each}
 					</ul>
@@ -225,8 +231,7 @@
 						{#each popular.runes as choice, i (i)}
 							<li class="flex items-center gap-2 text-xs tabular-nums">
 								{@render runes(choice)}
-								{formatRate(choice.winRate)}
-								<span class="text-muted">· {choice.games.toLocaleString('en')}</span>
+								{@render rated(choice.winRate, choice.games)}
 							</li>
 						{:else}<li class="text-sm text-muted">–</li>{/each}
 					</ul>
@@ -237,8 +242,7 @@
 						{#each popular.spells as choice, i (i)}
 							<li class="flex items-center gap-2 text-xs tabular-nums">
 								{@render spells(choice.spells)}
-								{formatRate(choice.winRate)}
-								<span class="text-muted">· {choice.games.toLocaleString('en')}</span>
+								{@render rated(choice.winRate, choice.games)}
 							</li>
 						{:else}<li class="text-sm text-muted">–</li>{/each}
 					</ul>
