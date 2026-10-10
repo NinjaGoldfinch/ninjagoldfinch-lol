@@ -1,0 +1,384 @@
+{
+	"_note": "Synthetic: the recorded all-roles Ahri detail relabelled BOTTOM, so the Bot tab has a page whose set builds are empty and whose matchups fail. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM&limit=10"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HMYDCS4XKV6JHP1390BNKR"
+		},
+		"body": {
+			"championId": 103,
+			"championName": "Ahri",
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"tier": null,
+			"patch": "all",
+			"role": "BOTTOM",
+			"computedAt": "2026-10-10T00:10:16.020Z",
+			"sectionsComputedAt": {
+				"stats": "2026-10-10T00:10:16.020Z",
+				"matchups": "2026-10-10T00:10:22.637Z",
+				"items": "2026-10-10T00:10:23.886Z",
+				"runes": "2026-10-10T00:10:23.886Z",
+				"spells": "2026-10-10T00:10:23.886Z"
+			},
+			"totalGames": 2407,
+			"stats": [
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": null,
+					"patch": "all",
+					"games": 2407,
+					"wins": 1215,
+					"winRate": 0.5048,
+					"share": 1,
+					"pickRate": 0.1138,
+					"banRate": 0.0447,
+					"avgKda": 2.7068,
+					"avgDamage": 24296.8521,
+					"avgVision": 24.0395,
+					"csPerMin": 7.3384,
+					"goldPerMin": 417.4927
+				}
+			],
+			"byTier": [
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "UNKNOWN",
+					"patch": "all",
+					"games": 1590,
+					"wins": 783,
+					"winRate": 0.4925,
+					"share": 0.6608,
+					"pickRate": 0.0755,
+					"banRate": 0.0449,
+					"avgKda": 2.6327,
+					"avgDamage": 23522.4145,
+					"avgVision": 23.6195,
+					"csPerMin": 7.2158,
+					"goldPerMin": 412.0482
+				},
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "MASTER",
+					"patch": "all",
+					"games": 722,
+					"wins": 381,
+					"winRate": 0.5277,
+					"share": 0.3001,
+					"pickRate": 0.0411,
+					"banRate": 0.0426,
+					"avgKda": 2.8618,
+					"avgDamage": 25745.2715,
+					"avgVision": 24.8795,
+					"csPerMin": 7.5924,
+					"goldPerMin": 428.3543
+				},
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "GRANDMASTER",
+					"patch": "all",
+					"games": 43,
+					"wins": 22,
+					"winRate": 0.5116,
+					"share": 0.0179,
+					"pickRate": 0.0091,
+					"banRate": 0.032,
+					"avgKda": 2.5286,
+					"avgDamage": 23656.2791,
+					"avgVision": 24.186,
+					"csPerMin": 7.4909,
+					"goldPerMin": 427.4132
+				},
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "CHALLENGER",
+					"patch": "all",
+					"games": 38,
+					"wins": 20,
+					"winRate": 0.5263,
+					"share": 0.0158,
+					"pickRate": 0.0114,
+					"banRate": 0.0304,
+					"avgKda": 3.2296,
+					"avgDamage": 27596.3158,
+					"avgVision": 25.5,
+					"csPerMin": 8.0215,
+					"goldPerMin": 445.0408
+				},
+				{
+					"championId": 103,
+					"championName": "Ahri",
+					"tier": "EMERALD",
+					"patch": "all",
+					"games": 13,
+					"wins": 9,
+					"winRate": 0.6923,
+					"share": 0.0054,
+					"pickRate": 0.0034,
+					"banRate": 0.0541,
+					"avgKda": 2.6829,
+					"avgDamage": 31061.5385,
+					"avgVision": 23.2308,
+					"csPerMin": 6.0879,
+					"goldPerMin": 381.8247
+				}
+			],
+			"matchups": [
+				{
+					"role": "MIDDLE",
+					"opponentId": 517,
+					"opponentName": "Sylas",
+					"games": 126,
+					"wins": 60,
+					"winRate": 0.4762
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 134,
+					"opponentName": "Syndra",
+					"games": 94,
+					"wins": 54,
+					"winRate": 0.5745
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 112,
+					"opponentName": "Viktor",
+					"games": 91,
+					"wins": 48,
+					"winRate": 0.5275
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 238,
+					"opponentName": "Zed",
+					"games": 88,
+					"wins": 41,
+					"winRate": 0.4659
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 157,
+					"opponentName": "Yasuo",
+					"games": 83,
+					"wins": 43,
+					"winRate": 0.5181
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 55,
+					"opponentName": "Katarina",
+					"games": 79,
+					"wins": 40,
+					"winRate": 0.5063
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 90,
+					"opponentName": "Malzahar",
+					"games": 70,
+					"wins": 41,
+					"winRate": 0.5857
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 777,
+					"opponentName": "Yone",
+					"games": 67,
+					"wins": 32,
+					"winRate": 0.4776
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 3,
+					"opponentName": "Galio",
+					"games": 63,
+					"wins": 37,
+					"winRate": 0.5873
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 4,
+					"opponentName": "Twisted Fate",
+					"games": 59,
+					"wins": 33,
+					"winRate": 0.5593
+				}
+			],
+			"items": [
+				{
+					"itemId": 3118,
+					"games": 1552,
+					"wins": 777,
+					"winRate": 0.5006
+				},
+				{
+					"itemId": 3175,
+					"games": 1034,
+					"wins": 513,
+					"winRate": 0.4961
+				},
+				{
+					"itemId": 1056,
+					"games": 984,
+					"wins": 457,
+					"winRate": 0.4644
+				},
+				{
+					"itemId": 4645,
+					"games": 964,
+					"wins": 503,
+					"winRate": 0.5218
+				},
+				{
+					"itemId": 1082,
+					"games": 837,
+					"wins": 394,
+					"winRate": 0.4707
+				},
+				{
+					"itemId": 3171,
+					"games": 780,
+					"wins": 421,
+					"winRate": 0.5397
+				},
+				{
+					"itemId": 2503,
+					"games": 660,
+					"wins": 348,
+					"winRate": 0.5273
+				},
+				{
+					"itemId": 3089,
+					"games": 660,
+					"wins": 380,
+					"winRate": 0.5758
+				},
+				{
+					"itemId": 3157,
+					"games": 655,
+					"wins": 377,
+					"winRate": 0.5756
+				},
+				{
+					"itemId": 1058,
+					"games": 654,
+					"wins": 322,
+					"winRate": 0.4924
+				}
+			],
+			"runes": [
+				{
+					"keystoneId": 8112,
+					"subStyleId": 8200,
+					"games": 1721,
+					"wins": 870,
+					"winRate": 0.5055
+				},
+				{
+					"keystoneId": 8112,
+					"subStyleId": 8400,
+					"games": 167,
+					"wins": 92,
+					"winRate": 0.5509
+				},
+				{
+					"keystoneId": 8112,
+					"subStyleId": 8300,
+					"games": 156,
+					"wins": 75,
+					"winRate": 0.4808
+				},
+				{
+					"keystoneId": 8992,
+					"subStyleId": 8100,
+					"games": 84,
+					"wins": 39,
+					"winRate": 0.4643
+				},
+				{
+					"keystoneId": 8214,
+					"subStyleId": 8300,
+					"games": 59,
+					"wins": 28,
+					"winRate": 0.4746
+				},
+				{
+					"keystoneId": 8992,
+					"subStyleId": 8000,
+					"games": 53,
+					"wins": 25,
+					"winRate": 0.4717
+				},
+				{
+					"keystoneId": 8112,
+					"subStyleId": 8000,
+					"games": 22,
+					"wins": 11,
+					"winRate": 0.5
+				},
+				{
+					"keystoneId": 8992,
+					"subStyleId": 8300,
+					"games": 22,
+					"wins": 11,
+					"winRate": 0.5
+				},
+				{
+					"keystoneId": 8214,
+					"subStyleId": 8400,
+					"games": 20,
+					"wins": 10,
+					"winRate": 0.5
+				},
+				{
+					"keystoneId": 8992,
+					"subStyleId": 8400,
+					"games": 20,
+					"wins": 10,
+					"winRate": 0.5
+				}
+			],
+			"spells": [
+				{
+					"spellA": 4,
+					"spellB": 12,
+					"games": 1269,
+					"wins": 644,
+					"winRate": 0.5075
+				},
+				{
+					"spellA": 4,
+					"spellB": 14,
+					"games": 1094,
+					"wins": 544,
+					"winRate": 0.4973
+				},
+				{
+					"spellA": 3,
+					"spellB": 4,
+					"games": 24,
+					"wins": 18,
+					"winRate": 0.75
+				},
+				{
+					"spellA": 4,
+					"spellB": 21,
+					"games": 12,
+					"wins": 7,
+					"winRate": 0.5833
+				}
+			]
+		}
+	}
+}

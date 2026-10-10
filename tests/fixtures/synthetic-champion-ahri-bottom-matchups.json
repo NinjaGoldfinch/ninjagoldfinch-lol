@@ -1,0 +1,23 @@
+{
+	"_note": "Synthetic: riot-proxy's documented RATE_LIMITED envelope (ErrorResponse) for Ahri's Bot matchups, so that section fails on its own. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/matchups?queue=RANKED_SOLO_5x5&patch=all&role=BOTTOM&limit=200"
+	},
+	"response": {
+		"status": 503,
+		"headers": {
+			"content-type": "application/json",
+			"retry-after": "30",
+			"x-request-id": "SYNTHETIC"
+		},
+		"body": {
+			"error": {
+				"code": "RATE_LIMITED",
+				"message": "Riot rate limit budget exhausted",
+				"requestId": "SYNTHETIC",
+				"retryAfter": 30
+			}
+		}
+	}
+}

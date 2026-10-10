@@ -6,7 +6,10 @@ import {
 	formatRate,
 	parseChampionFilter,
 	parseSort,
+	patchLabel,
 	patchOptions,
+	pickerPatches,
+	analyticsQuery,
 	proxyQuery,
 	sortRows,
 	toChampionTable,
@@ -173,5 +176,34 @@ describe('parseSort and formatRate', () => {
 	it('formats a rate as a percentage', () => {
 		expect(formatRate(0.51234)).toBe('51.2%');
 		expect(formatRate(null)).toBe('–');
+	});
+});
+
+describe('analyticsQuery', () => {
+	it('adds a limit only when given', () => {
+		expect(analyticsQuery({ role: 'top', patch: '16.19' })).toEqual({
+			queue: 'RANKED_SOLO_5x5',
+			patch: '16.19',
+			role: 'TOP'
+		});
+		expect(analyticsQuery({ role: null, patch: 'all' }, 10)).toEqual({
+			queue: 'RANKED_SOLO_5x5',
+			patch: 'all',
+			limit: 10
+		});
+	});
+});
+
+describe('patchLabel and pickerPatches', () => {
+	it('names the patch shown', () => {
+		expect(patchLabel('all')).toBe('All patches');
+		expect(patchLabel('16.19')).toBe('Patch 16.19');
+		expect(patchLabel(null)).toBe('Newest patch');
+	});
+
+	it("offers the patch shown even when riot-proxy's list lacks it", () => {
+		expect(pickerPatches('16.10', ['16.20', '16.19'])).toEqual(['16.10', '16.20', '16.19']);
+		expect(pickerPatches('16.19', ['16.20', '16.19'])).toEqual(['16.20', '16.19']);
+		expect(pickerPatches('all', [])).toEqual([]);
 	});
 });

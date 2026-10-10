@@ -5,7 +5,7 @@ const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 async function search(page: Page, region: string, riotId: string) {
 	const form = page.getByRole('banner').getByRole('search');
 	await form.getByRole('combobox', { name: 'Region' }).selectOption(region);
-	await form.getByRole('textbox', { name: 'Riot ID' }).fill(riotId);
+	await form.getByRole('textbox', { name: 'Riot ID or champion' }).fill(riotId);
 	await form.getByRole('button', { name: 'Search' }).click();
 }
 
@@ -93,13 +93,40 @@ test.describe('without JavaScript', () => {
 		);
 	});
 
-	test('a Riot ID without a tag asks for one', async ({ page }) => {
+	test('a name with no tag and no champion match asks for the tag', async ({ page }) => {
 		await page.goto('/');
 		await search(page, 'oce', 'NinjaGoldfinch');
 
 		await expect(page).toHaveURL(/\/search\?/);
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Search for a player');
-		await expect(page.getByRole('main').getByRole('textbox')).toHaveValue('NinjaGoldfinch');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Search');
+		const main = page.getByRole('main');
+		// The champion names are suggested now, so the box is a combobox.
+		await expect(main.getByRole('combobox', { name: 'Riot ID or champion' })).toHaveValue(
+			'NinjaGoldfinch'
+		);
+		await expect(main).toContainText(
+			"No champion matches 'NinjaGoldfinch'. A Riot ID needs its #TAG."
+		);
+	});
+
+	test("a champion's name opens its builds", async ({ page }) => {
+		await page.goto('/');
+		await search(page, 'oce', 'AHRI');
+		await expect(page).toHaveURL('/champions/ahri#builds');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ahri');
+	});
+
+	test('an ambiguous champion prefix lists the matches', async ({ page }) => {
+		await page.goto('/');
+		await search(page, 'oce', 'sy');
+		await expect(page.getByRole('main')).toContainText("'sy' matches Sylas, Syndra. Keep typing.");
+		await expect(page.getByRole('main')).toContainText('Keep typing.');
+	});
+
+	test('a malformed Riot ID says how to write one', async ({ page }) => {
+		await page.goto('/');
+		await search(page, 'oce', 'NinjaGoldfinch#');
+		await expect(page.getByRole('main')).toContainText('A Riot ID is Game name#TAG.');
 	});
 });
 

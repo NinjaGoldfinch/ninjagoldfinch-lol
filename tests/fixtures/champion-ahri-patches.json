@@ -1,0 +1,250 @@
+{
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/patches?queue=RANKED_SOLO_5x5&championId=103"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HMYDTSSEXV7X2PTRM0STTX"
+		},
+		"body": {
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"championId": 103,
+			"patches": [
+				{
+					"patch": "16.20",
+					"games": 13,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.19",
+					"games": 42,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.18",
+					"games": 40,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.17",
+					"games": 57,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.16",
+					"games": 33,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.15",
+					"games": 23,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.14",
+					"games": 101,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.13",
+					"games": 477,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.12",
+					"games": 233,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.11",
+					"games": 205,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.10",
+					"games": 186,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.9",
+					"games": 106,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.8",
+					"games": 91,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.7",
+					"games": 91,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.6",
+					"games": 95,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.5",
+					"games": 111,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.4",
+					"games": 135,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.3",
+					"games": 71,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.2",
+					"games": 31,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "16.1",
+					"games": 58,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.24",
+					"games": 51,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.23",
+					"games": 18,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.22",
+					"games": 17,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.21",
+					"games": 13,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.20",
+					"games": 6,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.18",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.17",
+					"games": 3,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.16",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.14",
+					"games": 1,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.12",
+					"games": 3,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.11",
+					"games": 6,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.10",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.9",
+					"games": 10,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.8",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.7",
+					"games": 6,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.6",
+					"games": 6,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.5",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.4",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.3",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.2",
+					"games": 1,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "15.1",
+					"games": 10,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "14.24",
+					"games": 24,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "14.23",
+					"games": 12,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "14.22",
+					"games": 3,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "14.21",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				},
+				{
+					"patch": "14.20",
+					"games": 2,
+					"computedAt": "2026-10-10T00:10:16.020Z"
+				}
+			]
+		}
+	}
+}

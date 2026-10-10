@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import AnalyticsFilters from '#lib/components/AnalyticsFilters.svelte';
 	import ChampionIcon from '#lib/components/ChampionIcon.svelte';
+	import { championPath } from '#lib/domain/champion-search.ts';
 	import {
-		DEFAULT_SORT,
-		ROLES,
 		championQuery,
 		formatRate,
 		parseSort,
+		patchLabel,
 		sortRows,
 		type ChampionSort
 	} from '#lib/domain/champion-stats.ts';
@@ -19,75 +20,30 @@
 	const sort = $derived(parseSort(page.url.searchParams.get('sort')));
 	const rows = $derived(sortRows(data.table.rows, sort));
 	const shownPatch = $derived(data.filter.patch ?? data.table.patch);
-	const patchLabel = $derived(
-		shownPatch === 'all' ? 'All patches' : shownPatch ? `Patch ${shownPatch}` : 'Newest patch'
-	);
-	// The picker always offers the patch shown, even when riot-proxy's list failed.
-	const patches = $derived(
-		shownPatch && shownPatch !== 'all' && !data.patches.includes(shownPatch)
-			? [shownPatch, ...data.patches]
-			: data.patches
-	);
+	const label = $derived(patchLabel(shownPatch));
 
 	const columns: { sort: ChampionSort; label: string }[] = [
 		{ sort: 'win', label: 'Win rate' },
 		{ sort: 'pick', label: 'Pick rate' },
 		{ sort: 'ban', label: 'Ban rate' }
 	];
-	const roleTabs = [{ slug: null, label: 'All roles' }, ...ROLES];
-
-	const submit = (event: Event & { currentTarget: HTMLSelectElement }) =>
-		event.currentTarget.form?.requestSubmit();
 </script>
 
 <svelte:head>
-	<title>Champions · {patchLabel}</title>
+	<title>Champions · {label}</title>
 </svelte:head>
 
 <h1 class="text-2xl font-semibold">Champions</h1>
-<p class="mt-1 text-sm text-muted">Ranked Solo/Duo · every region and tier · {patchLabel}</p>
+<p class="mt-1 text-sm text-muted">Ranked Solo/Duo · every region and tier · {label}</p>
 
-<div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-	<nav aria-label="Role">
-		<ul class="flex flex-wrap gap-1">
-			{#each roleTabs as tab (tab.label)}
-				{@const current = data.filter.role === tab.slug}
-				<li>
-					<a
-						href="/champions{championQuery({ ...data.filter, role: tab.slug }, sort)}"
-						aria-current={current ? 'page' : undefined}
-						class="block rounded border px-3 py-1.5 text-sm {current
-							? 'border-accent bg-accent text-bg'
-							: 'border-border bg-surface hover:text-accent'}">{tab.label}</a
-					>
-				</li>
-			{/each}
-		</ul>
-	</nav>
-
-	<!-- GET, so every view has its own URL; the role and sort are kept. -->
-	<form method="GET" class="flex items-center gap-2">
-		{#if data.filter.role}<input type="hidden" name="role" value={data.filter.role} />{/if}
-		{#if sort !== DEFAULT_SORT}<input type="hidden" name="sort" value={sort} />{/if}
-		<label>
-			<span class="sr-only">Patch</span>
-			<select
-				name="patch"
-				onchange={submit}
-				class="h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none"
-			>
-				<option value="all" selected={shownPatch === 'all'}>All patches</option>
-				{#each patches as patch (patch)}
-					<option value={patch} selected={shownPatch === patch}>Patch {patch}</option>
-				{/each}
-			</select>
-		</label>
-		<noscript>
-			<button type="submit" class="h-9 rounded border border-border bg-surface px-3 text-sm">
-				Apply
-			</button>
-		</noscript>
-	</form>
+<div class="mt-6">
+	<AnalyticsFilters
+		path="/champions"
+		filter={data.filter}
+		{shownPatch}
+		patches={data.patches}
+		{sort}
+	/>
 </div>
 
 {#if rows.length === 0}
@@ -96,7 +52,7 @@
 	<!-- Narrow screens scroll the table inside its box, not the page. -->
 	<div class="mt-4 overflow-x-auto rounded border border-border bg-surface">
 		<table class="w-full text-sm">
-			<caption class="sr-only">Champion win, pick and ban rates, {patchLabel}</caption>
+			<caption class="sr-only">Champion win, pick and ban rates, {label}</caption>
 			<thead class="border-b border-border text-left text-xs text-muted">
 				<tr>
 					<th scope="col" class="hidden w-10 px-3 py-2 text-right font-normal sm:table-cell">#</th>
@@ -131,10 +87,16 @@
 							<span class="flex items-center gap-2">
 								{#if row.key}
 									<ChampionIcon patch={data.ddragonVersion} id={row.key} name="" size={28} />
+									<a
+										href="{championPath({ id: row.key, name: row.name })}{championQuery(
+											data.filter
+										)}"
+										class="hover:text-accent">{row.name}</a
+									>
 								{:else}
 									<span class="size-7 rounded bg-bg" aria-hidden="true"></span>
+									{row.name}
 								{/if}
-								{row.name}
 							</span>
 						</th>
 						<td class="px-3 py-1.5 text-right tabular-nums">{formatRate(row.winRate)}</td>
