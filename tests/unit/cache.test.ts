@@ -14,6 +14,12 @@ describe('cacheControl', () => {
 		});
 	});
 
+	it('lets the edge cache champion analytics for 10 min, stale for another 10', () => {
+		expect(cacheControl('analytics')).toEqual({
+			'cache-control': 'public, s-maxage=600, stale-while-revalidate=600'
+		});
+	});
+
 	it('marks per-request responses as not cacheable', () => {
 		expect(cacheControl('none')).toEqual({ 'cache-control': 'no-store' });
 	});
