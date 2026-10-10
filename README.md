@@ -83,4 +83,31 @@ A full URL records from CommunityDragon instead. The fixture is keyed by the URL
 
 ## Deploying
 
-The site runs as one Docker container built from the `Dockerfile`, with `deploy/compose.yaml`. To run it on a VM on your Proxmox node, see [deploy/proxmox/README.md](deploy/proxmox/README.md).
+### Preview VM
+
+The LAN preview runs as one Docker container built from the `Dockerfile`, with `deploy/compose.yaml`. To run it on a VM on your Proxmox node, see [deploy/proxmox/README.md](deploy/proxmox/README.md).
+
+### Production
+
+Production runs without Docker: `node build` under systemd on the same server as riot-proxy, reached through a Cloudflare Tunnel at `https://ninjagoldfinch.lol`.
+
+| What       | Where                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------- |
+| Checkout   | `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key                          |
+| Service    | `ninjagoldfinch-lol.service`, running as the `ninjagoldfinch-lol` user                 |
+| Settings   | `/etc/ninjagoldfinch-lol/env`: `NODE_ENV`, `HOST`, `PORT`, `PROXY_URL` and `PROXY_KEY` |
+| Listens on | `127.0.0.1:3000`; the tunnel is the only way in                                        |
+| Logs       | `sudo journalctl -u ninjagoldfinch-lol`                                                |
+| Liveness   | `curl -s http://127.0.0.1:3000/healthz`                                                |
+
+To deploy the latest `main`, run on the server:
+
+```sh
+cd /opt/ninjagoldfinch-lol
+sudo -H -u ninjagoldfinch-lol git pull
+sudo -H -u ninjagoldfinch-lol pnpm install --frozen-lockfile
+sudo -H -u ninjagoldfinch-lol env ORIGIN=https://ninjagoldfinch.lol pnpm build
+sudo systemctl restart ninjagoldfinch-lol
+```
+
+`ORIGIN` goes on the build command because the site's origin is fixed at build time (ADR-014); it is not read from the settings file. Form posts, such as Refresh, are accepted only from that origin.

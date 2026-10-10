@@ -496,3 +496,18 @@ Date: 2026-10-10 · Task: P4-04
 - **Fixtures.** The profile fixtures were recorded with `?platform=oc1`. Their request paths drop it, with a note: riot-proxy answers the same document without it, which was checked against the dev instance.
 
 **Consequences.** One URL per player, so the edge holds one copy of each profile. The first view of a player costs riot-proxy one account-v1 call. Header search no longer follows a profile's region, since there is nothing to follow. The not-found hint now says to check the #TAG rather than the region.
+
+## ADR-038: Production runs `node build` under systemd, not in Docker
+
+Date: 2026-10-10 · Task: P5-04
+
+**Context.** The plan deploys the site as a Docker container beside `cloudflared` and riot-proxy on a Proxmox VM. Production is instead a small rented server (2 vCPU, 4 GB) that already runs riot-proxy as a plain systemd service, with `cloudflared` installed as a system service. The owner chose to run the site the same way, without Docker on that server. The repo stays private, so the server cannot pull a public image or release.
+
+**Decision.**
+
+- The server keeps a checkout at `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key, and builds there: `pnpm install --frozen-lockfile`, then `pnpm build` with `ORIGIN=https://ninjagoldfinch.lol` (ADR-014).
+- `ninjagoldfinch-lol.service` runs `node build` as its own `ninjagoldfinch-lol` user, with settings from `/etc/ninjagoldfinch-lol/env`. `HOST=127.0.0.1`, so only the tunnel on the same server reaches it.
+- The Cloudflare Tunnel routes `ninjagoldfinch.lol` to `http://127.0.0.1:3000`.
+- The `Dockerfile`, `deploy/compose.yaml` and `deploy/proxmox/` stay for the LAN preview VM.
+
+**Consequences.** Node 22.18 or later and pnpm must be installed on the server; Ubuntu 26.04's packaged Node is new enough. Deploying is five commands, listed in the README, and none of them is in the repo as a script or unit file yet. The plan's deployment section and P5-01's compose-with-`cloudflared` item describe a setup production does not use.
