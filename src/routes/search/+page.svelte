@@ -15,10 +15,5 @@
 	<span class="text-text">Hide on bush#KR1</span>, or a champion's name.
 </p>
 <div class="mt-6 max-w-xl">
-	<SearchForm
-		region={data.region}
-		query={data.query}
-		message={data.message}
-		champions={data.championNames}
-	/>
+	<SearchForm query={data.query} message={data.message} champions={data.championNames} />
 </div>

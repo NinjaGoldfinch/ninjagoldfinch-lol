@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { RecentSearch } from '#lib/domain/recent.ts';
-	import { findRegion } from '#lib/domain/regions.ts';
 	import { profilePath } from '#lib/domain/riot-id.ts';
 	import { readRecent } from '#lib/recent-storage.ts';
 
@@ -20,14 +19,13 @@
 			Recent searches
 		</h2>
 		<ul class="mt-3 flex flex-wrap gap-2">
-			{#each recent as r (`${r.region}/${r.gameName}#${r.tagLine}`)}
+			{#each recent as r (`${r.gameName}#${r.tagLine}`.toLowerCase())}
 				<li>
 					<a
-						href={profilePath(r.region, r)}
+						href={profilePath(r)}
 						class="block rounded border border-border bg-surface px-3 py-1.5 text-sm hover:border-accent"
 					>
 						{r.gameName}<span class="text-muted">#{r.tagLine}</span>
-						<span class="ml-1 text-xs text-muted">{findRegion(r.region)?.label ?? r.region}</span>
 					</a>
 				</li>
 			{/each}

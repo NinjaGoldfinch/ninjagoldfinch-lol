@@ -1,14 +1,11 @@
 import type { AddressInfo } from 'node:net';
 import { isHttpError } from '@sveltejs/kit';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { findRegion, type Region } from '#lib/domain/regions.ts';
 import { loadProfile } from '#lib/server/profile.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
 import { createMockProxy, loadFixtures, type Fixture } from '../mock-proxy/mock.ts';
 import { MATCHES_PATH, PROFILE_PATH, fixtureBody } from './fixtures.ts';
-
-const oce = findRegion('oce') as Region;
 
 beforeEach(() => {
 	clearStaticNames();
@@ -32,7 +29,7 @@ describe('loadProfile', () => {
 	});
 
 	it('loads the recorded profile, matches and patch', async () => {
-		const profile = await loadProfile(oce, me, mock.client);
+		const profile = await loadProfile(me, mock.client);
 
 		expect(profile.region).toEqual({ slug: 'oce', label: 'Oceania' });
 		expect(profile.riotId).toEqual(me);
@@ -47,20 +44,20 @@ describe('loadProfile', () => {
 	});
 
 	it('asks riot-proxy to re-read both parts on refresh, and reports the cooldown', async () => {
-		const profile = await loadProfile(oce, me, mock.client, { refresh: true });
+		const profile = await loadProfile(me, mock.client, { refresh: true });
 		expect(profile.refreshAvailableIn).toBe(60);
 		expect(profile.fetchedAgeSeconds).toBe(0);
 		expect(profile.matches).toHaveLength(10);
 	});
 
 	it('loads a later page and a single queue', async () => {
-		const page2 = await loadProfile(oce, me, mock.client, {
+		const page2 = await loadProfile(me, mock.client, {
 			filter: { queue: null, champion: null, page: 2 }
 		});
 		expect(page2.matches?.[0].matchId).toBe('OC1_712213427');
 		expect(page2.filter).toEqual({ queue: null, champion: null, page: 2 });
 
-		const solo = await loadProfile(oce, me, mock.client, {
+		const solo = await loadProfile(me, mock.client, {
 			filter: { queue: 420, champion: null, page: 1 }
 		});
 		expect(solo.matches?.every((m) => m.queueId === 420)).toBe(true);
@@ -68,7 +65,7 @@ describe('loadProfile', () => {
 	});
 
 	it("loads one champion's games from riot-proxy's archive", async () => {
-		const viego = await loadProfile(oce, me, mock.client, {
+		const viego = await loadProfile(me, mock.client, {
 			filter: { queue: null, champion: 234, page: 1 }
 		});
 		expect(viego.matches?.every((m) => m.champion.name === 'Viego')).toBe(true);
@@ -78,16 +75,14 @@ describe('loadProfile', () => {
 		);
 		expect(viego.championOptions).toContainEqual({ id: 234, name: 'Viego' });
 
-		const all = await loadProfile(oce, me, mock.client);
+		const all = await loadProfile(me, mock.client);
 		expect(all.archiveComplete).toBeNull();
 	});
 
 	it('maps an unknown player to 404', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const missing = { gameName: 'NoSuchPlayer000', tagLine: 'XXXX' };
-		await expect(loadProfile(oce, missing, mock.client)).rejects.toSatisfy((e) =>
-			isHttpError(e, 404)
-		);
+		await expect(loadProfile(missing, mock.client)).rejects.toSatisfy((e) => isHttpError(e, 404));
 	});
 });
 
@@ -101,7 +96,7 @@ describe('loadProfile with a part riot-proxy could not fetch', () => {
 		});
 		const mock = await withMock(fixtures);
 		try {
-			const profile = await loadProfile(oce, me, mock.client);
+			const profile = await loadProfile(me, mock.client);
 			expect(profile.ranks).toBeNull();
 			expect(profile.summoner).not.toBeNull();
 		} finally {
@@ -139,7 +134,7 @@ describe('loadProfile when parts fail', () => {
 				? json(503, { error: { code: 'RATE_LIMITED', message: 'x', retryAfter: 30 } })
 				: undefined
 		);
-		const profile = await loadProfile(oce, me, limited);
+		const profile = await loadProfile(me, limited);
 
 		expect(profile.summoner?.summonerLevel).toBe(458);
 		expect(profile.matches).toBeNull();
@@ -154,7 +149,7 @@ describe('loadProfile when parts fail', () => {
 			matches: body.matches.map((m, i) => (i < 2 ? { ...m, queueId: i === 0 ? 0 : null } : m))
 		};
 		const custom = client((path) => (path === MATCHES_PATH ? json(200, withCustom) : undefined));
-		const profile = await loadProfile(oce, me, custom);
+		const profile = await loadProfile(me, custom);
 
 		expect(profile.matches).toHaveLength(8);
 		expect(profile.customHidden).toBe(true);
@@ -166,10 +161,32 @@ describe('loadProfile when parts fail', () => {
 		const filling = client((p) =>
 			p === path ? json(200, { ...body, archive: { complete: false } }) : undefined
 		);
-		const profile = await loadProfile(oce, me, filling, {
+		const profile = await loadProfile(me, filling, {
 			filter: { queue: null, champion: 234, page: 1 }
 		});
 		expect(profile.archiveComplete).toBe(false);
+	});
+
+	it("asks for the profile without a platform, and the matches on the player's", async () => {
+		const asked: string[] = [];
+		const watching = client((path) => {
+			asked.push(path);
+			return undefined;
+		});
+		const profile = await loadProfile(me, watching);
+		expect(asked).toContain(PROFILE_PATH);
+		expect(asked).toContain(MATCHES_PATH);
+		expect(profile.region).toEqual({ slug: 'oce', label: 'Oceania' });
+	});
+
+	it('is unavailable for a platform the site has no region for', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const body = fixtureBody(PROFILE_PATH) as object;
+		const elsewhere = client((path) =>
+			path === PROFILE_PATH ? json(200, { ...body, platform: 'xx1' }) : undefined
+		);
+		const failure = await loadProfile(me, elsewhere).catch((e: unknown) => e);
+		expect(isHttpError(failure) && failure.status).toBe(503);
 	});
 
 	it('falls back to plain names when the Data Dragon lookups fail', async () => {
@@ -179,7 +196,7 @@ describe('loadProfile when parts fail', () => {
 				? json(503, { error: { code: 'UPSTREAM_ERROR', message: 'x' } })
 				: undefined
 		);
-		const profile = await loadProfile(oce, me, noStatic);
+		const profile = await loadProfile(me, noStatic);
 
 		expect(profile.matches?.[0].champion).toMatchObject({ key: null, name: 'Ahri' });
 		expect(profile.matches?.[0].queue).toBe('Queue 420');

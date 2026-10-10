@@ -2,9 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 
-async function search(page: Page, region: string, riotId: string) {
+async function search(page: Page, riotId: string) {
 	const form = page.getByRole('banner').getByRole('search');
-	await form.getByRole('combobox', { name: 'Region' }).selectOption(region);
 	await form.getByRole('textbox', { name: 'Riot ID or champion' }).fill(riotId);
 	await form.getByRole('button', { name: 'Search' }).click();
 }
@@ -14,16 +13,16 @@ test.describe('without JavaScript', () => {
 
 	test('searching a Riot ID opens its profile', async ({ page }) => {
 		await page.goto('/');
-		await search(page, 'oce', 'NinjaGoldfinch#OCENZ');
+		await search(page, 'NinjaGoldfinch#OCENZ');
 
-		await expect(page).toHaveURL('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
 		await expect(page.getByRole('main')).toContainText('Oceania · Level 458');
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 
 	test('a profile shows its header, rank and the first page of matches', async ({ page }) => {
-		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 
 		const main = page.getByRole('main');
 		await expect(main.locator('img').first()).toHaveAttribute(
@@ -83,7 +82,7 @@ test.describe('without JavaScript', () => {
 	});
 
 	test('refresh re-reads the profile and starts the cooldown', async ({ page }) => {
-		await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+		await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 		await page.getByRole('button', { name: 'Refresh' }).click();
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
@@ -95,7 +94,7 @@ test.describe('without JavaScript', () => {
 
 	test('a name with no tag and no champion match asks for the tag', async ({ page }) => {
 		await page.goto('/');
-		await search(page, 'oce', 'NinjaGoldfinch');
+		await search(page, 'NinjaGoldfinch');
 
 		await expect(page).toHaveURL(/\/search\?/);
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Search');
@@ -111,27 +110,27 @@ test.describe('without JavaScript', () => {
 
 	test("a champion's name opens its builds", async ({ page }) => {
 		await page.goto('/');
-		await search(page, 'oce', 'AHRI');
+		await search(page, 'AHRI');
 		await expect(page).toHaveURL('/champions/ahri#builds');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ahri');
 	});
 
 	test('an ambiguous champion prefix lists the matches', async ({ page }) => {
 		await page.goto('/');
-		await search(page, 'oce', 'sy');
+		await search(page, 'sy');
 		await expect(page.getByRole('main')).toContainText("'sy' matches Sylas, Syndra. Keep typing.");
 		await expect(page.getByRole('main')).toContainText('Keep typing.');
 	});
 
 	test('a malformed Riot ID says how to write one', async ({ page }) => {
 		await page.goto('/');
-		await search(page, 'oce', 'NinjaGoldfinch#');
+		await search(page, 'NinjaGoldfinch#');
 		await expect(page.getByRole('main')).toContainText('A Riot ID is Game name#TAG.');
 	});
 });
 
 test('a profile is cacheable at the edge', async ({ request }) => {
-	const response = await request.get('/summoner/oce/NinjaGoldfinch-OCENZ');
+	const response = await request.get('/summoner/NinjaGoldfinch-OCENZ');
 	expect(response.status()).toBe(200);
 	expect(response.headers()['cache-control']).toBe(
 		'public, s-maxage=60, stale-while-revalidate=300'
@@ -139,7 +138,7 @@ test('a profile is cacheable at the edge', async ({ request }) => {
 });
 
 test('an unknown player shows not found', async ({ page }) => {
-	const response = await page.goto('/summoner/oce/NoSuchPlayer000-XXXX');
+	const response = await page.goto('/summoner/NoSuchPlayer000-XXXX');
 	expect(response?.status()).toBe(404);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
 });
@@ -150,7 +149,7 @@ test('an unknown region shows not found', async ({ page }) => {
 });
 
 test('the champion panel summarises the matches shown', async ({ page }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 
 	const panel = page.getByRole('region', { name: 'Champions' });
 	await expect(panel).toContainText('From the 10 matches shown');
@@ -163,14 +162,14 @@ test('the champion panel summarises the matches shown', async ({ page }) => {
 });
 
 test('opened profiles appear under recent searches', async ({ page }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
 	await page.goto('/');
 
 	const recent = page.getByRole('region', { name: 'Recent searches' });
 	await expect(recent.getByRole('link', { name: /NinjaGoldfinch#OCENZ/ })).toHaveAttribute(
 		'href',
-		'/summoner/oce/NinjaGoldfinch-OCENZ'
+		'/summoner/NinjaGoldfinch-OCENZ'
 	);
 });
 
@@ -188,7 +187,7 @@ test('/healthz answers without touching the proxy', async ({ request }) => {
 });
 
 test('with JavaScript, refresh counts the cooldown down', async ({ page }) => {
-	await page.goto('/summoner/oce/NinjaGoldfinch-OCENZ');
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 	const button = page.getByRole('button', { name: 'Refresh' });
 	await expect(button).toBeEnabled();
 	await button.click();
@@ -200,16 +199,31 @@ test('with JavaScript, refresh counts the cooldown down', async ({ page }) => {
 	});
 });
 
-test("the header search starts at the profile's region", async ({ page }) => {
-	// No fixture exists for this player, so the page fails; the header still follows the URL.
-	await page.goto('/summoner/kr/Somebody-KR1');
-	await expect(page.getByRole('banner').getByRole('combobox', { name: 'Region' })).toHaveValue(
-		'kr'
-	);
+test('old profile and match URLs move permanently to the ones without a region', async ({
+	request
+}) => {
+	const profile = await request.get('/summoner/oce/NinjaGoldfinch-OCENZ?queue=420', {
+		maxRedirects: 0
+	});
+	expect(profile.status()).toBe(308);
+	expect(profile.headers()['location']).toBe('/summoner/NinjaGoldfinch-OCENZ?queue=420');
+
+	const match = await request.get('/match/oce/OC1_712351051?player=NinjaGoldfinch-OCENZ', {
+		maxRedirects: 0
+	});
+	expect(match.status()).toBe(308);
+	expect(match.headers()['location']).toBe('/match/OC1_712351051?player=NinjaGoldfinch-OCENZ');
+
+	// An old URL with a region the site never had is not found, not redirected.
+	expect((await request.get('/summoner/xx/Somebody-KR1', { maxRedirects: 0 })).status()).toBe(404);
+});
+
+test('a match id whose prefix names no region is not found', async ({ request }) => {
+	expect((await request.get('/match/XX1_1')).status()).toBe(404);
 });
 
 test.describe('match filters and pages', () => {
-	const PROFILE = '/summoner/oce/NinjaGoldfinch-OCENZ';
+	const PROFILE = '/summoner/NinjaGoldfinch-OCENZ';
 	const firstMatch = (page: Page) =>
 		page.getByRole('region', { name: 'Recent matches' }).getByRole('article').first();
 
@@ -281,7 +295,7 @@ test.describe('match filters and pages', () => {
 
 test('when match history fails, the profile still shows, uncached', async ({ page }) => {
 	// Synthetic fixtures: this player's match page answers RATE_LIMITED, retry in 30 s.
-	const response = await page.goto('/summoner/oce/Synthetic-TEST');
+	const response = await page.goto('/summoner/Synthetic-TEST');
 	expect(response?.status()).toBe(200);
 	expect(response?.headers()['cache-control']).toBe('no-store');
 
@@ -293,7 +307,7 @@ test('when match history fails, the profile still shows, uncached', async ({ pag
 });
 
 test('error pages are not cached, except briefly for not found', async ({ request }) => {
-	const missing = await request.get('/summoner/oce/NoSuchPlayer000-XXXX');
+	const missing = await request.get('/summoner/NoSuchPlayer000-XXXX');
 	expect(missing.status()).toBe(404);
 	expect(missing.headers()['cache-control']).toBe('public, s-maxage=60');
 

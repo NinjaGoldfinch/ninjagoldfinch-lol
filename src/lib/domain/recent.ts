@@ -1,19 +1,21 @@
 import type { RiotId } from './riot-id.ts';
 
 /** A profile the visitor opened, kept in their browser only. */
-export interface RecentSearch extends RiotId {
-	region: string;
-}
+export type RecentSearch = RiotId;
 
 export const MAX_RECENT = 8;
 
 /** Puts `entry` first, drops an earlier copy of it (ignoring case), keeps the newest few. */
 export function addRecent(list: RecentSearch[], entry: RecentSearch): RecentSearch[] {
-	const key = (r: RecentSearch) => `${r.region}/${r.gameName}#${r.tagLine}`.toLowerCase();
+	const key = (r: RecentSearch) => `${r.gameName}#${r.tagLine}`.toLowerCase();
 	return [entry, ...list.filter((r) => key(r) !== key(entry))].slice(0, MAX_RECENT);
 }
 
-/** Reads a stored list, ignoring anything malformed. */
+/**
+ * Reads a stored list, ignoring anything malformed. Entries stored before
+ * profiles lost their region (ADR-037) still carry one; it is dropped, and a
+ * player stored under two regions is kept once.
+ */
 export function parseRecent(raw: string | null): RecentSearch[] {
 	let value: unknown;
 	try {
@@ -28,9 +30,10 @@ export function parseRecent(raw: string | null): RecentSearch[] {
 			(r): r is RecentSearch =>
 				typeof r === 'object' &&
 				r !== null &&
-				typeof r.region === 'string' &&
 				typeof r.gameName === 'string' &&
 				typeof r.tagLine === 'string'
 		)
+		.map(({ gameName, tagLine }) => ({ gameName, tagLine }))
+		.reduceRight<RecentSearch[]>((list, entry) => addRecent(list, entry), [])
 		.slice(0, MAX_RECENT);
 }

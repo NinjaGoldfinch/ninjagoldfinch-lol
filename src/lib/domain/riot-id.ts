@@ -17,9 +17,12 @@ export function parseRiotId(segment: string): RiotId | undefined {
 	return split(segment, '-');
 }
 
-/** The profile URL for a Riot ID in a region. */
-export function profilePath(region: string, id: RiotId): string {
-	return `/summoner/${region}/${encodeURIComponent(`${id.gameName}-${id.tagLine}`)}`;
+/**
+ * The profile URL for a Riot ID. A Riot ID plays on one platform, which
+ * riot-proxy finds from the account, so the URL names no region. ADR-037.
+ */
+export function profilePath(id: RiotId): string {
+	return `/summoner/${encodeURIComponent(`${id.gameName}-${id.tagLine}`)}`;
 }
 
 /** Riot IDs compare without regard to case, as Riot looks them up. */

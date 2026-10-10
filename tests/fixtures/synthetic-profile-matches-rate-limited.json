@@ -1,8 +1,8 @@
 {
-	"_note": "Synthetic: the recorded NinjaGoldfinch profile renamed, for a player whose match history fails. Not a recording.",
+	"_note": "Synthetic: the recorded NinjaGoldfinch profile renamed, for a player whose match history fails. Not a recording. Recorded with ?platform=oc1. Without a platform riot-proxy answers the same document, finding the platform from the account (SITE-09), so the path drops it.",
 	"request": {
 		"method": "GET",
-		"path": "/v1/players/by-riot-id/Synthetic/TEST/profile?platform=oc1"
+		"path": "/v1/players/by-riot-id/Synthetic/TEST/profile"
 	},
 	"response": {
 		"status": 200,

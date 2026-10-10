@@ -7,7 +7,7 @@
 	import Loadout from './Loadout.svelte';
 
 	/**
-	 * `region` is the URL slug; `maxDamage` is the match's highest, for the bars;
+	 * `maxDamage` is the match's highest, for the bars;
 	 * `highlight` is whose line to mark, if anyone's. Each champion links to
 	 * `buildHref` for that player's build, and `onbuild` may open it in place
 	 * instead; `selected` is whose build is open.
@@ -15,7 +15,6 @@
 	let {
 		team,
 		version,
-		region,
 		maxDamage,
 		highlight = null,
 		selected = null,
@@ -24,7 +23,6 @@
 	}: {
 		team: TeamScoreboard;
 		version: string;
-		region: string;
 		maxDamage: number;
 		highlight?: RiotId | null;
 		selected?: number | null;
@@ -137,7 +135,7 @@
 								<div class="min-w-0">
 									{#if player.riotId}
 										<a
-											href={profilePath(region, player.riotId)}
+											href={profilePath(player.riotId)}
 											class="block max-w-40 truncate hover:underline"
 											>{player.riotId.gameName}<span class="text-muted"
 												>#{player.riotId.tagLine}</span

@@ -1,7 +1,8 @@
 {
+	"_note": "Recorded with ?platform=oc1. Without a platform riot-proxy answers the same document, finding the platform from the account (SITE-09), so the path drops it.",
 	"request": {
 		"method": "GET",
-		"path": "/v1/players/by-riot-id/NinjaGoldfinch/OCENZ/profile?platform=oc1&refresh=true"
+		"path": "/v1/players/by-riot-id/NinjaGoldfinch/OCENZ/profile?refresh=true"
 	},
 	"response": {
 		"status": 200,

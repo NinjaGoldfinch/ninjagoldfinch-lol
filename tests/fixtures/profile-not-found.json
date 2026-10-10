@@ -1,7 +1,8 @@
 {
+	"_note": "Recorded with ?platform=oc1. Without a platform riot-proxy passes Riot's 404 for an unknown player through (SITE-09), so the path drops it.",
 	"request": {
 		"method": "GET",
-		"path": "/v1/players/by-riot-id/NoSuchPlayer000/XXXX/profile?platform=oc1"
+		"path": "/v1/players/by-riot-id/NoSuchPlayer000/XXXX/profile"
 	},
 	"response": {
 		"status": 404,

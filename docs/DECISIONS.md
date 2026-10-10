@@ -479,3 +479,20 @@ Some champions also start with rank 1 of their R at level 1 and can rank it to 4
 - `playerBuild` keeps every `NORMAL` point. Nothing caps points by level, by rank totals, or by R at 6/11/16.
 
 **Consequences.** A Triple Tonic build shows its level-9 points side by side in columns 9 and 10. Viego's possession can still add points he never spent. riot-proxy owns that definition, and a writeup proposing a Viego-only rule has gone to it; the site will mirror the rule once it lands. `skillOrder` still ranks Q, W and E only, per riot-proxy's definition, so Udyr's R isn't ranked; the writeup asks riot-proxy whether it should be.
+
+## ADR-037: The region comes from the Riot ID; URLs drop it
+
+Date: 2026-10-10 · Task: P4-04
+
+**Context.** A League account plays on exactly one platform. riot-proxy now finds it from Riot's account-v1 (SITE-09): its profile routes take `platform` as optional and, without it, name the player's `platform` and `region`. The lookup is cached like an account (24 h soft, 96 h hard), so repeat views cost nothing. Asking visitors for a region was a guess they could get wrong. Every other player route still needs `platform`; riot-proxy's advice is to take it from the profile just loaded. The owner chose to drop the region from profile URLs and, since a Riot match id already names its platform (`OC1_…`), from match URLs too.
+
+**Decision.**
+
+- **Profiles** are at `/summoner/{GameName-TAG}`. The load asks for the profile without `platform`, maps the platform riot-proxy names to the site's region (`regionForPlatform`), and asks for the match page on that platform. A platform the site has no region for is unavailable (503), not guessed. Riot's 404 for an unknown player is still not found.
+- **Matches** are at `/match/{matchId}`. The region is the one the id's prefix names (`regionForMatchId`); an id whose prefix names none is not found.
+- **Old URLs** (`/summoner/{region}/{GameName-TAG}`, `/match/{region}/{matchId}`) redirect with a 308 to the new ones, keeping the query, so links and bookmarks keep working. Their region is ignored as long as it is one the site knew; otherwise they are not found. An old match URL with the wrong region now opens the match, since its id decides.
+- **Search** has no region picker. A Riot ID redirects straight to its profile; the search itself asks riot-proxy nothing.
+- **Recent searches** store a Riot ID only. Entries stored with a region are read without it, and a player stored under two regions is kept once.
+- **Fixtures.** The profile fixtures were recorded with `?platform=oc1`. Their request paths drop it, with a note: riot-proxy answers the same document without it, which was checked against the dev instance.
+
+**Consequences.** One URL per player, so the edge holds one copy of each profile. The first view of a player costs riot-proxy one account-v1 call. Header search no longer follows a profile's region, since there is nothing to follow. The not-found hint now says to check the #TAG rather than the region.

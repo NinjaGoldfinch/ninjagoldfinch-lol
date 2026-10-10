@@ -243,12 +243,12 @@ export function matchTab(fromUrl: string | null): MatchTab {
 }
 
 /**
- * The match page URL. `player` is whose champion to highlight: the profile the
+ * The match page URL. Its region is the one the match id names (ADR-037).
+ * `player` is whose champion to highlight: the profile the
  * visitor came from, written `GameName-TAG` as in profile URLs. `tab` is which
  * tab to show. `build` is whose build to show, by participant id.
  */
 export function matchPath(
-	region: string,
 	matchId: string,
 	{ player, tab, build }: { player?: RiotId | null; tab?: MatchTab; build?: number } = {}
 ): string {
@@ -257,7 +257,7 @@ export function matchPath(
 	if (tab && tab !== 'scoreboard') query.set('tab', tab);
 	if (build !== undefined) query.set('build', String(build));
 	const search = query.size > 0 ? `?${query}` : '';
-	return `/match/${region}/${encodeURIComponent(matchId)}${search}`;
+	return `/match/${encodeURIComponent(matchId)}${search}`;
 }
 
 /** `9 Oct 2026, 09:12 UTC`: the page is cached for a day, so no "N hours ago". */

@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import { toLeagueEntries, toSummoner, type LeagueEntry, type Summoner } from '#lib/api/riot.ts';
 import {
 	FILTER_QUEUES,
@@ -6,7 +7,7 @@ import {
 	type MatchFilter
 } from '#lib/domain/match-filters.ts';
 import { isCustomGame, toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
-import type { Region } from '#lib/domain/regions.ts';
+import { regionForPlatform } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
 import { classifyProxyError, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
@@ -55,6 +56,11 @@ export interface ProfileData {
  * One profile call by Riot ID, then the page of matches and the patch.
  * Two round trips: the match page needs the puuid from the profile.
  *
+ * The profile is asked for without a platform: riot-proxy finds the one the
+ * player plays on from their account and names it, and the match page is
+ * asked for on that platform (ADR-037). A platform the site has no region for
+ * is unavailable, not guessed.
+ *
  * Only the profile call is essential. If the match page fails, the page still
  * renders with `matches: null`; if the Data Dragon lookups fail, plain
  * fallbacks are used.
@@ -64,17 +70,21 @@ export interface ProfileData {
  * `filter` picks the match page: a queue, and which page of ten.
  */
 export async function loadProfile(
-	region: Region,
 	id: RiotId,
 	client: ProxyClient = proxy,
 	{ refresh = false, filter = NO_FILTER }: { refresh?: boolean; filter?: MatchFilter } = {}
 ): Promise<ProfileData> {
 	const refreshQuery = refresh ? { refresh: true } : {};
 	const profile = await client.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
-		params: { path: id, query: { platform: region.platform, ...refreshQuery } }
+		params: { path: id, query: refreshQuery }
 	});
 	if (!profile.response.ok || !profile.data) toHttpError(profile.response, profile.error);
 	const body = profile.data;
+	const region = body.platform ? regionForPlatform(body.platform) : undefined;
+	if (!region) {
+		console.error(`profile ${id.gameName}#${id.tagLine}: unknown platform ${body.platform}`);
+		error(503, 'Temporarily unavailable');
+	}
 
 	const [page, patch] = await Promise.all([
 		client.GET('/v1/players/{puuid}/matches', {
@@ -93,8 +103,8 @@ export async function loadProfile(
 		currentPatch(client)
 	]);
 
-	const names = await staticNames(patch, client).catch((error: unknown) => {
-		console.error('Data Dragon lookups unavailable; using fallbacks:', error);
+	const names = await staticNames(patch, client).catch((e: unknown) => {
+		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
 		return NO_NAMES;
 	});
 

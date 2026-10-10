@@ -41,7 +41,7 @@
 			? from.url.pathname + from.url.search
 			: null;
 	});
-	const back = $derived(cameFrom ?? (highlight ? profilePath(data.region.slug, highlight) : null));
+	const back = $derived(cameFrom ?? (highlight ? profilePath(highlight) : null));
 
 	// `?tab=timeline` shows the charts in place of the scoreboard. The tab links
 	// are plain links. The load doesn't read the URL, so with JavaScript switching
@@ -52,8 +52,7 @@
 		{ id: 'scoreboard', label: 'Scoreboard' },
 		{ id: 'timeline', label: 'Timeline' }
 	];
-	const tabHref = (id: MatchTab) =>
-		matchPath(data.region.slug, data.matchId, { player: highlight, tab: id });
+	const tabHref = (id: MatchTab) => matchPath(data.matchId, { player: highlight, tab: id });
 	function goBack(event: MouseEvent) {
 		if (!cameFrom || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
 		event.preventDefault();
@@ -69,8 +68,8 @@
 	const build = $derived(openId === null ? undefined : selectBuild(data, openId, highlight));
 	const buildLine = $derived(lines.find((l) => l.participantId === build?.participantId));
 	const buildHref = (participantId: number) =>
-		`${matchPath(data.region.slug, data.matchId, { player: highlight, tab, build: participantId })}#build`;
-	const closeHref = $derived(matchPath(data.region.slug, data.matchId, { player: highlight, tab }));
+		`${matchPath(data.matchId, { player: highlight, tab, build: participantId })}#build`;
+	const closeHref = $derived(matchPath(data.matchId, { player: highlight, tab }));
 
 	// The header's build link: the highlighted player's, else the first player's.
 	const firstBuild = $derived(selectBuild(data, null, highlight));
@@ -173,7 +172,6 @@
 			<Scoreboard
 				{team}
 				version={data.ddragonVersion}
-				region={data.region.slug}
 				{maxDamage}
 				{highlight}
 				selected={build?.participantId ?? null}

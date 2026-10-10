@@ -12,15 +12,10 @@
 	import type { RiotId } from '#lib/domain/riot-id.ts';
 
 	/**
-	 * `region` is the URL slug and `player` the profile's Riot ID, for the link
-	 * to the match page, which highlights that player.
+	 * `player` is the profile's Riot ID, for the link to the match page, which
+	 * highlights that player.
 	 */
-	let {
-		match,
-		patch,
-		region,
-		player
-	}: { match: MatchRow; patch: string; region: string; player: RiotId } = $props();
+	let { match, patch, player }: { match: MatchRow; patch: string; player: RiotId } = $props();
 
 	const RESULT = {
 		win: { label: 'Victory', border: 'border-l-win', text: 'text-win' },
@@ -31,7 +26,7 @@
 	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
 	const version = $derived(match.ddragonVersion ?? patch);
 	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
-	const href = $derived(matchPath(region, match.matchId, { player }));
+	const href = $derived(matchPath(match.matchId, { player }));
 
 	// With JavaScript, a button shows both teams inside the row (ADR-030). Their
 	// data is the match page's own load, run through SvelteKit's preloadData,
@@ -159,12 +154,7 @@
 	{#if open}
 		<div id={panelId} class="min-w-0 basis-full border-t border-border pt-3">
 			{#if detail}
-				<MatchTeams
-					teams={detail.teams}
-					version={detail.ddragonVersion}
-					{region}
-					highlight={player}
-				/>
+				<MatchTeams teams={detail.teams} version={detail.ddragonVersion} highlight={player} />
 			{:else if failed}
 				<p class="text-sm text-muted">
 					The teams couldn't be loaded. <a {href} class="text-accent hover:underline"

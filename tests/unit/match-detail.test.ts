@@ -183,30 +183,30 @@ describe('isMatchIdFor', () => {
 
 describe('matchPath', () => {
 	it('builds the match page URL', () => {
-		expect(matchPath('oce', 'OC1_712351051')).toBe('/match/oce/OC1_712351051');
+		expect(matchPath('OC1_712351051')).toBe('/match/OC1_712351051');
 	});
 
 	it('names the player to highlight as in profile URLs', () => {
-		expect(
-			matchPath('oce', 'OC1_1', { player: { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' } })
-		).toBe('/match/oce/OC1_1?player=NinjaGoldfinch-OCENZ');
-		expect(matchPath('kr', 'KR_1', { player: { gameName: 'Hide on bush', tagLine: 'KR1' } })).toBe(
-			'/match/kr/KR_1?player=Hide+on+bush-KR1'
+		expect(matchPath('OC1_1', { player: { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' } })).toBe(
+			'/match/OC1_1?player=NinjaGoldfinch-OCENZ'
+		);
+		expect(matchPath('KR_1', { player: { gameName: 'Hide on bush', tagLine: 'KR1' } })).toBe(
+			'/match/KR_1?player=Hide+on+bush-KR1'
 		);
 	});
 });
 
 describe('matchPath tabs', () => {
 	it('names the tab, leaving out the default scoreboard', () => {
-		expect(matchPath('oce', 'OC1_1', { tab: 'timeline' })).toBe('/match/oce/OC1_1?tab=timeline');
-		expect(matchPath('oce', 'OC1_1', { tab: 'scoreboard' })).toBe('/match/oce/OC1_1');
+		expect(matchPath('OC1_1', { tab: 'timeline' })).toBe('/match/OC1_1?tab=timeline');
+		expect(matchPath('OC1_1', { tab: 'scoreboard' })).toBe('/match/OC1_1');
 		expect(
-			matchPath('oce', 'OC1_1', {
+			matchPath('OC1_1', {
 				player: { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' },
 				tab: 'timeline',
 				build: 8
 			})
-		).toBe('/match/oce/OC1_1?player=NinjaGoldfinch-OCENZ&tab=timeline&build=8');
+		).toBe('/match/OC1_1?player=NinjaGoldfinch-OCENZ&tab=timeline&build=8');
 	});
 });
 
