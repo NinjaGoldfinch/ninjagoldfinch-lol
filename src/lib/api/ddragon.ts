@@ -18,7 +18,26 @@ export interface StaticNames {
 	queues: Record<number, string>;
 	/** Rune paths (styles) and runes by id; `icon` is a Data Dragon image path. */
 	runes: Record<number, Rune>;
+	/** What a build needs to know of each item; null without item.json. */
+	itemCatalog: ItemCatalog | null;
 }
+
+/** One item as a build reads it (riot-proxy's BLD definitions). */
+export interface ItemInfo {
+	/** Purchasable, builds into nothing, at least 1500 gold, and not Boots, Consumable or Trinket. */
+	finished: boolean;
+	/** Tagged Boots. */
+	boots: boolean;
+	/** Tagged Trinket. */
+	trinket: boolean;
+	/** The items it is built from. */
+	from: number[];
+}
+
+export type ItemCatalog = Record<number, ItemInfo>;
+
+/** A finished item costs at least this much in total. */
+const FINISHED_MIN_GOLD = 1500;
 
 export interface Rune {
 	name: string;
@@ -41,6 +60,34 @@ export function parseItemNames(body: unknown): Record<number, string> {
 	for (const [id, entry] of dataEntries(body)) {
 		const { name } = entry as Record<string, unknown>;
 		if (typeof name === 'string') out[Number(id)] = name;
+	}
+	return out;
+}
+
+/** item.json as a build reads it. An entry whose id isn't a number is left out. */
+export function parseItemCatalog(body: unknown): ItemCatalog {
+	const out: ItemCatalog = {};
+	for (const [id, entry] of dataEntries(body)) {
+		if (!/^\d+$/.test(id)) continue;
+		const { tags, gold, into, from } = entry as Record<string, unknown>;
+		const tagList = Array.isArray(tags) ? tags : [];
+		const tagged = (tag: string) => tagList.includes(tag);
+		const { purchasable, total } = (gold ?? {}) as Record<string, unknown>;
+		out[Number(id)] = {
+			finished:
+				purchasable === true &&
+				!(Array.isArray(into) && into.length > 0) &&
+				typeof total === 'number' &&
+				total >= FINISHED_MIN_GOLD &&
+				!tagged('Boots') &&
+				!tagged('Consumable') &&
+				!tagged('Trinket'),
+			boots: tagged('Boots'),
+			trinket: tagged('Trinket'),
+			from: (Array.isArray(from) ? from : [])
+				.filter((f): f is string => typeof f === 'string' && /^\d+$/.test(f))
+				.map(Number)
+		};
 	}
 	return out;
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseItemNames, parseKeyedNames, parseQueueNames, parseRunes } from '#lib/api/ddragon.ts';
+import {
+	parseItemCatalog,
+	parseItemNames,
+	parseKeyedNames,
+	parseQueueNames,
+	parseRunes
+} from '#lib/api/ddragon.ts';
 import { fixtureBody } from './fixtures.ts';
 
 describe('Data Dragon lookups', () => {
@@ -47,5 +53,45 @@ describe('Data Dragon lookups', () => {
 		expect(parseItemNames({ data: 'x' })).toEqual({});
 		expect(parseQueueNames({})).toEqual({});
 		expect(parseRunes([{ id: 1 }, null, { slots: 'x' }])).toEqual({});
+	});
+});
+
+describe('parseItemCatalog', () => {
+	const entry = (overrides: Record<string, unknown> = {}) => ({
+		gold: { purchasable: true, total: 3000 },
+		tags: [],
+		...overrides
+	});
+	const catalog = parseItemCatalog({
+		data: {
+			3031: entry({ from: ['1038', '1018', 'x'] }),
+			1038: entry({ gold: { purchasable: true, total: 1300 }, into: ['3031'] }),
+			1500: entry({ gold: { purchasable: true, total: 1500 } }),
+			3172: entry({ from: ['3006'] }),
+			3006: entry({ gold: { purchasable: true, total: 1100 }, tags: ['Boots'] }),
+			3340: entry({ gold: { purchasable: true, total: 0 }, tags: ['Trinket'] }),
+			2138: entry({ tags: ['Consumable'] }),
+			9999: entry({ gold: { purchasable: false, total: 3000 } }),
+			abc: entry()
+		}
+	});
+
+	it('marks finished items: purchasable, builds into nothing, 1500 gold or more', () => {
+		expect(catalog[3031].finished).toBe(true);
+		expect(catalog[1500].finished).toBe(true);
+		expect(catalog[1038].finished).toBe(false);
+		expect(catalog[9999].finished).toBe(false);
+	});
+
+	it('never counts boots, consumables or trinkets as finished', () => {
+		expect(catalog[3006]).toEqual({ finished: false, boots: true, trinket: false, from: [] });
+		expect(catalog[3340]).toMatchObject({ finished: false, trinket: true });
+		expect(catalog[2138].finished).toBe(false);
+	});
+
+	it("keeps what an item is built from, and leaves out ids that aren't numbers", () => {
+		expect(catalog[3031].from).toEqual([1038, 1018]);
+		expect(catalog[3172]).toMatchObject({ boots: false, from: [3006] });
+		expect(Object.keys(catalog)).not.toContain('abc');
 	});
 });

@@ -1,4 +1,5 @@
 import {
+	parseItemCatalog,
 	parseItemNames,
 	parseKeyedNames,
 	parseQueueNames,
@@ -27,6 +28,7 @@ export function recordedNames(): StaticNames {
 		items: parseItemNames(fixtureBody('/v1/static/item?version=16.20.1')),
 		spells: parseKeyedNames(fixtureBody('/v1/static/summoner?version=16.20.1')),
 		queues: parseQueueNames(fixtureBody('/v1/static/queues')),
-		runes: parseRunes(fixtureBody('/v1/static/runesReforged?version=16.20.1'))
+		runes: parseRunes(fixtureBody('/v1/static/runesReforged?version=16.20.1')),
+		itemCatalog: parseItemCatalog(fixtureBody('/v1/static/item?version=16.20.1'))
 	};
 }

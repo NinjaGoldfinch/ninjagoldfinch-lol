@@ -390,3 +390,20 @@ Date: 2026-10-10 · Task: P3-03
 - The key is a row of letter chips (T Tower, I Inhibitor, ...) in place of the line of text, and the time axis reads `5m`, `10m`, ....
 
 **Consequences.** The tooltip is hidden from screen readers, as the lanes are. The chart's accessible name and the objectives table still carry the figures.
+
+## ADR-032: A player's build by riot-proxy's definitions
+
+Date: 2026-10-10 · Task: P3-05 (added after the P3 exit check, owner request; supersedes ADR-026's item order, ADR-027's minute stacks and the max order behind the skill order)
+
+**Context.** riot-proxy now aggregates set builds from archived timelines (BLD-02/03) and has published how one player's build is worked out (BLD-04). It has a reference port in its showcase (`playerBuild`, `shopVisits`, `itemCatalog`) and a golden fixture for the ten players of OC1_711969250. The match page's build (ADR-026) used its own rules: purchases and sales grouped by game minute, and a skill order by when each skill was maxed. The site's player builds would then disagree with the champion pages' set builds (P4-02).
+
+**Decision.**
+
+- `playerBuild` in `src/lib/domain/builds.ts` ports riot-proxy's definitions. It finds the player by puuid in the timeline's `info.participants`, so it parses those and the match's puuids. Puuids are used on the server only and never reach the page. Purchases are `ITEM_PURCHASED` in time order. An `ITEM_UNDO` with `afterId: 0` removes the latest earlier purchase of `beforeId`. Sales, undone sales and destroyed items are ignored. Starter, boots and finished items (the first six, with their times) follow riot-proxy's definitions; `parseItemCatalog` in `src/lib/api/ddragon.ts` reads them from item.json. The skill order is Q, W and E by points at the end, and a tie goes to the skill that reached that count first. Only `NORMAL` level-ups count.
+- The panel shows three rows beside the rune page: (1) starter, boots, skill order `Q › W › E`, and finished items with their `mm:ss`; (2) the skill grid, always 18 columns; (3) shop visits. Purchases less than 30 s apart are one visit; that is riot-proxy's display choice, as the timeline has no shop event. Repeat buys within a visit (or in the starter) keep ADR-027's single icon with a count.
+- The work runs in the match page's server load, like the rest of the page, rather than in the browser as riot-proxy's showcase does. It uses the same pure functions and the same inputs, so the result is the same.
+- The item catalogue comes from the current patch's item.json, the same one that names items (ADR-013). An item it doesn't know is left out of starter, boots and finished items, not guessed; shop visits still show it.
+- Without item.json, the panel says item data is unavailable, and the grid and shop visits still show. A player with no purchases and no skill points gets "No build for this player." A failed timeline leaves the rest of the page and the rune page in place, as before.
+- `tests/fixtures/builds/` holds riot-proxy's timeline, its cut-down item.json and its golden answers, copied unchanged. `playerBuild` must match all ten players.
+
+**Consequences.** Sales are no longer shown. The player's build and the champion pages' set builds (P4-02) use one definition, so they agree. If riot-proxy changes a definition, its fixtures are copied again and the golden test shows what moved.

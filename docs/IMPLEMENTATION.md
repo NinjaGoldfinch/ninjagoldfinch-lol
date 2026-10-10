@@ -524,6 +524,7 @@ Six phases, each ending in a check you can run. One task is one branch and one P
 - [ ] P3-02 Builds: items, runes, summoner spells, skill order
 - [ ] P3-03 Timeline charts in SVG: gold difference and objective events
 - [ ] P3-04 Expand a match inline from the profile page without a full reload
+- [ ] P3-05 One player's build by riot-proxy's definitions (BLD-04): starter, boots, finished items, skill order, shop visits
 
 **Exit check:** a match page loads directly by URL and from a profile row, and its charts match the numbers in the raw timeline fixture.
 
