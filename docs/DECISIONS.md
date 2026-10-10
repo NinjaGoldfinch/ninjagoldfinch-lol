@@ -460,3 +460,22 @@ Date: 2026-10-10 · Task: P4-03
 - **Every rate shows its games.** Each rate on the champion pages already sat beside its games count; this task adds no new figure. The build summary (top runes, spells, skill order, starter, boots) shows choices, not rates, so it is not marked.
 
 **Consequences.** On the newest patch almost everything is marked. Over all patches, every champion row in the table clears 100 games, while most matchups and later item options do not. Both thresholds are one constant each.
+
+## ADR-036: The skill grid shows every point taken, past 18
+
+Date: 2026-10-10 · Task: P3-05 (follow-up)
+
+**Context.** The skill grid from ADR-032 always had 18 columns, labelled as champion levels, and put the n-th skill point in column n. Two things break that, as the owner pointed out:
+
+- **Triple Tonic** (rune 8313) grants an extra skill point at level 9. From then on the n-th point is not the n-th level.
+- **Udyr** has more ranks between his abilities than he has levels, so with Triple Tonic he can take 19 points. The 19th fell off the grid.
+
+Some champions also start with rank 1 of their R at level 1 and can rank it to 4 (Nidalee, for example), so R points don't always come at 6, 11 and 16. Nothing on the site assumed they did.
+
+**Decision.**
+
+- `skillColumns` in `src/lib/domain/builds.ts` gives at least 18 columns, and one per point past that.
+- Columns are numbered by point, in the order taken. The table's caption says "Skill points in the order taken", not "by champion level". Each point's title still gives its time.
+- `playerBuild` keeps every `NORMAL` point. Nothing caps points by level, by rank totals, or by R at 6/11/16.
+
+**Consequences.** A Triple Tonic build shows its level-9 points side by side in columns 9 and 10. Viego's possession can still add points he never spent. riot-proxy owns that definition, and a writeup proposing a Viego-only rule has gone to it; the site will mirror the rule once it lands. `skillOrder` still ranks Q, W and E only, per riot-proxy's definition, so Udyr's R isn't ranked; the writeup asks riot-proxy whether it should be.

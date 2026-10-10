@@ -17,8 +17,8 @@ const ITEMS_KEPT = 6;
  * Riot's: the timeline has no event for opening or closing the shop.
  */
 const SHOP_VISIT_GAP_MS = 30_000;
-/** Columns in the skill grid: a champion's levels. */
-export const SKILL_LEVELS = 18;
+/** The skill grid's fewest columns: one per level up to 18. */
+const SKILL_COLUMNS = 18;
 
 export const SKILL_KEYS = ['Q', 'W', 'E', 'R'] as const;
 
@@ -128,6 +128,16 @@ export function skillOrder(slots: number[]): string | null {
 		.sort((a, b) => points[b] - points[a] || reached[a] - reached[b])
 		.map((i) => SKILL_KEYS[i])
 		.join('');
+}
+
+/**
+ * The skill grid's columns, numbered 1 to n: the n-th point taken, whatever
+ * level it came at. At least 18, and more when a player took more points:
+ * Triple Tonic grants an extra point at level 9, so Udyr, whose abilities have
+ * more ranks than he has levels, can take 19. ADR-036.
+ */
+export function skillColumns(points: number): number[] {
+	return Array.from({ length: Math.max(SKILL_COLUMNS, points) }, (_, i) => i + 1);
 }
 
 /** Purchases grouped into shop visits: one less than 30 s after the last joins its visit. */
