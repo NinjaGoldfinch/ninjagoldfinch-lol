@@ -51,7 +51,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [ ] SPD-02 `patchVersions` held in memory for 5 minutes
 - [~] SPD-03 Dropped on measurement (ADR-039)
 - [~] SPD-04 Dropped on measurement (ADR-039)
-- [ ] SPD-05 A timeout on every riot-proxy call
+- [x] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise, a 503 when spent; optional calls degrade on a throw as on an error response — #63 (ADR-040)
 - [ ] SPD-06 Cloudflare's cache of `__data.json`
 
 ## Brought forward

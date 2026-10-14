@@ -142,6 +142,19 @@ describe('loadProfile when parts fail', () => {
 		expect(profile.hasMore).toBe(false);
 	});
 
+	it('still returns the profile when the match page call throws', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const unreachable = client((path) => {
+			if (path.includes('/matches')) throw new TypeError('fetch failed');
+			return undefined;
+		});
+		const profile = await loadProfile(me, unreachable);
+
+		expect(profile.summoner?.summonerLevel).toBe(458);
+		expect(profile.matches).toBeNull();
+		expect(profile.matchesError).toEqual({ status: 503, retryAfter: undefined });
+	});
+
 	it('leaves custom games out and says so', async () => {
 		const body = fixtureBody(MATCHES_PATH) as { matches: { queueId: number | null }[] };
 		const withCustom = {

@@ -115,6 +115,17 @@ describe('loadMatch', () => {
 		expect(match.builds[0]).toMatchObject({ timeline: null });
 	});
 
+	it('still returns the scoreboard when the timeline call throws', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { proxy } = client((path) => {
+			if (path === TIMELINE_PATH) throw new TypeError('fetch failed');
+			return undefined;
+		});
+		const match = await loadMatch(oce, 'OC1_712351051', { client: proxy, cdragon });
+		expect(match.teams).toHaveLength(2);
+		expect(match.gold).toBeNull();
+	});
+
 	it('fails the page on a match payload it cannot read', async () => {
 		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 		const { proxy } = client((path) =>

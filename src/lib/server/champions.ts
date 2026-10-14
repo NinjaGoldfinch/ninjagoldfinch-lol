@@ -6,7 +6,7 @@ import {
 } from '#lib/domain/champion-stats.ts';
 import type { ChampionFilter, ChampionTable } from '#lib/domain/champion-stats.ts';
 import { championNames } from '#lib/domain/champion-search.ts';
-import { toHttpError } from './errors.ts';
+import { optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
 import { NO_NAMES, staticNames } from './static-data.ts';
@@ -36,7 +36,9 @@ export async function loadChampions(
 ): Promise<ChampionsPage> {
 	const [champions, patches, ddragonVersion] = await Promise.all([
 		client.GET('/v1/lol/analytics/champions', { params: { query: proxyQuery(filter) } }),
-		client.GET('/v1/lol/analytics/patches', { params: { query: { queue: ANALYTICS_QUEUE } } }),
+		optional(
+			client.GET('/v1/lol/analytics/patches', { params: { query: { queue: ANALYTICS_QUEUE } } })
+		),
 		currentPatch(client)
 	]);
 	if (!champions.response.ok || !champions.data) toHttpError(champions.response, champions.error);

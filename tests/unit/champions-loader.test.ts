@@ -55,6 +55,17 @@ describe('loadChampions', () => {
 		expect(page.table.rows.length).toBeGreaterThan(100);
 	});
 
+	it('still loads when the patch list call throws', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { proxy } = client((path) => {
+			if (path.startsWith('/v1/lol/analytics/patches')) throw new TypeError('fetch failed');
+			return undefined;
+		});
+		const page = await loadChampions({ role: null, patch: 'all' }, { client: proxy });
+		expect(page.patches).toEqual([]);
+		expect(page.table.rows.length).toBeGreaterThan(100);
+	});
+
 	it('fails when the table fails', async () => {
 		const { proxy } = client((path) =>
 			path.startsWith('/v1/lol/analytics/champions') ? json(503, {}) : undefined

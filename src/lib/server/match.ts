@@ -4,7 +4,7 @@ import { isMatchIdFor, toMatchDetail, type MatchDetail } from '#lib/domain/match
 import { isCustomGame } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
 import { statShards } from './cdragon.ts';
-import { toHttpError } from './errors.ts';
+import { optional, toHttpError } from './errors.ts';
 import { ddragonVersionFor, patchVersions } from './patch.ts';
 import { proxy } from './proxy.ts';
 import { NO_NAMES, staticNames } from './static-data.ts';
@@ -36,7 +36,7 @@ export async function loadMatch(
 	const path = { region: region.route, matchId };
 	const [matchResponse, timelineResponse, versions] = await Promise.all([
 		client.GET('/v1/lol/matches/{region}/{matchId}', { params: { path } }),
-		client.GET('/v1/lol/matches/{region}/{matchId}/timeline', { params: { path } }),
+		optional(client.GET('/v1/lol/matches/{region}/{matchId}/timeline', { params: { path } })),
 		patchVersions(client)
 	]);
 	if (!matchResponse.response.ok) toHttpError(matchResponse.response, matchResponse.error);
