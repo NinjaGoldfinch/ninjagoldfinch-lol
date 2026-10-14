@@ -19,6 +19,38 @@ export const logFailures: Middleware = {
 	}
 };
 
+/** An analytics call slower than this is logged. riot-proxy answers from memory in about 1 ms. */
+export const SLOW_ANALYTICS_MS = 250;
+
+const started = new Map<string, number>();
+
+/**
+ * Logs a slow analytics call with riot-proxy's X-Cache (`HIT` from memory,
+ * `MISS` read from its tables), so a cold slice can be told from a slow
+ * network. Server log only; the header never reaches the browser.
+ */
+export const logSlowAnalytics: Middleware = {
+	onRequest({ id, request }) {
+		if (new URL(request.url).pathname.startsWith('/v1/lol/analytics/')) {
+			started.set(id, performance.now());
+		}
+	},
+	onResponse({ id, request, response }) {
+		const start = started.get(id);
+		if (start === undefined) return;
+		started.delete(id);
+		const ms = Math.round(performance.now() - start);
+		if (ms <= SLOW_ANALYTICS_MS) return;
+		const cache = response.headers.get('x-cache') ?? 'none';
+		console.warn(
+			`proxy slow ${request.method} ${new URL(request.url).pathname} x-cache=${cache} ${ms}ms`
+		);
+	},
+	onError({ id }) {
+		started.delete(id);
+	}
+};
+
 /** The Authorization header is sent only when a key is configured. */
 export function createProxyClient(
 	baseUrl: string,
@@ -30,7 +62,7 @@ export function createProxyClient(
 		fetch,
 		headers: key ? { Authorization: `Bearer ${key}` } : {}
 	});
-	client.use(logFailures);
+	client.use(logFailures, logSlowAnalytics);
 	return client;
 }
 
