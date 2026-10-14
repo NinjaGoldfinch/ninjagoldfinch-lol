@@ -1,5 +1,6 @@
+import { isHttpError } from '@sveltejs/kit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SLOW_ANALYTICS_MS, createProxyClient } from '#lib/server/proxy.ts';
+import { SLOW_ANALYTICS_MS, createProxyClient, proxyBudget } from '#lib/server/proxy.ts';
 
 const BASE = 'http://proxy.test:8080';
 
@@ -92,5 +93,57 @@ describe('logSlowAnalytics', () => {
 		await createProxyClient(BASE, undefined, fetch).GET('/v1/static/versions');
 
 		expect(log).not.toHaveBeenCalled();
+	});
+});
+
+describe('timeouts', () => {
+	/** A riot-proxy that never answers, as a real fetch does until its signal aborts. */
+	const hang = (request: Request) =>
+		new Promise<Response>((_, reject) => {
+			if (request.signal.aborted) reject(request.signal.reason);
+			request.signal.addEventListener('abort', () => reject(request.signal.reason));
+		});
+
+	it('gives analytics and static data 5 s, and player and match routes 30 s', () => {
+		expect(proxyBudget('/v1/lol/analytics/champions')).toBe(5_000);
+		expect(proxyBudget('/v1/static/versions')).toBe(5_000);
+		expect(proxyBudget('/v1/players/by-riot-id/a/b/profile')).toBe(30_000);
+		expect(proxyBudget('/v1/lol/matches/sea/OC1_1')).toBe(30_000);
+	});
+
+	it('fails a call that never answers once its budget is spent, as unavailable', async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const started = Date.now();
+		const failure = await createProxyClient(BASE, undefined, hang, () => 20)
+			.GET('/healthz')
+			.catch((e: unknown) => e);
+
+		expect(isHttpError(failure, 503)).toBe(true);
+		expect(Date.now() - started).toBeLessThan(1_000);
+		expect(log).toHaveBeenCalledWith('proxy unreachable GET /healthz:', failure);
+	});
+
+	it("keeps the caller's own abort", async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const controller = new AbortController();
+		const call = createProxyClient(BASE, undefined, hang, () => 10_000).GET('/healthz', {
+			signal: controller.signal
+		});
+		controller.abort();
+		const failure = await call.catch((e: unknown) => e);
+
+		expect(isHttpError(failure)).toBe(false);
+		expect(failure).toMatchObject({ name: 'AbortError' });
+	});
+
+	it('leaves a fast response as it was', async () => {
+		const { fetch } = stubFetch(200, { 'x-request-id': '01FAST' });
+		const { data, response } = await createProxyClient(BASE, undefined, fetch, () => 20).GET(
+			'/healthz'
+		);
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get('x-request-id')).toBe('01FAST');
+		expect(data).toEqual({ ok: true });
 	});
 });

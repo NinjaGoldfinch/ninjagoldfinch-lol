@@ -127,6 +127,20 @@ describe('loadChampionPage', () => {
 		expect(page.setBuilds?.builds).toHaveLength(3);
 	});
 
+	it('still loads when the builds, matchups and patch list calls throw', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { page } = await load((path) => {
+			if (path.startsWith(`${BASE}/`) || path.startsWith('/v1/lol/analytics/patches')) {
+				throw new TypeError('fetch failed');
+			}
+			return undefined;
+		});
+		expect(page.stats).not.toBeNull();
+		expect(page.setBuilds).toBeNull();
+		expect(page.matchups).toBeNull();
+		expect(page.patches).toEqual([]);
+	});
+
 	it('fails when the detail fails', async () => {
 		const failure = await load((path) =>
 			path.startsWith(`${BASE}?`) ? json(503, {}) : undefined

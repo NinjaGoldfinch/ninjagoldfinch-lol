@@ -9,7 +9,7 @@ import {
 import { isCustomGame, toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
 import { regionForPlatform } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
-import { classifyProxyError, toHttpError } from './errors.ts';
+import { classifyProxyError, optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
 import { NO_NAMES, staticNames } from './static-data.ts';
@@ -87,19 +87,21 @@ export async function loadProfile(
 	}
 
 	const [page, patch] = await Promise.all([
-		client.GET('/v1/players/{puuid}/matches', {
-			params: {
-				path: { puuid: body.puuid },
-				query: {
-					platform: region.platform,
-					...(filter.page > 1 ? { start: (filter.page - 1) * MATCHES_PER_PAGE } : {}),
-					count: MATCHES_PER_PAGE,
-					...(filter.queue !== null ? { queue: filter.queue } : {}),
-					...(filter.champion !== null ? { champion: filter.champion } : {}),
-					...refreshQuery
+		optional(
+			client.GET('/v1/players/{puuid}/matches', {
+				params: {
+					path: { puuid: body.puuid },
+					query: {
+						platform: region.platform,
+						...(filter.page > 1 ? { start: (filter.page - 1) * MATCHES_PER_PAGE } : {}),
+						count: MATCHES_PER_PAGE,
+						...(filter.queue !== null ? { queue: filter.queue } : {}),
+						...(filter.champion !== null ? { champion: filter.champion } : {}),
+						...refreshQuery
+					}
 				}
-			}
-		}),
+			})
+		),
 		currentPatch(client)
 	]);
 

@@ -20,7 +20,7 @@ import {
 	patchOptions,
 	type ChampionFilter
 } from '#lib/domain/champion-stats.ts';
-import { toHttpError } from './errors.ts';
+import { optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy } from './proxy.ts';
 import { staticNames } from './static-data.ts';
@@ -106,15 +106,21 @@ export async function loadChampionPage(
 		client.GET('/v1/lol/analytics/champions/{championId}', {
 			params: { path, query: analyticsQuery(filter, 10) }
 		}),
-		client.GET('/v1/lol/analytics/champions/{championId}/builds', {
-			params: { path, query: analyticsQuery(filter) }
-		}),
-		client.GET('/v1/lol/analytics/champions/{championId}/matchups', {
-			params: { path, query: analyticsQuery(filter, 200) }
-		}),
-		client.GET('/v1/lol/analytics/patches', {
-			params: { query: { queue: ANALYTICS_QUEUE, championId: found.championId } }
-		})
+		optional(
+			client.GET('/v1/lol/analytics/champions/{championId}/builds', {
+				params: { path, query: analyticsQuery(filter) }
+			})
+		),
+		optional(
+			client.GET('/v1/lol/analytics/champions/{championId}/matchups', {
+				params: { path, query: analyticsQuery(filter, 200) }
+			})
+		),
+		optional(
+			client.GET('/v1/lol/analytics/patches', {
+				params: { query: { queue: ANALYTICS_QUEUE, championId: found.championId } }
+			})
+		)
 	]);
 	if (!detail.response.ok || !detail.data) toHttpError(detail.response, detail.error);
 	for (const [label, r] of [

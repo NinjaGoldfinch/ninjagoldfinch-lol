@@ -536,3 +536,17 @@ The site already fetches a champion page's four calls in parallel. The cold page
 - **The spec comes from riot-proxy's release.** `openapi/riot-proxy.json` is `riot-proxy spec` from the v2.6.0 release binary without its trailing newline, which is byte-identical to production's `/openapi.json`. The LAN dev instance is gone; `PROXY_URL` already had no default in code.
 
 **Consequences.** Since 2.0.0-rc.3 the spec gained optional `side` and `tier` filters on the analytics routes, `side` and `tier` echoed in their responses, the `X-Cache` header, and admin routes; the site uses none of them. Set-build skill orders can now have four letters for Udyr (`RWEQ`), which the page already writes as `R › W › E › Q`. The first view of each champion after a rebuild stays at about 200 ms until riot-proxy warms those calls.
+
+## ADR-040: A deadline on every riot-proxy call; optional calls fail on their own
+
+Date: 2026-10-15 · Task: SPD-05
+
+**Context.** The proxy client had no timeout, so a riot-proxy that stopped answering held the page until Node's socket gave up. A call that threw (riot-proxy unreachable) also failed the whole page through `Promise.all`, even where ADR-017, ADR-023 and ADR-034 say that part is optional; only error responses degraded. riot-proxy's player and match routes can wait on Riot: its client allows 25 s a request with a 10 s connect timeout, retries a 5xx twice, and waits up to 2 s for its rate limiter, so one short deadline for everything would break a profile refresh.
+
+**Decision.**
+
+- **Budgets by route.** `proxyBudget` in `src/lib/server/proxy.ts`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, which riot-proxy answers from its own tables, and 30 s for everything else. The client's `fetch` is wrapped so each request carries `AbortSignal.any([its own signal, AbortSignal.timeout(budget)])`, and the body is read inside the wrapper, so the deadline covers the whole exchange. A caller's own abort still works.
+- **A spent budget is a 503** with the usual "Temporarily unavailable", the state every other riot-proxy outage shows, thrown with `error()`. The existing `proxy unreachable` log line records it, and the `handle` hook keeps it out of the edge cache.
+- **Optional calls survive a throw.** `optional()` in `src/lib/server/errors.ts` turns a thrown call into a 503 response for that call alone, so the existing "not ok" branch degrades it: the table's patch list; the champion page's builds, matchups and patch list; the profile's match page; and the match timeline. Essential calls (profile, match, champion table and detail, current patch) still fail the page.
+
+**Consequences.** A hung riot-proxy now costs a page at most 5 s (champions) or 30 s (profiles and matches) before the error page. With riot-proxy unreachable, the optional parts show their usual "unavailable" states instead of the page failing, as long as the essential call answered. No setting; the budgets are constants.

@@ -38,6 +38,25 @@ export function toHttpError(response: Response, body: unknown): never {
 	error(failure.status, failure.body);
 }
 
+/** An optional call that threw: unreachable, timed out or unreadable. */
+export interface Unanswered {
+	data?: undefined;
+	error?: undefined;
+	response: Response;
+}
+
+/**
+ * For a call a page can do without: a throw becomes a 503 response for that
+ * call alone, so the page's usual "not ok" branch handles it instead of
+ * failing the whole page. The client has already logged an unreachable
+ * riot-proxy or a timeout.
+ */
+export function optional<T extends { response: Response }>(
+	call: Promise<T>
+): Promise<T | Unanswered> {
+	return call.catch(() => ({ response: new Response(null, { status: 503 }) }));
+}
+
 function isErrorResponse(body: unknown): body is ErrorResponse {
 	if (typeof body !== 'object' || body === null || !('error' in body)) return false;
 	const inner = body.error;

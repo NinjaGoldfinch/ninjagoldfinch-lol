@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import createClient, { type ClientOptions, type Middleware } from 'openapi-fetch';
 import { PROXY_KEY, PROXY_URL } from '$app/env/private';
 import type { paths } from '#lib/api/schema.d.ts';
@@ -51,15 +52,50 @@ export const logSlowAnalytics: Middleware = {
 	}
 };
 
+/**
+ * How long a call may take, body included. riot-proxy answers analytics and
+ * static data from its own tables. Player and match routes may wait on Riot:
+ * its client allows 25 s a request, so a refresh can take tens of seconds.
+ */
+export function proxyBudget(pathname: string): number {
+	return pathname.startsWith('/v1/lol/analytics/') || pathname.startsWith('/v1/static/')
+		? 5_000
+		: 30_000;
+}
+
+type Fetch = NonNullable<ClientOptions['fetch']>;
+
+/**
+ * Sends each request with a deadline from `budget`, keeping the caller's own
+ * abort. A call past its deadline is unavailable (503), as for any other
+ * riot-proxy outage.
+ */
+export function withTimeout(fetch?: Fetch, budget: (pathname: string) => number = proxyBudget) {
+	return async (request: Request): Promise<Response> => {
+		const timeout = AbortSignal.timeout(budget(new URL(request.url).pathname));
+		const signal = AbortSignal.any([request.signal, timeout]);
+		try {
+			const response = await (fetch ?? globalThis.fetch)(new Request(request, { signal }));
+			// Read the body here, so the deadline covers it too.
+			const body = await response.arrayBuffer();
+			return new Response(body.byteLength > 0 ? body : null, response);
+		} catch (e) {
+			if (timeout.aborted) error(503, 'Temporarily unavailable');
+			throw e;
+		}
+	};
+}
+
 /** The Authorization header is sent only when a key is configured. */
 export function createProxyClient(
 	baseUrl: string,
 	key: string | undefined,
-	fetch?: ClientOptions['fetch']
+	fetch?: Fetch,
+	budget?: (pathname: string) => number
 ) {
 	const client = createClient<paths>({
 		baseUrl,
-		fetch,
+		fetch: withTimeout(fetch, budget),
 		headers: key ? { Authorization: `Bearer ${key}` } : {}
 	});
 	client.use(logFailures, logSlowAnalytics);
