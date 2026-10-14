@@ -511,3 +511,28 @@ Date: 2026-10-10 · Task: P5-04
 - The `Dockerfile`, `deploy/compose.yaml` and `deploy/proxmox/` stay for the LAN preview VM.
 
 **Consequences.** Node 22.18 or later and pnpm must be installed on the server; Ubuntu 26.04's packaged Node is new enough. Deploying is five commands, listed in the README, and none of them is in the repo as a script or unit file yet. The plan's deployment section and P5-01's compose-with-`cloudflared` item describe a setup production does not use.
+
+## ADR-039: Champion pages don't stream; cold slices are riot-proxy's to warm
+
+Date: 2026-10-15 · Task: SPD-01
+
+**Context.** Production's `/champions/__data.json` took 3.9 s on 2026-10-14, nearly all of it riot-proxy's analytics SQL. riot-proxy v2.6.0 keeps analytics responses in memory until the next recompute (`X-Cache: HIT`) and warms the champion table and its patch list after each rebuild, but not the champion pages' four calls. The SPD handoff proposed streaming the optional parts of both champion pages from their server loads, decided by measurement. Measured on the production server:
+
+|                                                                                        | time                                 |
+| -------------------------------------------------------------------------------------- | ------------------------------------ |
+| riot-proxy, table, patch list, versions (warm)                                         | 0.7–1.4 ms                           |
+| riot-proxy, Ahri's detail / builds / matchups / patches, first request after a rebuild | 87 / 76 / 23 / 6 ms, then under 1 ms |
+| site, `/champions` and `/champions/ahri` and their `__data.json`, riot-proxy warm      | 8–15 ms                              |
+| site, `/champions/zyra` and `/champions/yorick`, first view                            | 198 and 201 ms                       |
+| the same pages through Cloudflare                                                      | `MISS` 55–69 ms, then `HIT` 25–30 ms |
+
+The site already fetches a champion page's four calls in parallel. The cold page costs about the sum of the four cold reads (192 ms), not the slowest (87 ms), which suggests riot-proxy computes them one after another or they compete for its two vCPUs. A concurrent check could not confirm it: Zyra's calls were already warm by then.
+
+**Decision.**
+
+- **No streaming.** Warm, every call streaming would defer answers in about 1 ms. On a cold champion page, streaming only the patch list saves nothing, and streaming the builds and matchups too saves at most about 110 ms, once per champion per rebuild, after which the edge holds the page for 10 minutes. Without JavaScript a streamed card never fills in, which CLAUDE.md's "pages work without client JavaScript" rules out for content. SPD-03 and SPD-04 are dropped. (Streaming would still have been server-side loading, so the rule against client-side proxy fetches was never the obstacle.)
+- **Cold champion slices are riot-proxy's to warm.** The site does not cache analytics itself; a request to warm the champion pages' four calls for the default view, or to explain the summed cold time, goes to riot-proxy.
+- **Slow analytics calls are logged.** A `/v1/lol/analytics/*` call over 250 ms (`SLOW_ANALYTICS_MS`) logs its path, riot-proxy's `X-Cache` and the time, so a cold slice can be told from anything else in the server log. Nothing reaches the browser.
+- **The spec comes from riot-proxy's release.** `openapi/riot-proxy.json` is `riot-proxy spec` from the v2.6.0 release binary without its trailing newline, which is byte-identical to production's `/openapi.json`. The LAN dev instance is gone; `PROXY_URL` already had no default in code.
+
+**Consequences.** Since 2.0.0-rc.3 the spec gained optional `side` and `tier` filters on the analytics routes, `side` and `tier` echoed in their responses, the `X-Cache` header, and admin routes; the site uses none of them. Set-build skill orders can now have four letters for Udyr (`RWEQ`), which the page already writes as `R › W › E › Q`. The first view of each champion after a rebuild stays at about 200 ms until riot-proxy warms those calls.

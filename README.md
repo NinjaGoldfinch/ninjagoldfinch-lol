@@ -42,34 +42,34 @@ There is no CI. The pre-push hook runs `just check`, and the pre-commit hook ref
 
 | Variable      | Meaning                                                                                                                                |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `PROXY_URL`   | Base URL of riot-proxy. Defaults to the LAN dev instance, `http://192.168.68.46:8080`.                                                 |
+| `PROXY_URL`   | Base URL of riot-proxy. Required, with no default: there is no shared dev instance.                                                    |
 | `PROXY_KEY`   | Read-scope consumer key. Optional in development, required in production.                                                              |
 | `CDRAGON_URL` | Base URL of CommunityDragon, for stat shard names. Optional; defaults to `https://raw.communitydragon.org`, and a mirror can stand in. |
 
-The dev instance runs with auth disabled, so no key is needed locally. Production riot-proxy refuses to start with auth disabled, so the production site must have `PROXY_KEY` set.
+A riot-proxy run locally with auth disabled needs no key. Tests and `just e2e` use the mock proxy and need no riot-proxy at all. Production riot-proxy refuses to start with auth disabled, so the production site must have `PROXY_KEY` set.
 
 ### OpenAPI spec
 
-riot-proxy serves its OpenAPI document as raw JSON at **`/openapi.json`**. It is the same document the `/docs` reference page embeds. For the dev instance that is:
+riot-proxy serves its OpenAPI document as raw JSON at **`/openapi.json`**, the same document the `/docs` reference page embeds. Its release binary prints the same document with `riot-proxy spec`, which needs no config, key or server.
 
-```text
-http://192.168.68.46:8080/openapi.json
-```
-
-A copy is committed at `openapi/riot-proxy.json` so that a proxy change shows up as a diff. To refresh it, then regenerate the types:
+A copy is committed at `openapi/riot-proxy.json` so that a proxy change shows up as a diff. To refresh it from a release, then regenerate the types:
 
 ```sh
-curl -fsS http://192.168.68.46:8080/openapi.json -o openapi/riot-proxy.json
-just gen
+repo=$PWD; v=2.6.0; cd "$(mktemp -d)"
+curl -fsSLO https://github.com/NinjaGoldfinch/riot-proxy/releases/download/v$v/riot-proxy-linux-amd64
+curl -fsSLO https://github.com/NinjaGoldfinch/riot-proxy/releases/download/v$v/sha256sums
+sha256sum --ignore-missing -c sha256sums && chmod +x riot-proxy-linux-amd64
+./riot-proxy-linux-amd64 spec | head -c -1 > "$repo/openapi/riot-proxy.json"   # served without a trailing newline
+cd "$repo" && just gen
 ```
 
-The committed copy is riot-proxy `2.0.0-rc.3` as served by the dev instance on 2026-10-09 (`main`, with the site's requested changes). It is excluded from Prettier so it stays byte-identical to what the proxy serves. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
+The committed copy is riot-proxy `2.6.0`, byte-identical to what production serves at `/openapi.json` (checked by sha256 on 2026-10-15). It is excluded from Prettier so it stays that way. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
 
 ## Tests and fixtures
 
 Unit tests (`tests/unit/`) run in `just check`. Browser tests (`tests/e2e/`) run with `just e2e`. Playwright starts the real production server (`node build`) pointed at a mock riot-proxy (`tests/mock-proxy/`), which replays the recorded responses in `tests/fixtures/`. A request with no recorded response gets a 500, so it fails loudly. Nothing reaches the real proxy or Riot.
 
-To record a new fixture from `PROXY_URL` (one live call, so it spends Riot rate limit):
+To record a new fixture from `PROXY_URL` (one live call, so it spends Riot rate limit). This needs a riot-proxy you can reach; there is no shared dev instance, so without one write a synthetic fixture instead:
 
 ```sh
 just fixture account-hide-on-bush '/v1/riot/accounts/by-riot-id/asia/Hide%20on%20bush/KR1'

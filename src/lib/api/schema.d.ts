@@ -131,7 +131,7 @@ export interface paths {
         put?: never;
         /**
          * Recompute the analytics tables from the archive
-         * @description Queues `aggregate:analytics` for one ladder and answers 202 — the scan runs on the next free worker, ahead of every queued job (a rebuild already queued for the ladder is moved up), from the matches archived so far. Bounded by `AGGREGATE_PATCH_LIMIT`: only the latest N patches are rebuilt (v1).
+         * @description Queues `aggregate:analytics` for one ladder and answers 202 — the scan runs on the next free worker, ahead of every queued job (a rebuild already queued for the ladder is moved up), from the matches archived so far. Rebuilds run one at a time by default (`JOB_KIND_LIMITS`): one for another ladder already running goes first. Bounded by `AGGREGATE_PATCH_LIMIT`: only the latest N patches are rebuilt (v1).
          */
         post: operations["recompute_analytics"];
         delete?: never;
@@ -180,6 +180,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Backups and the last maintenance run
+         * @description The daily `VACUUM INTO` backups in `$DATA_DIR/backups`, newest first, with their sizes and times, read from the directory without opening a file; `BACKUP_KEEP`; the free space beside them; and what the last `maintenance` run since the process started did (design/07 §Backups).
+         */
+        get: operations["list_backups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/cache/purge": {
         parameters: {
             query?: never;
@@ -191,7 +211,7 @@ export interface paths {
         put?: never;
         /**
          * Purge cache entries by pattern
-         * @description Removes matching entries from memory and from the persisted cache. Keys look like `{keyScope}:{endpointId}:{host}:{params…}`, e.g. `summoner.byPuuid:*`. The match archive is not a cache and is never purged.
+         * @description Removes matching entries from memory and from the persisted cache. Keys look like `{keyScope}:{endpointId}:{host}:{params…}`, e.g. `summoner.byPuuid:*`. The match archive is not a cache and is never purged. With `dryRun` it only counts the entries that would go and answers `{ok, pattern, matched, dryRun: true}`.
          */
         post: operations["purge_cache"];
         delete?: never;
@@ -324,6 +344,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Build, uptime and configuration
+         * @description The version and commit this binary was built from, when it started, its feature switches and every configuration variable in effect. Secrets read `[REDACTED]`; `RIOT_API_KEY` is not listed.
+         */
+        get: operations["info"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/jobs": {
         parameters: {
             query?: never;
@@ -338,7 +378,11 @@ export interface paths {
         get: operations["list_jobs"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Purge pending or failed jobs of one kind
+         * @description Deletes every `pending` or `failed` row of `kind` whose priority is `minPriority` or a larger number (a lower band), in chunks, so a backlog of a million rows never holds the writer. Running rows are never touched; `done` rows are `maintenance`'s. Crawl-found matches are queued at 20 005 and lookups below 10 000, so `minPriority=20000` leaves a visitor's work alone. `dryRun=true` only counts.
+         */
+        delete: operations["purge_jobs"];
         options?: never;
         head?: never;
         patch?: never;
@@ -373,7 +417,7 @@ export interface paths {
         };
         /**
          * What is running and what runs next
-         * @description The running jobs and the next ones a worker would claim, in the claim order (design/06 §Claiming), with how many are ready and how many wait out a backoff.
+         * @description The running jobs and the next ones a worker would claim, in the claim order (design/06 §Claiming), with how many are ready, how many wait out a backoff, and which kinds are at their `JOB_KIND_LIMITS` cap (their jobs wait for one of the kind to finish).
          */
         get: operations["job_queue"];
         put?: never;
@@ -588,6 +632,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/maintenance/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue maintenance now
+         * @description Queues the daily `maintenance` job under the same dedupe key as its tick, so it joins one already queued. The run takes a backup only if today's (UTC) does not exist yet; the trims, sweep, statistics and checkpoint always run.
+         */
+        post: operations["run_maintenance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/metrics": {
         parameters: {
             query?: never;
@@ -688,6 +752,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The last requests or errors
+         * @description This process's last 500 answered requests (method, route, path, status, cache, latency, consumer, request id) or its last 200 error envelopes, newest first. Kept in memory, so a restart empties them. Health probes, `/metrics` and the dashboard's own polling of `/v1/admin/metrics` and this route are not recorded.
+         */
+        get: operations["recent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/stats": {
         parameters: {
             query?: never;
@@ -696,10 +780,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Archive and tracking counts
-         * @description `archivedMatches` counts the whole archive, which is not key-scoped: match ids are not encrypted, so it survives a key rotation. `trackedPlayers` is scoped to the current key and reads zero right after one.
+         * Archive and tracking counts, and what the database takes on disk
+         * @description `archivedMatches` counts the whole archive, which is not key-scoped: match ids are not encrypted, so it survives a key rotation. `trackedPlayers` is scoped to the current key and reads zero right after one. The `db*`, `wal*` and `disk*` fields are the SQLite file, its write-ahead log and free list, and the data directory's file system (DSK-01). The match and player counts are read with the request; `archivedTimelines`, the archive's bytes and the disk readings are sampled in the background with each history point (`METRICS_HISTORY_INTERVAL_S`, a minute by default; `sampledAt.slow`). `archiveBodies` and `archivePack*` say how much of the archive is in object storage (design/12): `archiveStoredBytes` counts only bodies still in SQLite.
          */
         get: operations["stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/timelines/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How far the timeline backfill has got
+         * @description `timelines:backfill` (TL-02) fetches the missing timelines of archived ranked matches (queues 420 and 440) in the newest `TIMELINE_BACKFILL_PATCHES` patches, newest patch first, at the lowest priority. Per patch: ranked matches, how many have a timeline, how many Riot answered 404 for (marked, never asked for again) and how many are left; per region, what is left and the patch its job is on. Reads the archive; makes no Riot call.
+         */
+        get: operations["timeline_backfill"];
         put?: never;
         post?: never;
         delete?: never;
@@ -717,7 +821,7 @@ export interface paths {
         };
         /**
          * List known players
-         * @description Every player row for the current `keyScope`, tracked or not: tracking is a flag on the row. Rows written under a previous Riot key are not returned, because PUUIDs are encrypted per key.
+         * @description Every player row for the current `keyScope`, tracked or not: tracking is a flag on the row. Rows written under a previous Riot key are not returned, because PUUIDs are encrypted per key. `tracked=true` returns only the tracked rows (ADM-14): the full list can run to tens of thousands of players a crawl discovered.
          */
         get: operations["list_players"];
         put?: never;
@@ -761,7 +865,7 @@ export interface paths {
         };
         /**
          * Champion pick, ban and win rates
-         * @description Aggregated from every archived match on the platform. Each participant is placed at the tier the ladder crawl or the latest league lookup of that player found them at, whichever is newer, and under `UNKNOWN` when neither has. Without `tier`, one row per champion summed over every tier (`tier: null`): pick and ban rates over every match in the slice (platform, queue, patch), each match counted once however many tiers its players were in, and averages over all the champion's games. With `tier`, a row per champion at that tier, its rates over the matches that had a player at the tier. `minGames` and `limit` apply to the rows returned. Recomputed per (platform, queue) when a crawl completes. Sends an `ETag`; a matching `If-None-Match` gets 304. Games Riot flagged as remakes are left out unless `remakes=include`.
+         * @description Aggregated from every archived match on the platform. Each participant is placed at the tier the ladder crawl or the latest league lookup of that player found them at, whichever is newer, and under `UNKNOWN` when neither has. Without `tier`, one row per champion summed over every tier (`tier: null`): pick and ban rates over every match in the slice (platform, queue, patch), each match counted once however many tiers its players were in, and averages over all the champion's games. With `tier`, a row per champion at that tier, its rates over the matches that had a player at the tier. `minGames` and `limit` apply to the rows returned. Recomputed per (platform, queue) when a crawl completes. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. Games Riot flagged as remakes are left out unless `remakes=include`.
          */
         get: operations["champions"];
         put?: never;
@@ -781,7 +885,7 @@ export interface paths {
         };
         /**
          * Champion detail composite
-         * @description Sends an `ETag`; a matching `If-None-Match` gets 304. The champion's stat row at this slice, its rows per tier, and its top lane matchups, items, runes and summoner spells — one call for a champion page. Without `tier`, `stats` is one row summed over every tier (`tier: null`), its pick and ban rates over every match in the slice, and `byTier` has a row per tier; with `tier`, both hold that tier's row. Each section is independently trimmed by `minGames`/`limit` (`stats` and `byTier` by `minGames` only); a champion nobody has data for yet still returns 200 with empty arrays rather than a 404.
+         * @description Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. The champion's stat row at this slice, its rows per tier, and its top lane matchups, items, runes and summoner spells — one call for a champion page. Without `tier`, `stats` is one row summed over every tier (`tier: null`), its pick and ban rates over every match in the slice, and `byTier` has a row per tier; with `tier`, both hold that tier's row. Each section is independently trimmed by `minGames`/`limit` (`stats` and `byTier` by `minGames` only); a champion nobody has data for yet still returns 200 with empty arrays rather than a 404.
          */
         get: operations["champion_detail"];
         put?: never;
@@ -801,7 +905,7 @@ export interface paths {
         };
         /**
          * Champion set builds
-         * @description The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice, named in `role`. Sends an `ETag`; a matching `If-None-Match` gets 304. A champion nobody has builds for yet still returns 200 with an empty `builds`.
+         * @description The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice (its `tier` and `side` included), named in `role`. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. A champion nobody has builds for yet still returns 200 with an empty `builds`.
          */
         get: operations["champion_builds"];
         put?: never;
@@ -821,7 +925,7 @@ export interface paths {
         };
         /**
          * A champion's lane matchups
-         * @description Sends an `ETag`; a matching `If-None-Match` gets 304. Every lane matchup this champion has archived data for. No tier dimension: sample sizes die fast enough per (champion, opponent, role) alone, and the two laners can sit in different tiers anyway. Mirror lanes are excluded — their win rate is 50% by construction. Every archived lane is recorded from both sides, so the opposite champion's view of the same lane mirrors this one.
+         * @description Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. Every lane matchup this champion has archived data for, at the tier and side of this champion's player (`tier`, `side`); the opponent may have been in another tier. Mirror lanes are excluded — their win rate is 50% by construction. Every archived lane is recorded from both sides, so the opposite champion's view of the same lane mirrors this one.
          */
         get: operations["champion_matchups"];
         put?: never;
@@ -841,7 +945,7 @@ export interface paths {
         };
         /**
          * Patches with analytics
-         * @description The patches the analytics tables hold for a ladder, newest first, with each one's games: what a client offers as `patch` choices on the other analytics routes (`all` sums them). With `championId`, only the patches that champion was played on, each with its games. Sends an `ETag`; a matching `If-None-Match` gets 304.
+         * @description The patches the analytics tables hold for a ladder, newest first, with each one's games: what a client offers as `patch` choices on the other analytics routes (`all` sums them). With `championId`, only the patches that champion was played on, each with its games. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables.
          */
         get: operations["patches"];
         put?: never;
@@ -1359,6 +1463,45 @@ export interface components {
             /** @description This field may be excluded from the response if the account doesn't have a tagLine. */
             tagLine?: string;
         };
+        /** @description `GET /v1/admin/info` (ADM-03): what is running, since when, and how it is configured. */
+        AdminInfo: {
+            /** @description As `riot-proxy --version` prints it. */
+            version: string;
+            /** @description The commit it was built from, 12 characters; `unknown` for a build without one. */
+            gitSha: string;
+            /** @description `rustc --version` of the compiler that built it. */
+            rustc: string;
+            /**
+             * Format: int64
+             * @description Unix ms.
+             */
+            builtAt: number;
+            /**
+             * Format: int64
+             * @description Unix ms.
+             */
+            startedAt: number;
+            /** Format: int64 */
+            uptimeSeconds: number;
+            /** @description `development`, `test` or `production`. */
+            env: string;
+            /** @description `all`, `api` or `worker`. */
+            role: string;
+            keyScope: string;
+            features: components["schemas"]["Features"];
+            /**
+             * Format: int32
+             * @description `JOB_CONCURRENCY`.
+             */
+            workers: number;
+            /**
+             * @description Every variable but `RIOT_API_KEY`, with the value in effect, as `.env` would
+             *     spell it. Secrets read `[REDACTED]`; an unset optional value is null.
+             */
+            config: {
+                [key: string]: string | null;
+            };
+        };
         /** @description Archive and tracking counts (v1's three fields, plus archive size). */
         AdminStats: {
             keyScope: string;
@@ -1389,6 +1532,49 @@ export interface components {
              * @description What they decompress to.
              */
             archiveRawBytes: number;
+            /** @description Where each kind of body is kept (OBJ-02, design/12). */
+            archiveBodies: components["schemas"]["ArchiveBodies"];
+            /**
+             * Format: int64
+             * @description Pack objects in the bucket, their bytes, and the bytes of bodies still
+             *     located in them.
+             */
+            archivePacks: number;
+            /** Format: int64 */
+            archivePackBytes: number;
+            /** Format: int64 */
+            archivePackLiveBytes: number;
+            /**
+             * Format: int64
+             * @description The SQLite file on disk (DSK-01).
+             */
+            dbFileBytes: number;
+            /**
+             * Format: int64
+             * @description Its write-ahead log; 0 right after a truncating checkpoint.
+             */
+            walBytes: number;
+            /** Format: int64 */
+            dbPageSize: number;
+            /** Format: int64 */
+            dbPageCount: number;
+            /**
+             * Format: int64
+             * @description Pages freed by deletes and not yet reused; they leave the file only with a `VACUUM`.
+             */
+            dbFreelistPages: number;
+            /**
+             * Format: int64
+             * @description Free space on the data directory's file system, as the service sees it.
+             */
+            diskFreeBytes: number;
+            /** Format: int64 */
+            diskTotalBytes: number;
+            /**
+             * @description When the counts (`fast`, read with the request) and the timelines count,
+             *     archive bytes and disk readings (`slow`, sampled) were read, unix ms (ADM-02).
+             */
+            sampledAt: components["schemas"]["SampledAt"];
         };
         /** @description One aggregated patch (ADR-094). */
         AnalyticsPatchEntry: {
@@ -1412,6 +1598,8 @@ export interface components {
              * @description The champion asked for, whose games each entry then counts; `null` for every champion.
              */
             championId: number | null;
+            /** @description `blue` or `red` when the request named one, whose games each entry then counts; `null`: both. */
+            side: string | null;
             /** @description Newest first. */
             patches: components["schemas"]["AnalyticsPatchEntry"][];
         };
@@ -1419,6 +1607,10 @@ export interface components {
             lastRuns: components["schemas"]["RunSummary"][];
             /** @description The newest run's ladder, its latest patch, top five by games. */
             topChampions: components["schemas"]["TopChampion"][];
+        };
+        ArchiveBodies: {
+            matches: components["schemas"]["BodyStates"];
+            timelines: components["schemas"]["BodyStates"];
         };
         /** @description How much of a player's history a champion-filtered page draws on (SITE-02). */
         ArchiveCoverage: {
@@ -1504,6 +1696,71 @@ export interface components {
              */
             limit: number;
         };
+        /** @description One daily backup on disk. */
+        BackupFile: {
+            /** @description `riot-proxy-<YYYY-MM-DD>.db`. */
+            name: string;
+            /** Format: int64 */
+            bytes: number;
+            /**
+             * Format: int64
+             * @description Unix ms; null where the file system keeps no time.
+             */
+            modifiedAt?: number | null;
+        };
+        /** @description `GET /v1/admin/backups` (ADM-06). */
+        Backups: {
+            /** @description `$DATA_DIR/backups`. */
+            dir: string;
+            /** @description `BACKUP_KEEP`; 0 takes none. */
+            keep: number;
+            /** @description Newest first; `[]` when the directory does not exist. */
+            files: components["schemas"]["BackupFile"][];
+            lastRun?: components["schemas"]["LastRun"] | null;
+            /**
+             * Format: int64
+             * @description Free bytes on the backup directory's file system (its parent's while it
+             *     does not exist); null when it cannot be read.
+             */
+            diskFreeBytes?: number | null;
+        };
+        /** @description A method where bulk work would wait right now, on one scope. */
+        BlockedMethod: {
+            scope: string;
+            method: string;
+            /**
+             * Format: int64
+             * @description Milliseconds until it frees up.
+             */
+            forMs: number;
+        };
+        /** @description A scope where bulk work would wait right now. */
+        BlockedScope: {
+            scope: string;
+            /**
+             * Format: int64
+             * @description Milliseconds until it frees up.
+             */
+            forMs: number;
+        };
+        /** @description Bodies of one kind by where they are kept (design/12 §SQLite). */
+        BodyStates: {
+            /**
+             * Format: int64
+             * @description Only in SQLite: not yet packed.
+             */
+            local: number;
+            /**
+             * Format: int64
+             * @description In a verified pack in the bucket, and still in SQLite.
+             */
+            packed: number;
+            /**
+             * Format: int64
+             * @description Only in the bucket; reads fetch its byte range.
+             */
+            offloaded: number;
+        };
         /** @description One choice at one step of a set build: an item (BLD-03). */
         BuildItemOption: {
             /** Format: int64 */
@@ -1524,7 +1781,10 @@ export interface components {
             /** Format: double */
             winRate: number;
         };
-        /** @description A skill order: Q, W and E in the order they were maxed, `"QWE"`. */
+        /**
+         * @description A skill order: Q, W and E in the order they were maxed, `"QWE"`. For Udyr,
+         *     whose R is ranked like the others, all four, `"RWEQ"`.
+         */
         BuildSkillOrderOption: {
             order: string;
             /** Format: int64 */
@@ -1570,6 +1830,31 @@ export interface components {
             /** @description Past its soft TTL (served as `STALE`), or null when absent. */
             stale: boolean | null;
         };
+        /** @description The cache tiers' sizes (ADM-04). */
+        CacheStore: {
+            /** Format: int64 */
+            l1Entries: number;
+            /**
+             * Format: int64
+             * @description Keys, bodies and per-entry overhead, as L1 weighs them.
+             */
+            l1Bytes: number;
+            /**
+             * Format: int64
+             * @description `CACHE_L1_MAX_MB` in bytes.
+             */
+            l1MaxBytes: number;
+            /**
+             * Format: int64
+             * @description Rows in the L2 `cache` table, from the slow sample.
+             */
+            l2Rows: number;
+            /**
+             * Format: int64
+             * @description L2 writes dropped on a full queue since the start (`cache_l2_dropped_total`).
+             */
+            l2Dropped: number;
+        };
         /**
          * @description One set build (BLD-03): its two core items, then what its players chose
          *     at each later step, at most three options each, most played first.
@@ -1604,6 +1889,10 @@ export interface components {
             /** @description `null` when the request named no platform: every platform summed. */
             platform: string | null;
             queue: string;
+            /** @description The tier asked for (the builder's, FLT-02); `null`: every tier summed. */
+            tier: string | null;
+            /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
+            side: string | null;
             patch: string | null;
             /**
              * @description The role asked for, else the champion's most-played role in the slice;
@@ -1628,6 +1917,8 @@ export interface components {
             platform: string | null;
             queue: string;
             tier: string | null;
+            /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
+            side: string | null;
             patch: string | null;
             role: string | null;
             /** @description The oldest section's recompute time: how fresh the whole document is. */
@@ -1736,6 +2027,10 @@ export interface components {
             /** @description `null` when the request named no platform: every platform summed. */
             platform: string | null;
             queue: string;
+            /** @description The tier asked for (the champion's player's, FLT-02); `null`: every tier summed. */
+            tier: string | null;
+            /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
+            side: string | null;
             patch: string | null;
             role: string | null;
             computedAt: string | null;
@@ -1820,6 +2115,8 @@ export interface components {
             platform: string | null;
             queue: string;
             tier: string | null;
+            /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
+            side: string | null;
             patch: string | null;
             role: string | null;
             /** @description The newest row's recompute time. */
@@ -1949,6 +2246,22 @@ export interface components {
             key: string;
             warning: string;
         };
+        /** @description What the database takes on disk, and what is left (DSK-01's readings). */
+        DiskSection: {
+            /** Format: int64 */
+            dbBytes: number;
+            /** Format: int64 */
+            walBytes: number;
+            /** Format: int64 */
+            freelistBytes: number;
+            /**
+             * Format: int64
+             * @description Free on the data directory's file system.
+             */
+            freeBytes: number;
+            /** Format: int64 */
+            totalBytes: number;
+        };
         ErrorBody: {
             code: components["schemas"]["ErrorCode"];
             message: string;
@@ -1989,6 +2302,19 @@ export interface components {
              */
             ms: number | null;
         };
+        /** @description Feature switches this process runs with (`GET /v1/admin/info`). */
+        Features: {
+            /** @description `/dev` and `/dev/showcase`; never in production. */
+            devUi: boolean;
+            docsUi: boolean;
+            dashboardUi: boolean;
+            authDisabled: boolean;
+            archiveTimelines: boolean;
+            staleWhileRevalidate: boolean;
+            trustProxy: boolean;
+            /** @description Built with the `postgres` feature. */
+            postgres: boolean;
+        };
         /** @description A job that finished in this process, newest first. */
         FinishedView: {
             jobId: string;
@@ -2009,6 +2335,31 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** @description The bulk gate (design/05 §Priorities): its settings and what it holds now. */
+        Gates: {
+            /**
+             * Format: double
+             * @description `BULK_USAGE_CEILING`.
+             */
+            bulkUsageCeiling: number;
+            /**
+             * Format: double
+             * @description `BULK_IDLE_CEILING`.
+             */
+            bulkIdleCeiling: number;
+            /**
+             * Format: int32
+             * @description `BULK_IDLE_AFTER_S`.
+             */
+            bulkIdleAfterS: number;
+            /**
+             * Format: int64
+             * @description `CLIENT_WAIT_BUDGET_MS`.
+             */
+            clientWaitBudgetMs: number;
+            blockedScopes: components["schemas"]["BlockedScope"][];
+            blockedMethods: components["schemas"]["BlockedMethod"][];
+        };
         Health: {
             ok: boolean;
         };
@@ -2024,7 +2375,10 @@ export interface components {
              */
             ageSeconds?: number | null;
         };
-        /** @description v1 `MetricsHistoryPoint`. */
+        /**
+         * @description v1 `MetricsHistoryPoint`, plus what the dashboard draws 24 h rates from
+         *     (ADM-04). Points stored before then lack the additions, which read null.
+         */
         HistoryPoint: {
             /**
              * Format: int64
@@ -2035,6 +2389,17 @@ export interface components {
             queues: components["schemas"]["HistoryQueues"];
             analytics: components["schemas"]["HistoryAnalytics"];
             cache: components["schemas"]["CacheCounts"];
+            disk?: components["schemas"]["DiskSection"] | null;
+            /**
+             * Format: int64
+             * @description `proxy_requests_total` summed over its labels, since the process started.
+             */
+            requests?: number | null;
+            /**
+             * Format: int64
+             * @description `proxy_upstream_requests_total` summed over its labels, since the process started.
+             */
+            upstream?: number | null;
         };
         HistoryQueues: {
             /** Format: int64 */
@@ -2085,6 +2450,16 @@ export interface components {
             delayed: number;
             /** @description When the soonest delayed job comes due. */
             nextDelayedAt: string | null;
+            /**
+             * @description Kinds with as many jobs running as `JOB_KIND_LIMITS` allows. Their rows in `next` wait for one to
+             *     finish; workers claim other kinds meanwhile.
+             */
+            heldKinds: string[];
+            /**
+             * Format: int64
+             * @description Ready jobs of `heldKinds`, counted in `ready` too.
+             */
+            held: number;
         };
         JobStats: {
             /** @description By kind. */
@@ -2120,6 +2495,24 @@ export interface components {
         JobTrace: {
             job: components["schemas"]["JobSummary"] | null;
             trace: components["schemas"]["TraceView"] | null;
+        };
+        /** @description `DELETE /v1/admin/jobs` (DSK-03). */
+        JobsPurged: {
+            kind: string;
+            state: string;
+            /** Format: int64 */
+            minPriority: number;
+            /**
+             * Format: int64
+             * @description Rows the filter matched when the purge started.
+             */
+            matched: number;
+            /**
+             * Format: int64
+             * @description Rows deleted; 0 on a dry run.
+             */
+            deleted: number;
+            dryRun: boolean;
         };
         /** @description One crawl in `GET /v1/admin/ladder/crawls` (v1 `LadderCrawlSummary`). */
         LadderCrawlSummary: {
@@ -2181,6 +2574,22 @@ export interface components {
              */
             entries: number;
         };
+        /** @description The last run this process made (ADM-06, `GET /v1/admin/backups`). */
+        LastRun: {
+            /**
+             * Format: int64
+             * @description Unix ms when it started.
+             */
+            at: number;
+            /**
+             * Format: int64
+             * @description How long it took.
+             */
+            ms: number;
+            report?: components["schemas"]["Report"] | null;
+            /** @description Why it failed; the job is retried like any other. */
+            error?: string | null;
+        };
         /** @description league-v4 `LeagueEntryDTO`: one ranked queue's standing. */
         LeagueEntryDTO: {
             /** @description Not in every recorded body. */
@@ -2221,6 +2630,11 @@ export interface components {
             frozenMs: number;
             windows: components["schemas"]["WindowUse"][];
             methods: components["schemas"]["MethodUse"][];
+            /**
+             * Format: int64
+             * @description Interactive requests queued on this scope; bulk yields while any wait (ADM-04).
+             */
+            interactiveWaiters: number;
         };
         /** @description One rate-limit bucket (v1 `LimitsResponse`). */
         Limits: {
@@ -2363,6 +2777,31 @@ export interface components {
             league: number | null;
             /** Format: int64 */
             mastery: number | null;
+        };
+        /** @description One patch's ranked matches and their timelines. */
+        PatchProgress: {
+            /** @description `major.minor`; `None` on the totals. */
+            patch?: string | null;
+            /**
+             * Format: int64
+             * @description Ranked matches archived.
+             */
+            matches: number;
+            /**
+             * Format: int64
+             * @description Of those, with a timeline archived.
+             */
+            withTimeline: number;
+            /**
+             * Format: int64
+             * @description Without one, and marked: Riot answered 404.
+             */
+            notFound: number;
+            /**
+             * Format: int64
+             * @description Without one and not marked: what the backfill still has to fetch.
+             */
+            left: number;
         };
         /** @description Riot's `perks` blob is ~40 lines to convey three icon ids. */
         PerksSummary: {
@@ -2571,6 +3010,18 @@ export interface components {
             /** @description Names each part that could not be fetched. */
             warnings: string[];
         };
+        /** @description `GET /v1/admin/timelines/backfill`. */
+        Progress: {
+            /**
+             * Format: int32
+             * @description `TIMELINE_BACKFILL_PATCHES`; 0 means the backfill is off.
+             */
+            configuredPatches: number;
+            /** @description Per patch, newest first, over the patches asked about. */
+            patches: components["schemas"]["PatchProgress"][];
+            regions: components["schemas"]["RegionProgress"][];
+            totals: components["schemas"]["PatchProgress"];
+        };
         /** @description `POST /v1/admin/cache/purge` body. */
         Purge: {
             /**
@@ -2578,6 +3029,8 @@ export interface components {
              *     current key unless it already starts with a key scope.
              */
             pattern: string;
+            /** @description Count what would go, delete nothing (ADM-10). Default false. */
+            dryRun?: boolean | null;
         };
         /** @description `POST /v1/admin/backfill` body (v1). */
         QueueBackfill: {
@@ -2639,6 +3092,26 @@ export interface components {
             /** @description Re-download a patch that is already mirrored. Default false. */
             force?: boolean | null;
         };
+        /** @description One consumer's quota window right now (the dashboard's `quotas`, ADM-04). */
+        QuotaUse: {
+            /** @description The consumer's id (`GET /v1/admin/consumers`). */
+            consumer: string;
+            /**
+             * Format: int32
+             * @description Requests per rolling minute.
+             */
+            limit: number;
+            /**
+             * Format: int32
+             * @description Requests in the last minute.
+             */
+            used: number;
+            /**
+             * Format: int64
+             * @description Seconds until the oldest of them leaves the window; 0 when none is in it.
+             */
+            resetSecs: number;
+        };
         /**
          * @description v1 returned `{ok, redis, postgres, keyScope}`. v2 has one store, so `sqlite` replaces
          *     the two backend booleans, and `limiter` says the checkpoint was restored
@@ -2658,12 +3131,94 @@ export interface components {
              */
             sqliteReadersFree: number;
         };
+        /** @description `GET /v1/admin/recent` (ADM-05): one of the two rings, newest first. */
+        Recent: {
+            /** @description `requests` or `errors`. */
+            kind: string;
+            /** @description How many the ring keeps: 500 requests, 200 errors. */
+            capacity: number;
+            /** @description Set for `kind=requests`. */
+            requests?: components["schemas"]["RecentRequest"][] | null;
+            /** @description Set for `kind=errors`. */
+            errors?: components["schemas"]["RecentError"][] | null;
+        };
+        /** @description One error answered with v1's envelope. */
+        RecentError: {
+            /**
+             * Format: int64
+             * @description Unix ms.
+             */
+            at: number;
+            /** @description The envelope's `code`, e.g. `NOT_FOUND`. */
+            code: string;
+            /** Format: int32 */
+            status: number;
+            message: string;
+            /** @description Null when raised outside a request. */
+            requestId?: string | null;
+        };
+        /** @description One answered request. */
+        RecentRequest: {
+            /**
+             * Format: int64
+             * @description Unix ms when the response was ready.
+             */
+            at: number;
+            method: string;
+            /**
+             * @description The matched route template (`/v1/lol/summoners/by-puuid/:platform/:puuid`),
+             *     or `unmatched`: the `route` label of `proxy_requests_total`.
+             */
+            route: string;
+            /** @description The path as requested, at most 200 characters; no query string. */
+            path: string;
+            /** Format: int32 */
+            status: number;
+            /** @description `hit`, `miss`, `neg`, `stale`, `archive`, `bypass` or `none`, from `X-Cache`. */
+            cache: string;
+            /** Format: int64 */
+            latencyMs: number;
+            /** @description The consumer's name; null before authentication or on a public route. */
+            consumer?: string | null;
+            requestId: string;
+        };
         /** @description `POST /v1/admin/analytics/recompute` body (v1). */
         RecomputeAnalytics: {
             /** @description Platform routing value. Required: there is no default platform. */
             platform: string;
             /** @description `RANKED_SOLO_5x5` or `RANKED_FLEX_SR`; default the first of `LADDER_QUEUES`. */
             queue?: string | null;
+        };
+        /** @description One region's share of what is left. */
+        RegionProgress: {
+            /** @description match-v5 region: `americas`, `europe`, `asia` or `sea`. */
+            region: string;
+            /** Format: int64 */
+            left: number;
+            /** @description The patch its job is working on: the newest with anything left. */
+            patch?: string | null;
+        };
+        /** @description What one run did. */
+        Report: {
+            /**
+             * @description The backup written, if one was (none when today's already exists, when
+             *     `BACKUP_KEEP` is 0, or when it was skipped or failed).
+             */
+            backup?: string | null;
+            /**
+             * @description Why no backup was attempted today: `BACKUP_KEEP=0`, or the disk's
+             *     free space against what the copy needs.
+             */
+            backupSkipped?: string | null;
+            /**
+             * @description The error of a copy that was attempted and failed; its partial file is
+             *     removed and the run goes on.
+             */
+            backupFailed?: string | null;
+            backupsDeleted: number;
+            jobsDeleted: number;
+            historyDeleted: number;
+            cacheSwept: number;
         };
         /** @description `POST /v1/admin/consumers/{id}/revoke-cache` body. */
         RevokeCache: {
@@ -2703,6 +3258,22 @@ export interface components {
             /** Format: int64 */
             games: number;
         };
+        /**
+         * @description When a document's sampled parts were read, unix ms (ADM-02). A part read
+         *     live, because nothing was sampled yet, carries the time of the request.
+         */
+        SampledAt: {
+            /**
+             * Format: int64
+             * @description Totals, queues, the ladder and analytics, sampled every 15 s.
+             */
+            fast: number;
+            /**
+             * Format: int64
+             * @description Archive bytes and disk, sampled with each history point.
+             */
+            slow: number;
+        };
         /** @description Each section's recompute time: they are rebuilt in separate transactions. */
         SectionsComputedAt: {
             stats: string | null;
@@ -2735,6 +3306,49 @@ export interface components {
             ladder: components["schemas"]["LadderSection"];
             analytics: components["schemas"]["AnalyticsSection"];
             process: components["schemas"]["ProcessStats"];
+            /**
+             * @description When `totals`, `queues`, `ladder` and `analytics` (`fast`) and the archive
+             *     and disk readings (`slow`) were read (ADM-02).
+             */
+            sampledAt: components["schemas"]["SampledAt"];
+            /** @description The cache tiers' sizes (ADM-04). */
+            cacheStore: components["schemas"]["CacheStore"];
+            /** @description The bulk gate (ADM-04). */
+            gates: components["schemas"]["Gates"];
+            /**
+             * Format: int64
+             * @description Riot calls in flight, each shared by every request waiting on it (ADM-04).
+             */
+            inflight: number;
+            /** @description Every consumer metered since the start, busiest first (ADM-04). */
+            quotas: components["schemas"]["QuotaUse"][];
+            sqlite: components["schemas"]["SqliteReaders"];
+            /** @description From the slow sample (ADM-04). */
+            disk: components["schemas"]["DiskSection"];
+            /**
+             * @description `route|status|cache` → requests answered since the start
+             *     (`proxy_requests_total`, ADM-05). `|` because routes hold `:`.
+             */
+            requests: {
+                [key: string]: number;
+            };
+            /**
+             * @description `region|method|status` → Riot calls since the start
+             *     (`proxy_upstream_requests_total`, ADM-05).
+             */
+            upstream: {
+                [key: string]: number;
+            };
+        };
+        /** @description The SQLite read pool. */
+        SqliteReaders: {
+            /** Format: int64 */
+            readers: number;
+            /**
+             * Format: int64
+             * @description Idle right now (`sqlite_readers_free`).
+             */
+            readersFree: number;
         };
         /** @description `POST /v1/admin/ladder/crawl` body (v1 `LadderCrawlBody`). */
         StartLadderCrawl: {
@@ -2903,7 +3517,7 @@ export interface components {
         "Last-Modified": string;
         /** @description Seconds to wait before trying again. */
         "Retry-After": number;
-        /** @description Where the body came from: `HIT`, `MISS`, `STALE`, `HIT-NEG` (a cached 404), `ARCHIVE` (the match archive) or `BYPASS` (`?refresh=true`). */
+        /** @description Where the body came from: `HIT`, `MISS`, `STALE`, `HIT-NEG` (a cached 404), `ARCHIVE` (the match archive) or `BYPASS` (`?refresh=true`). On the analytics routes, `HIT` is a response kept in memory since the last recompute and `MISS` one read from the tables. */
         "X-Cache": string;
         /** @description Seconds the content has been unchanged, not since the last fetch. */
         "X-Cache-Age": number;
@@ -3374,6 +3988,90 @@ export interface operations {
             };
         };
     };
+    list_backups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The backups */
+            200: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Backups"];
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found. */
+            404: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     purge_cache: {
         parameters: {
             query?: never;
@@ -3387,7 +4085,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description `{ok, pattern, deleted}` */
+            /** @description `{ok, pattern, deleted}`, or `{ok, pattern, matched, dryRun}` */
             200: {
                 headers: {
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
@@ -4111,6 +4809,90 @@ export interface operations {
             };
         };
     };
+    info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The process */
+            200: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminInfo"];
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found. */
+            404: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_jobs: {
         parameters: {
             query?: {
@@ -4138,6 +4920,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobList"];
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found. */
+            404: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    purge_jobs: {
+        parameters: {
+            query: {
+                /** @description A job kind, e.g. archive:match */
+                kind: string;
+                /** @description pending or failed */
+                state: string;
+                /** @description 0 or more, default 0 (every row of the kind and state) */
+                minPriority?: number;
+                /** @description Count only */
+                dryRun?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `{kind, state, minPriority, matched, deleted, dryRun}` */
+            200: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobsPurged"];
                 };
             };
             /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
@@ -5336,6 +6211,90 @@ export interface operations {
             };
         };
     };
+    run_maintenance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `{ok, jobId, status}`: `queued` or `already-queued` */
+            202: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found. */
+            404: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     metrics_snapshot: {
         parameters: {
             query?: never;
@@ -5769,6 +6728,95 @@ export interface operations {
             };
         };
     };
+    recent: {
+        parameters: {
+            query?: {
+                /** @description requests (default) or errors */
+                kind?: string;
+                /** @description 1–500, default 100 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ring */
+            200: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recent"];
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found. */
+            404: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     stats: {
         parameters: {
             query?: never;
@@ -5853,9 +6901,99 @@ export interface operations {
             };
         };
     };
+    timeline_backfill: {
+        parameters: {
+            query?: {
+                /** @description 1–1000 newest patches to report on; default `TIMELINE_BACKFILL_PATCHES`, so a preview of a wider backfill before turning it up */
+                patches?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progress */
+            200: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+            /** @description A parameter failed validation (`VALIDATION`, or `BAD_REGION` for a platform or region). */
+            400: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid key. */
+            401: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key lacks a scope, or the admin IP allowlist refused the caller. */
+            403: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found. */
+            404: {
+                headers: {
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Your consumer quota is spent (`QUOTA_EXCEEDED`). */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
+                    "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
+                    "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_players: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `true`: tracked players only */
+                tracked?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6148,6 +7286,8 @@ export interface operations {
                 queue?: string;
                 /** @description IRON … CHALLENGER, or UNKNOWN: that tier's rows. Omitted: one row per champion summed over every tier, pick and ban rates over every match in the slice */
                 tier?: string;
+                /** @description `blue` or `red`: only the champion's games on that side, its pick rate over every match in the slice. Omitted: both sides summed */
+                side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default every role summed */
@@ -6168,6 +7308,7 @@ export interface operations {
             /** @description The champions, most played first */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6181,6 +7322,7 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6258,8 +7400,10 @@ export interface operations {
                 platform?: string;
                 /** @description RANKED_SOLO_5x5 or RANKED_FLEX_SR */
                 queue?: string;
-                /** @description IRON … CHALLENGER, or UNKNOWN: `stats` and `byTier` are that tier's row. Omitted: `stats` is one row summed over every tier, pick and ban rates over every match in the slice, and `byTier` a row per tier */
+                /** @description IRON … CHALLENGER, or UNKNOWN: `stats` and `byTier` are that tier's row, and the matchups, items, runes and spells that tier's players'. Omitted: `stats` is one row summed over every tier, pick and ban rates over every match in the slice, `byTier` a row per tier, and the other sections every tier summed */
                 tier?: string;
+                /** @description `blue` or `red`: every section from the champion's games on that side only. Omitted: both sides summed */
+                side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty */
@@ -6283,6 +7427,7 @@ export interface operations {
             /** @description The champion's page */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6296,6 +7441,7 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6373,6 +7519,10 @@ export interface operations {
                 platform?: string;
                 /** @description RANKED_SOLO_5x5 or RANKED_FLEX_SR */
                 queue?: string;
+                /** @description IRON … CHALLENGER, or UNKNOWN: only builds of players at that tier. Omitted: every tier summed */
+                tier?: string;
+                /** @description `blue` or `red`: only builds of players on that side. Omitted: both sides summed */
+                side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role */
@@ -6396,6 +7546,7 @@ export interface operations {
             /** @description The champion's builds, most played first */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6409,6 +7560,7 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6486,6 +7638,10 @@ export interface operations {
                 platform?: string;
                 /** @description RANKED_SOLO_5x5 or RANKED_FLEX_SR */
                 queue?: string;
+                /** @description IRON … CHALLENGER, or UNKNOWN: only games where this champion's player was at that tier; the opponent may have been in another. Omitted: every tier summed */
+                tier?: string;
+                /** @description `blue` or `red`: only games where this champion was on that side. Omitted: both sides summed */
+                side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
                 /** @description TOP, JUNGLE, MIDDLE, BOTTOM or UTILITY; default every lane */
@@ -6509,6 +7665,7 @@ export interface operations {
             /** @description The matchups, most played first */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6522,6 +7679,7 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6601,6 +7759,8 @@ export interface operations {
                 queue?: string;
                 /** @description ≥ 1: count only this champion's games */
                 championId?: number;
+                /** @description `blue` or `red`: count only games on that side. Omitted: both */
+                side?: string;
                 /** @description `exclude` (default) or `include` */
                 remakes?: string;
             };
@@ -6613,6 +7773,7 @@ export interface operations {
             /** @description The patches, newest first */
             200: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];
@@ -6626,6 +7787,7 @@ export interface operations {
             /** @description Not modified */
             304: {
                 headers: {
+                    "X-Cache": components["headers"]["X-Cache"];
                     "X-RateLimit-Limit": components["headers"]["X-RateLimit-Limit"];
                     "X-RateLimit-Remaining": components["headers"]["X-RateLimit-Remaining"];
                     "X-RateLimit-Reset": components["headers"]["X-RateLimit-Reset"];

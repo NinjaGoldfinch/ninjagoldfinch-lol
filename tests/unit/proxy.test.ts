@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createProxyClient } from '#lib/server/proxy.ts';
+import { SLOW_ANALYTICS_MS, createProxyClient } from '#lib/server/proxy.ts';
 
 const BASE = 'http://proxy.test:8080';
 
@@ -47,6 +47,49 @@ describe('createProxyClient', () => {
 		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
 		const { fetch } = stubFetch(200);
 		await createProxyClient(BASE, undefined, fetch).GET('/healthz');
+
+		expect(log).not.toHaveBeenCalled();
+	});
+});
+
+describe('logSlowAnalytics', () => {
+	const ANALYTICS = '/v1/lol/analytics/patches';
+
+	/** Each call to performance.now() moves the clock on by `step` ms. */
+	function clock(step: number) {
+		let now = 0;
+		vi.spyOn(performance, 'now').mockImplementation(() => (now += step));
+	}
+
+	it('logs a slow analytics call with its x-cache', async () => {
+		const log = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		clock(SLOW_ANALYTICS_MS + 50);
+		const { fetch } = stubFetch(200, { 'x-cache': 'MISS' });
+		await createProxyClient(BASE, undefined, fetch).GET(ANALYTICS, {
+			params: { query: { queue: 'RANKED_SOLO_5x5' } }
+		});
+
+		expect(log).toHaveBeenCalledWith(
+			`proxy slow GET ${ANALYTICS} x-cache=MISS ${SLOW_ANALYTICS_MS + 50}ms`
+		);
+	});
+
+	it('does not log a fast call', async () => {
+		const log = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		clock(1);
+		const { fetch } = stubFetch(200, { 'x-cache': 'HIT' });
+		await createProxyClient(BASE, undefined, fetch).GET(ANALYTICS, {
+			params: { query: { queue: 'RANKED_SOLO_5x5' } }
+		});
+
+		expect(log).not.toHaveBeenCalled();
+	});
+
+	it('does not log other routes, however slow', async () => {
+		const log = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		clock(SLOW_ANALYTICS_MS * 10);
+		const { fetch } = stubFetch(200);
+		await createProxyClient(BASE, undefined, fetch).GET('/v1/static/versions');
 
 		expect(log).not.toHaveBeenCalled();
 	});

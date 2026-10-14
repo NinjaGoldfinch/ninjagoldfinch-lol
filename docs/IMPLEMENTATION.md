@@ -547,6 +547,19 @@ Six phases, each ending in a check you can run. One task is one branch and one P
 
 **Exit check:** `https://ninjagoldfinch.lol` serves a profile over HTTPS, riot-proxy is unreachable from outside the VM, and a rollback to the previous tag takes under five minutes.
 
+### SPD — speed (after riot-proxy v2.6.0)
+
+riot-proxy v2.6.0 keeps analytics responses in memory and warms the champion table and patch list after each rebuild. This series removes what the site still adds. Measured on production on 2026-10-14 and 2026-10-15 (ADR-039): a champions page answers in 8–15 ms once riot-proxy is warm; a champion page nobody has viewed since the last rebuild takes about 200 ms, nearly all of it riot-proxy's cold reads.
+
+- [ ] SPD-01 riot-proxy spec refreshed to v2.6.0 from the release binary; slow analytics calls logged with `X-Cache`; no LAN dev instance in the docs
+- [ ] SPD-02 `patchVersions` held in memory for 5 minutes, as ADR-013 holds the lookups
+- [ ] SPD-03 Dropped: stream `/champions`' patch list. riot-proxy warms it and answers in under 1 ms, and without JavaScript the picker would lose its patches (ADR-039)
+- [ ] SPD-04 Dropped: stream the champion page's builds, matchups and patch list. At most about 110 ms on a champion's first view per rebuild, at the cost of "Loading…" cards without JavaScript; warming those calls is riot-proxy's (ADR-039)
+- [ ] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise; a timeout is a 503, and optional calls degrade on their own
+- [ ] SPD-06 Check and document Cloudflare's cache of `__data.json`
+
+**Exit check:** none beyond each task's own; every task records before and after numbers from production in its PR.
+
 ## Riot policy checklist
 
 These come from Riot's [General Policies](https://developer.riotgames.com/policies/general) (last updated May 29, 2025) and the [League of Legends developer docs](https://developer.riotgames.com/docs/lol). Re-read both before the production key review.

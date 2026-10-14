@@ -176,4 +176,8 @@ describe('openBuild, roleLabel and formatSkillOrder', () => {
 	it('writes a skill order with arrows', () => {
 		expect(formatSkillOrder('QEW')).toBe('Q › E › W');
 	});
+
+	it("writes Udyr's four-skill order", () => {
+		expect(formatSkillOrder('RWEQ')).toBe('R › W › E › Q');
+	});
 });
