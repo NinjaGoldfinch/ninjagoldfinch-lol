@@ -1,7 +1,9 @@
 import type { AddressInfo } from 'node:net';
 import { isHttpError } from '@sveltejs/kit';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	PATCH_TTL_MS,
+	clearPatchVersions,
 	currentPatch,
 	ddragonVersionFor,
 	patchVersions,
@@ -51,6 +53,10 @@ describe('ddragonVersionFor', () => {
 	});
 });
 
+beforeEach(() => {
+	clearPatchVersions();
+});
+
 describe('currentPatch', () => {
 	const server = createMockProxy(loadFixtures());
 	let baseUrl = '';
@@ -82,5 +88,67 @@ describe('currentPatch', () => {
 			async () => new Response(null, { status: 502 })
 		);
 		await expect(currentPatch(failing)).rejects.toSatisfy((e) => isHttpError(e, 503));
+	});
+});
+
+describe('patchVersions held in memory', () => {
+	const VERSIONS = { current: '16.20.1', versions: ['16.20.1', '16.19.1'] };
+
+	/** A client that counts its requests; `answer` decides each response. */
+	function counting(answer: () => Response | Promise<Response>) {
+		let requests = 0;
+		const client = createProxyClient('http://proxy.test', undefined, async () => {
+			requests += 1;
+			return answer();
+		});
+		return { client, requests: () => requests };
+	}
+	const ok = () => Response.json(VERSIONS);
+
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('makes one request for two calls inside the TTL', async () => {
+		const { client, requests } = counting(ok);
+		expect(await currentPatch(client)).toBe('16.20.1');
+		vi.advanceTimersByTime(PATCH_TTL_MS - 1);
+		expect(await patchVersions(client)).toEqual(VERSIONS);
+		expect(requests()).toBe(1);
+	});
+
+	it('asks again once the TTL has passed', async () => {
+		const { client, requests } = counting(ok);
+		await currentPatch(client);
+		vi.advanceTimersByTime(PATCH_TTL_MS);
+		await currentPatch(client);
+		expect(requests()).toBe(2);
+	});
+
+	it('does not keep a failed fetch', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		let fail = true;
+		const { client, requests } = counting(() =>
+			fail ? new Response(null, { status: 502 }) : ok()
+		);
+		await expect(currentPatch(client)).rejects.toSatisfy((e) => isHttpError(e, 503));
+		fail = false;
+		expect(await currentPatch(client)).toBe('16.20.1');
+		expect(requests()).toBe(2);
+	});
+
+	it('shares one request between concurrent first calls', async () => {
+		const { client, requests } = counting(ok);
+		const answers = await Promise.all([
+			currentPatch(client),
+			patchVersions(client),
+			currentPatch(client)
+		]);
+		expect(answers[0]).toBe('16.20.1');
+		expect(requests()).toBe(1);
 	});
 });

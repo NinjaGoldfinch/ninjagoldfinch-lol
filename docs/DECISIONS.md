@@ -550,3 +550,13 @@ Date: 2026-10-15 · Task: SPD-05
 - **Optional calls survive a throw.** `optional()` in `src/lib/server/errors.ts` turns a thrown call into a 503 response for that call alone, so the existing "not ok" branch degrades it: the table's patch list; the champion page's builds, matchups and patch list; the profile's match page; and the match timeline. Essential calls (profile, match, champion table and detail, current patch) still fail the page.
 
 **Consequences.** A hung riot-proxy now costs a page at most 5 s (champions) or 30 s (profiles and matches) before the error page. With riot-proxy unreachable, the optional parts show their usual "unavailable" states instead of the page failing, as long as the essential call answered. No setting; the budgets are constants.
+
+## ADR-041: The current patch is held for 5 minutes
+
+Date: 2026-10-15 · Task: SPD-02
+
+**Context.** Every page load asked riot-proxy for `/v1/static/versions` to learn the current patch: the profile, match, search and both champion pages. On a champion page it was the first of two steps that run before the analytics calls can start. riot-proxy answers it from its mirror in about 1 ms, and its answer changes about once a patch, every two weeks.
+
+**Decision.** `patchVersions` in `src/lib/server/patch.ts` holds its answer (the current patch and Riot's version list) for `PATCH_TTL_MS`, 5 minutes, as ADR-013 holds the Data Dragon lookups. Concurrent callers share one request, and a failed fetch is not kept, so the next page tries again. No setting. This extends ADR-013's exception to the no-cache rule: it covers data that cannot change within a patch, never Riot player data or analytics.
+
+**Consequences.** After riot-proxy's mirror moves to a new patch, pages keep the old patch's icons and names for up to 5 minutes; then `staticNames` loads the new patch's lookups once. Each page view makes one riot-proxy call fewer, about 1 ms on production, and a champion page no longer waits on that call before resolving its champion.

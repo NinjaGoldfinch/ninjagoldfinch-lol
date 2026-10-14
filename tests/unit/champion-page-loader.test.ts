@@ -4,6 +4,7 @@ import { findChampionPage, loadChampionPage, resolveChampion } from '#lib/server
 import { createProxyClient } from '#lib/server/proxy.ts';
 import type { ChampionFilter } from '#lib/domain/champion-stats.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
+import { clearPatchVersions } from '#lib/server/patch.ts';
 import { loadFixtures } from '../mock-proxy/mock.ts';
 import { recordedNames } from './fixtures.ts';
 
@@ -36,6 +37,7 @@ const ALL: ChampionFilter = { role: null, patch: 'all' };
 
 beforeEach(() => {
 	clearStaticNames();
+	clearPatchVersions();
 	vi.restoreAllMocks();
 });
 
