@@ -42,13 +42,37 @@ export function ddragonVersionFor(
 	return patch ? versions.find((v) => v === patch || v.startsWith(`${patch}.`)) : undefined;
 }
 
+type PatchVersions = { current: string; versions: string[] };
+
+/** How long the version list is held. riot-proxy's mirror moves about once a patch. */
+export const PATCH_TTL_MS = 5 * 60 * 1000;
+
+// Every page asks for the current patch, which changes about every two weeks,
+// so one answer is shared for a few minutes, as ADR-013 holds the lookups.
+let held: { at: number; versions: Promise<PatchVersions> } | undefined;
+
 /**
  * The current patch, and Riot's version list for matching older games.
- * riot-proxy answers this from its mirror, not from Riot.
+ * riot-proxy answers this from its mirror, not from Riot. Held for
+ * PATCH_TTL_MS and shared by concurrent callers; a failure is not kept.
  */
-export async function patchVersions(
-	client: ProxyClient = proxy
-): Promise<{ current: string; versions: string[] }> {
+export function patchVersions(client: ProxyClient = proxy): Promise<PatchVersions> {
+	if (held && Date.now() - held.at < PATCH_TTL_MS) return held.versions;
+
+	const versions = fetchVersions(client);
+	held = { at: Date.now(), versions };
+	versions.catch(() => {
+		if (held?.versions === versions) held = undefined;
+	});
+	return versions;
+}
+
+/** For tests: forget the held versions. */
+export function clearPatchVersions(): void {
+	held = undefined;
+}
+
+async function fetchVersions(client: ProxyClient): Promise<PatchVersions> {
 	const { data, error: apiError, response } = await client.GET('/v1/static/versions');
 	if (!response.ok) toHttpError(response, apiError);
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadChampions } from '#lib/server/champions.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
+import { clearPatchVersions } from '#lib/server/patch.ts';
 import { loadFixtures } from '../mock-proxy/mock.ts';
 
 const fixtures = loadFixtures();
@@ -29,6 +30,7 @@ function client(override: (path: string) => Response | undefined = () => undefin
 
 beforeEach(() => {
 	clearStaticNames();
+	clearPatchVersions();
 	vi.restoreAllMocks();
 });
 

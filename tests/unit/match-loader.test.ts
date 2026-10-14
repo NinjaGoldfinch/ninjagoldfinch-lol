@@ -5,6 +5,7 @@ import { findRegion, type Region } from '#lib/domain/regions.ts';
 import { loadMatch } from '#lib/server/match.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
+import { clearPatchVersions } from '#lib/server/patch.ts';
 import { loadFixtures } from '../mock-proxy/mock.ts';
 import { MATCH_PATH, TIMELINE_PATH, fixtureBody } from './fixtures.ts';
 
@@ -37,6 +38,7 @@ function client(override: (path: string) => Response | undefined = () => undefin
 
 beforeEach(() => {
 	clearStaticNames();
+	clearPatchVersions();
 });
 
 describe('loadMatch', () => {

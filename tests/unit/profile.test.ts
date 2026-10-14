@@ -4,11 +4,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { loadProfile } from '#lib/server/profile.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
+import { clearPatchVersions } from '#lib/server/patch.ts';
 import { createMockProxy, loadFixtures, type Fixture } from '../mock-proxy/mock.ts';
 import { MATCHES_PATH, PROFILE_PATH, fixtureBody } from './fixtures.ts';
 
 beforeEach(() => {
 	clearStaticNames();
+	clearPatchVersions();
 });
 const me = { gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' };
 

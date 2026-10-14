@@ -48,7 +48,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 ## SPD — speed
 
 - [x] SPD-01 riot-proxy spec v2.6.0 from the release binary, byte-identical to production's `/openapi.json`; slow analytics calls logged with `X-Cache`; LAN dev instance removed from the docs — #62 (ADR-039)
-- [ ] SPD-02 `patchVersions` held in memory for 5 minutes
+- [x] SPD-02 `patchVersions` held in memory for 5 minutes, shared by concurrent callers, a failure not kept — #64 (ADR-041)
 - [~] SPD-03 Dropped on measurement (ADR-039)
 - [~] SPD-04 Dropped on measurement (ADR-039)
 - [x] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise, a 503 when spent; optional calls degrade on a throw as on an error response — #63 (ADR-040)
