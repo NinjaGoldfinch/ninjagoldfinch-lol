@@ -1,7 +1,8 @@
 import type { components } from '#lib/api/schema.d.ts';
 import type { Named, Rune, StaticNames } from '#lib/api/ddragon.ts';
 import { stackItems, type StackedItem } from './builds.ts';
-import { ROLES } from './champion-stats.ts';
+import { championSlug } from './champion-search.ts';
+import { ROLES, type RoleSlug } from './champion-stats.ts';
 
 type Schemas = components['schemas'];
 type StatEntry = Schemas['ChampionStatEntry'];
@@ -111,8 +112,13 @@ export interface SetBuild extends Rated {
 }
 
 export interface SetBuilds {
-	/** riot-proxy's role for the builds: the one asked for, else the most played. */
+	/**
+	 * riot-proxy's role for the builds: the one asked for, else the most
+	 * played, or against an opponent the lane they met in most.
+	 */
 	role: string | null;
+	/** The lane opponent the builds are against; null for every game. */
+	opponentId: number | null;
 	/** Games in that role that had a build. */
 	totalGames: number;
 	builds: SetBuild[];
@@ -123,8 +129,12 @@ export function toSetBuilds(
 	names: StaticNames
 ): SetBuilds {
 	const item = (id: number): NamedItem => ({ id, name: names.items[id] ?? `Item ${id}` });
+	// Against an opponent riot-proxy keeps only the 3rd item of the path, so
+	// the 4th and 5th come back empty and are left out (riot-proxy ADR-171).
+	const against = body.opponentId !== null;
 	return {
 		role: body.role,
+		opponentId: body.opponentId,
 		totalGames: body.totalGames,
 		builds: body.builds.map((b) => {
 			const rune = b.runes[0];
@@ -134,9 +144,11 @@ export function toSetBuilds(
 				games: b.games,
 				winRate: b.winRate,
 				pickRate: b.pickRate,
-				next: b.next.map((options) =>
-					options.map((o) => ({ ...item(o.itemId), games: o.games, winRate: o.winRate }))
-				),
+				next: b.next
+					.map((options) =>
+						options.map((o) => ({ ...item(o.itemId), games: o.games, winRate: o.winRate }))
+					)
+					.filter((options) => !against || options.length > 0),
 				starter: b.starter[0] ? stackItems(b.starter[0].items, names.items) : null,
 				boots: b.boots[0] ? item(b.boots[0].itemId) : null,
 				skillOrder: b.skillOrder[0]?.order ?? null,
@@ -204,6 +216,91 @@ export function toMatchups(
 			winRate: m.winRate
 		}))
 		.sort((a, b) => b.games - a.games || b.winRate - a.winRate);
+}
+
+/**
+ * The lane opponent a champion page's builds are against: `?vs=syndra`, a
+ * champion page's own URL segment, and optionally `&lane=mid`. The lane is
+ * dropped when a role is picked, since the role is the lane. An unknown
+ * champion drops the pick, an unknown lane only the lane. ADR-043.
+ */
+export interface VsPick {
+	opponentId: number;
+	/** The URL value, `syndra`. */
+	slug: string;
+	name: string;
+	lane: RoleSlug | null;
+}
+
+export function parseVsPick(
+	params: URLSearchParams,
+	champions: Record<number, Named>,
+	role: RoleSlug | null
+): VsPick | null {
+	const vs = params.get('vs');
+	if (!vs) return null;
+	const found = Object.entries(champions).find(([, c]) => championSlug(c) === vs);
+	if (!found) return null;
+	const lane =
+		role === null ? (ROLES.find((r) => r.slug === params.get('lane'))?.slug ?? null) : null;
+	return { opponentId: Number(found[0]), slug: vs, name: found[1].name, lane };
+}
+
+/** A champion page's query with a pick added: `?rank=gold+&vs=syndra&lane=mid`. */
+export function withPick(query: string, pick: Pick<VsPick, 'slug' | 'lane'> | null): string {
+	if (!pick) return query;
+	const lane = pick.lane ? `&lane=${pick.lane}` : '';
+	return `${query}${query ? '&' : '?'}vs=${encodeURIComponent(pick.slug)}${lane}`;
+}
+
+/** One opponent the *vs* picker offers. */
+export interface VsChoice {
+	opponentId: number;
+	slug: string;
+	name: string;
+	/** Games summed over every lane; null for a pick the matchups lack. */
+	games: number | null;
+}
+
+/**
+ * The *vs* picker's opponents, from the matchups the page already loaded:
+ * each opponent once, its games summed over lanes, most first, ties by name.
+ * A picked opponent the list lacks (another slice, an old link) goes last
+ * without a count. Names are Data Dragon's: an opponent it doesn't know has
+ * no URL value, so it isn't offered.
+ * riot-proxy's showcase does the same (`vsChoices`, its ADR-172).
+ */
+export function vsChoices(
+	entries: Schemas['ChampionMatchupEntry'][],
+	picked: VsPick | null,
+	names: StaticNames
+): VsChoice[] {
+	const byId = new Map<number, VsChoice>();
+	for (const m of entries) {
+		const champion = names.champions[m.opponentId];
+		if (!champion) continue;
+		const seen = byId.get(m.opponentId);
+		if (seen) seen.games = (seen.games ?? 0) + m.games;
+		else
+			byId.set(m.opponentId, {
+				opponentId: m.opponentId,
+				slug: championSlug(champion),
+				name: champion.name,
+				games: m.games
+			});
+	}
+	const choices = [...byId.values()].sort(
+		(a, b) => (b.games ?? 0) - (a.games ?? 0) || a.name.localeCompare(b.name)
+	);
+	if (picked && !byId.has(picked.opponentId)) {
+		choices.push({
+			opponentId: picked.opponentId,
+			slug: picked.slug,
+			name: picked.name,
+			games: null
+		});
+	}
+	return choices;
 }
 
 /** `MIDDLE` → `Mid`, as the role tabs name it. */

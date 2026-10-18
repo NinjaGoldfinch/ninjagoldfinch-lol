@@ -1,0 +1,21 @@
+{
+	"_note": "Synthetic: a failed builds call against an opponent (Mel, 800), in riot-proxy's VALIDATION envelope, so the card shows the error without the detail's lists. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&opponentId=800&minGames=0"
+	},
+	"response": {
+		"status": 400,
+		"headers": {
+			"content-type": "application/json",
+			"x-request-id": "SYNTHETIC"
+		},
+		"body": {
+			"error": {
+				"code": "VALIDATION",
+				"message": "synthetic failure: any error from the builds route",
+				"requestId": "SYNTHETIC"
+			}
+		}
+	}
+}

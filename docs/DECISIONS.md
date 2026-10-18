@@ -577,3 +577,21 @@ Date: 2026-10-19 · Task: VS-02
 - **Default.** All tiers, as before, so riot-proxy's warm list needs no change. Each rank is its own riot-proxy cache entry and its own page at the edge: Cloudflare's cache key includes the query string, checked from outside on 2026-10-19 (each `?patch=` and `?role=` view MISS, then HIT with its own content).
 
 **Consequences.** The first view of each rank after a rebuild is a riot-proxy MISS: about 121 ms for the table at `minTier=EMERALD` and 34 ms at `tier=EMERALD`, 2–3 ms for one champion (riot-proxy ADR-170). Low ranges such as Iron+ sum nearly every tier and are unmeasured; if one is slow in production, that goes to riot-proxy. Tests use synthetic range and tier bodies until real ones are recorded.
+
+## ADR-043: Builds against a lane opponent: the pick in the query, no fallback
+
+Date: 2026-10-19 · Task: VS-03
+
+**Context.** riot-proxy v2.7.0 answers a champion's set builds in the games where it held a lane alone against one opponent (`opponentId`, riot-proxy ADR-171). Each build then has its 3rd item, boots, runes and spells; the 4th and 5th items, starter and skill order come back empty. An opponent never met is a 200 with no builds. riot-proxy's showcase added a _vs_ picker and links from its matchups (its ADR-172), keeping the pick in the URL's hash.
+
+**Decision.**
+
+- **The pick is in the query:** `?vs=syndra`, the opponent's champion page name, and optionally `&lane=mid`, a role tab's value. The server renders it, so it works without JavaScript and each pick is its own page at the edge. An unknown champion drops the pick and an unknown lane only the lane, with a redirect to the clean URL. With a role picked, the lane is dropped: the role is the lane.
+- **Only the set builds are against the opponent.** `opponentId`, and the lane or the role as riot-proxy's `role`, go on the builds call; the detail, matchups and patch list are unchanged. Without a lane, riot-proxy picks the lane the two met in most and names it; the card's header says it, and the Matchups card follows that lane, as it follows the builds' role without an opponent.
+- **The picker** leads the build tabs: a GET form (submitted on change, with an Apply button without JavaScript) that keeps the role, tier and patch, and goes to `#builds`. Its options come from the matchups the page already loaded (`vsChoices`): each opponent once, its games summed over lanes, most first, ties by name. A picked opponent the list lacks goes last without a count. Names are Data Dragon's; an opponent it doesn't know has no URL value, so it isn't offered.
+- **Matchup links.** Each row's Lane cell links to the builds against that opponent in that lane. When a role or the builds' lane hides the Lane column, the win rate carries the link. The opponent's name still links to its own champion page. Role tabs, the patch and tier form, and the build tabs keep the pick.
+- **Against an opponent, nothing empty is drawn.** The 4th and 5th item steps are dropped in `toSetBuilds`, and the card leaves out Skills and Starter. Without an opponent an empty part still shows `–`, where it means nobody chose one.
+- **No fallback.** The detail's item, rune and spell lists aren't against anyone, so against an opponent an empty list says "No builds against Syndra in this slice yet." and a failed call "Builds against Syndra are unavailable right now.". The picker stays in both, so the visitor can step back.
+- **Marking.** Builds against an opponent are marked "Low sample" under 100 games, as every rate is (ADR-035). `winRateLow` is not used (VS-04 dropped).
+
+**Consequences.** Against an opponent most builds are marked, which is the honest reading of 10 to 50 games. Each pick is a riot-proxy MISS on its first view after a rebuild (2–3 ms per champion read). Opponent builds are empty in production until a builds rebuild has run since 2.7.0 started; until then the card says there are none. Tests use synthetic opponent bodies until real ones are recorded.

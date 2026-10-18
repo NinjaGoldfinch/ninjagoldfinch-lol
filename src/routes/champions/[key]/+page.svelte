@@ -4,12 +4,13 @@
 	import ChampionIcon from '#lib/components/ChampionIcon.svelte';
 	import LowSample from '#lib/components/LowSample.svelte';
 	import SetBuilds from '#lib/components/SetBuilds.svelte';
-	import { openBuild, roleLabel } from '#lib/domain/champion-page.ts';
+	import { openBuild, roleLabel, withPick } from '#lib/domain/champion-page.ts';
 	import { championPath } from '#lib/domain/champion-search.ts';
 	import {
 		LOW_SAMPLE_GAMES,
 		ROLES,
 		championQuery,
+		filterFields,
 		formatRate,
 		isLowSample,
 		patchLabel,
@@ -22,6 +23,14 @@
 
 	const path = $derived(championPath(data.champion));
 	const query = $derived(championQuery(data.filter));
+	// This view's own query: the filter and the lane opponent picked.
+	const viewQuery = $derived(withPick(query, data.vs));
+	/** A matchup's link: the builds against that opponent in that lane, the role kept. */
+	const vsHref = (slug: string, proxyRole: string) =>
+		`${path}${withPick(query, {
+			slug,
+			lane: data.filter.role ? null : (ROLES.find((r) => r.proxy === proxyRole)?.slug ?? null)
+		})}#builds`;
 	const shownPatch = $derived(data.filter.patch ?? data.patch);
 	const role = $derived(ROLES.find((r) => r.slug === data.filter.role)?.label ?? null);
 	const scope = $derived(
@@ -34,7 +43,7 @@
 		openBuild(page.url.searchParams.get('build'), data.setBuilds?.builds.length ?? 0)
 	);
 	const tabHref = (i: number) =>
-		`${path}${query}${i === 0 ? '' : `${query ? '&' : '?'}build=${i + 1}`}#builds`;
+		`${path}${viewQuery}${i === 0 ? '' : `${viewQuery ? '&' : '?'}build=${i + 1}`}#builds`;
 
 	const stats = $derived(
 		data.stats
@@ -81,7 +90,7 @@
 {/if}
 
 <div class="mt-6">
-	<AnalyticsFilters {path} filter={data.filter} {shownPatch} patches={data.patches} />
+	<AnalyticsFilters {path} filter={data.filter} {shownPatch} patches={data.patches} vs={data.vs} />
 </div>
 
 <div class="mt-6 flex flex-col gap-6">
@@ -91,6 +100,10 @@
 		version={data.ddragonVersion}
 		{open}
 		{tabHref}
+		vs={data.vs}
+		choices={data.vsChoices}
+		pickerAction="{path}#builds"
+		fields={filterFields(data.filter)}
 	/>
 
 	<div class="grid gap-6 lg:grid-cols-2">
@@ -139,12 +152,28 @@
 											{/if}
 										</span>
 									</th>
-									{#if !data.matchupRole}<td class="px-2 py-1.5">{roleLabel(m.role)}</td>{/if}
+									{#if !data.matchupRole}
+										<td class="px-2 py-1.5">
+											{#if m.key}<a
+													href={vsHref(m.key.toLowerCase(), m.role)}
+													title="Builds against {m.name} in this lane"
+													class="underline decoration-border underline-offset-2 hover:text-accent"
+													>{roleLabel(m.role)}</a
+												>{:else}{roleLabel(m.role)}{/if}
+										</td>
+									{/if}
 									<td
 										class="px-2 py-1.5 text-right tabular-nums {isLowSample(m.games)
 											? 'text-muted'
-											: ''}">{formatRate(m.winRate)}</td
+											: ''}"
 									>
+										{#if m.key && data.matchupRole}<a
+												href={vsHref(m.key.toLowerCase(), m.role)}
+												title="Builds against {m.name}"
+												class="underline decoration-border underline-offset-2 hover:text-accent"
+												>{formatRate(m.winRate)}</a
+											>{:else}{formatRate(m.winRate)}{/if}
+									</td>
 									<td class="px-4 py-1.5 text-right whitespace-nowrap text-muted tabular-nums"
 										>{m.games.toLocaleString('en')}{#if isLowSample(m.games)}<LowSample />{/if}</td
 									>

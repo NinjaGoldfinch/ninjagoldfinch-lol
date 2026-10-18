@@ -6,11 +6,14 @@ import {
 	toPopularChoices,
 	toSetBuilds,
 	toTierRows,
+	vsChoices,
 	type ChampionStats,
 	type Matchup,
 	type PopularChoices,
 	type SetBuilds,
-	type TierRow
+	type TierRow,
+	type VsChoice,
+	type VsPick
 } from '#lib/domain/champion-page.ts';
 import { champKey, championNames } from '#lib/domain/champion-search.ts';
 import {
@@ -36,6 +39,10 @@ export interface ChampionPage {
 	tiers: TierRow[];
 	/** null when riot-proxy's builds failed. */
 	setBuilds: SetBuilds | null;
+	/** The lane opponent the builds are against; null for every game. */
+	vs: VsPick | null;
+	/** The opponents the *vs* picker offers; empty when the matchups failed. */
+	vsChoices: VsChoice[];
 	/** The detail's lists, shown when there are no set builds. */
 	popular: PopularChoices;
 	/** null when riot-proxy's matchups failed. */
@@ -75,7 +82,12 @@ export function resolveChampion(
 export async function findChampionPage(
 	segment: string,
 	{ client = proxy }: { client?: ProxyClient } = {}
-): Promise<{ championId: number; champion: Named; ddragonVersion: string }> {
+): Promise<{
+	championId: number;
+	champion: Named;
+	ddragonVersion: string;
+	champions: Record<number, Named>;
+}> {
 	const ddragonVersion = await currentPatch(client);
 	const names = await staticNames(ddragonVersion, client).catch((e: unknown) => {
 		console.error('Data Dragon lookups unavailable:', e);
@@ -83,7 +95,7 @@ export async function findChampionPage(
 	});
 	const found = resolveChampion(names.champions, segment);
 	if (!found) error(404, 'Not found');
-	return { ...found, ddragonVersion };
+	return { ...found, ddragonVersion, champions: names.champions };
 }
 
 /**
@@ -91,11 +103,13 @@ export async function findChampionPage(
  * champion's patch list, fetched in parallel. The detail is essential; the set
  * builds, matchups and patch list each fail on their own. Without a role, the
  * set builds name the champion's most-played one, and the matchups follow it.
+ * With a lane opponent picked, only the set builds are against it: they take
+ * its lane, or the role, and riot-proxy names the lane it chose.
  */
 export async function loadChampionPage(
 	found: { championId: number; champion: Named; ddragonVersion: string },
 	filter: ChampionFilter,
-	{ client = proxy }: { client?: ProxyClient } = {}
+	{ client = proxy, vs = null }: { client?: ProxyClient; vs?: VsPick | null } = {}
 ): Promise<ChampionPage> {
 	const { ddragonVersion } = found;
 	// Held in memory for the current patch (ADR-013), so this costs nothing more.
@@ -108,7 +122,7 @@ export async function loadChampionPage(
 		}),
 		optional(
 			client.GET('/v1/lol/analytics/champions/{championId}/builds', {
-				params: { path, query: analyticsQuery(filter) }
+				params: { path, query: buildsQuery(filter, vs) }
 			})
 		),
 		optional(
@@ -142,6 +156,9 @@ export async function loadChampionPage(
 		stats: toChampionStats(detail.data.stats, detail.data.tier),
 		tiers: toTierRows(detail.data.byTier),
 		setBuilds,
+		vs,
+		vsChoices:
+			matchups.response.ok && matchups.data ? vsChoices(matchups.data.matchups, vs, names) : [],
 		popular: toPopularChoices(detail.data, names),
 		matchups:
 			matchups.response.ok && matchups.data
@@ -152,4 +169,15 @@ export async function loadChampionPage(
 		ddragonVersion,
 		championNames: championNames(names.champions)
 	};
+}
+
+/**
+ * The set builds' query: the filter's, and against a lane opponent its id,
+ * with the picked lane as the role when no role is. Keys in the order the
+ * mock proxy's recorded paths use.
+ */
+export function buildsQuery(filter: ChampionFilter, vs: VsPick | null) {
+	if (!vs) return analyticsQuery(filter);
+	const { minGames, ...slice } = analyticsQuery({ ...filter, role: filter.role ?? vs.lane });
+	return { ...slice, opponentId: vs.opponentId, minGames };
 }

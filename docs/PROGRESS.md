@@ -58,7 +58,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 - [x] VS-01 riot-proxy spec v2.7.0 from the release binary; fixtures carry every field the spec requires, checked by a test — #66
 - [x] VS-02 Tier filter: `?rank=diamond` one tier, `?rank=diamond+` it and above, Iron to Challenger; all tiers by default — #67 (ADR-042)
-- [ ] VS-03 Builds against a lane opponent
+- [x] VS-03 Builds against a lane opponent: `?vs=syndra&lane=mid`, a picker from the matchups, matchup rows linking to it, no fallback — #68 (ADR-043)
 - [~] VS-04 Dropped: `winRateLow` not used for now (owner, 2026-10-19)
 
 ## FIX — fixes

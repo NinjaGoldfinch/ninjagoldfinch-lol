@@ -1,7 +1,13 @@
 import { isHttpError, isRedirect } from '@sveltejs/kit';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { findChampionPage, loadChampionPage, resolveChampion } from '#lib/server/champion-page.ts';
+import {
+	buildsQuery,
+	findChampionPage,
+	loadChampionPage,
+	resolveChampion
+} from '#lib/server/champion-page.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
+import type { VsPick } from '#lib/domain/champion-page.ts';
 import type { ChampionFilter } from '#lib/domain/champion-stats.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
 import { clearPatchVersions } from '#lib/server/patch.ts';
@@ -34,6 +40,7 @@ const failing = (prefix: string) => (path: string) =>
 	path.startsWith(prefix) ? json(503, {}) : undefined;
 const BASE = '/v1/lol/analytics/champions/103';
 const ALL: ChampionFilter = { role: null, patch: 'all', rank: null };
+const SYNDRA: VsPick = { opponentId: 134, slug: 'syndra', name: 'Syndra', lane: null };
 
 beforeEach(() => {
 	clearStaticNames();
@@ -73,10 +80,14 @@ describe('findChampionPage', () => {
 });
 
 describe('loadChampionPage', () => {
-	async function load(override?: (path: string) => Response | undefined, filter = ALL) {
+	async function load(
+		override?: (path: string) => Response | undefined,
+		filter = ALL,
+		vs: VsPick | null = null
+	) {
 		const { proxy, asked } = client(override);
 		const found = await findChampionPage('ahri', { client: proxy });
-		return { page: await loadChampionPage(found, filter, { client: proxy }), asked };
+		return { page: await loadChampionPage(found, filter, { client: proxy, vs }), asked };
 	}
 
 	it("asks for the detail, set builds, matchups and the champion's patches", async () => {
@@ -132,6 +143,67 @@ describe('loadChampionPage', () => {
 		expect(asked.some((path) => path.includes('minTier='))).toBe(false);
 		expect(page.stats).toMatchObject({ games: 722, winRate: 0.5277 });
 		expect(page.tiers.map((t) => t.tier)).toEqual(['MASTER']);
+	});
+
+	it('asks for builds against a lane opponent on the builds call only', async () => {
+		const { page, asked } = await load(undefined, ALL, SYNDRA);
+		expect(asked).toEqual(
+			expect.arrayContaining([
+				`${BASE}?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=10`,
+				`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&opponentId=134&minGames=0`,
+				`${BASE}/matchups?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=200`
+			])
+		);
+		expect(asked.filter((path) => path.includes('opponentId='))).toHaveLength(1);
+		expect(page.vs).toEqual(SYNDRA);
+		expect(page.setBuilds).toMatchObject({ role: 'MIDDLE', opponentId: 134 });
+		// The matchups follow the lane riot-proxy chose against the opponent.
+		expect(page.matchupRole).toBe('MIDDLE');
+		expect(page.vsChoices[0]).toMatchObject({ name: 'Sylas', games: 129 });
+	});
+
+	it('sends the picked lane, or the role, as the builds role', async () => {
+		const { asked } = await load(undefined, ALL, { ...SYNDRA, lane: 'mid' });
+		expect(asked).toContain(
+			`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&opponentId=134&minGames=0`
+		);
+		expect(buildsQuery({ ...ALL, role: 'mid' }, SYNDRA)).toEqual(
+			buildsQuery(ALL, { ...SYNDRA, lane: 'mid' })
+		);
+		expect(
+			Object.keys(
+				buildsQuery({ ...ALL, rank: { tier: 'gold', andAbove: true } }, { ...SYNDRA, lane: 'top' })
+			)
+		).toEqual(['queue', 'patch', 'role', 'minTier', 'opponentId', 'minGames']);
+	});
+
+	it('an opponent never met is an empty list, not an error', async () => {
+		const { page } = await load(undefined, ALL, {
+			opponentId: 350,
+			slug: 'yuumi',
+			name: 'Yuumi',
+			lane: null
+		});
+		expect(page.setBuilds).toEqual({ role: null, opponentId: 350, totalGames: 0, builds: [] });
+		expect(page.vsChoices.at(-1)).toEqual({
+			opponentId: 350,
+			slug: 'yuumi',
+			name: 'Yuumi',
+			games: null
+		});
+	});
+
+	it('a failed call against an opponent leaves the builds null, the page loaded', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { page } = await load(undefined, ALL, {
+			opponentId: 800,
+			slug: 'mel',
+			name: 'Mel',
+			lane: null
+		});
+		expect(page.setBuilds).toBeNull();
+		expect(page.stats?.games).toBe(2407);
+		expect(page.vs?.name).toBe('Mel');
 	});
 
 	it("follows the set builds' role for the matchups when none is asked for", async () => {

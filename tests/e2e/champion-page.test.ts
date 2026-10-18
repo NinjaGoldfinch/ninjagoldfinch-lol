@@ -137,7 +137,10 @@ test.describe('without JavaScript', () => {
 	test("one tier: that tier's rates and its row", async ({ page }) => {
 		await page.goto(AHRI);
 		await page.getByRole('combobox', { name: 'Tier' }).selectOption({ label: 'Master' });
-		await page.getByRole('button', { name: 'Apply' }).click();
+		await page
+			.getByRole('form', { name: 'Patch and tier' })
+			.getByRole('button', { name: 'Apply' })
+			.click();
 		await expect(page).toHaveURL(`${AHRI}?rank=master`);
 		await expect(page.getByRole('main')).toContainText('every region · Master · All patches');
 		// riot-proxy labels the summed row MASTER under tier=MASTER; it is still the header's.
@@ -146,6 +149,97 @@ test.describe('without JavaScript', () => {
 		await expect(rates).toContainText('Win rate 52.8%');
 		const tiers = page.getByRole('region', { name: 'By tier · Master' }).locator('tbody tr');
 		await expect(tiers.getByRole('rowheader')).toHaveText(['Master']);
+	});
+
+	test('a matchup links to the builds against that opponent in that lane', async ({ page }) => {
+		await page.goto(AHRI);
+		const syndra = page
+			.getByRole('region', { name: /^Matchups/ })
+			.locator('tbody tr')
+			.filter({ hasText: 'Syndra' });
+		await syndra.getByRole('link', { name: /%$/ }).click();
+		await expect(page).toHaveURL(`${AHRI}?vs=syndra&lane=mid#builds`);
+
+		const builds = page.getByRole('region', { name: 'Builds' });
+		await expect(builds).toContainText('Mid · 71 games with a build against Syndra');
+		await expect(builds.getByRole('combobox', { name: 'Against' })).toHaveValue('syndra');
+		const tabs = builds.getByRole('navigation', { name: 'Builds' }).getByRole('link');
+		await expect(tabs).toHaveCount(3);
+		await expect(tabs.nth(1)).toHaveAttribute('href', `${AHRI}?vs=syndra&lane=mid&build=2#builds`);
+		// riot-proxy sends no skill order, starter, 4th or 5th item against an opponent.
+		const summary = builds.getByRole('group', { name: 'Build summary' });
+		await expect(summary).not.toContainText('Skills');
+		await expect(summary).not.toContainText('Starter');
+		await expect(summary).toContainText('Boots');
+		const path = builds.getByRole('list', { name: 'Item path' });
+		await expect(path.getByRole('list', { name: 'Item 3 options' })).toBeVisible();
+		await expect(path.getByRole('list', { name: 'Item 4 options' })).toHaveCount(0);
+		await expect(path).not.toContainText('–');
+		// The rest of the page is not against anyone.
+		await expect(page.locator('dl[aria-label="Rates"]')).toContainText('Games 2,407');
+		// A role tab keeps the opponent; the role is now the lane.
+		await expect(
+			page.getByRole('navigation', { name: 'Role' }).getByRole('link', { name: 'Mid' })
+		).toHaveAttribute('href', `${AHRI}?role=mid&vs=syndra`);
+	});
+
+	test('the vs picker asks for the builds against one opponent, and back', async ({ page }) => {
+		await page.goto(AHRI);
+		const picker = page.getByRole('form', { name: 'Builds against an opponent' });
+		const against = picker.getByRole('combobox', { name: 'Against' });
+		await expect(against).toHaveValue('');
+		// Each opponent once, games summed over lanes: Sylas 126 + 2 + 1.
+		await expect(against.locator('option').nth(1)).toHaveText('vs Sylas · 129');
+		await against.selectOption({ label: 'vs Syndra · 94' });
+		await picker.getByRole('button', { name: 'Apply' }).click();
+		await expect(page).toHaveURL(`${AHRI}?vs=syndra#builds`);
+		await expect(page.getByRole('region', { name: 'Builds' })).toContainText('against Syndra');
+
+		await page
+			.getByRole('form', { name: 'Builds against an opponent' })
+			.getByRole('combobox', { name: 'Against' })
+			.selectOption({ label: 'vs any opponent' });
+		await page
+			.getByRole('form', { name: 'Builds against an opponent' })
+			.getByRole('button', { name: 'Apply' })
+			.click();
+		await expect(page).toHaveURL(new RegExp(`${AHRI}(#builds)?$`));
+		await expect(page.getByRole('region', { name: 'Builds' })).toContainText(
+			'Mid · 1,994 games with a build'
+		);
+	});
+
+	test('an opponent never met: no builds, no fallback, the picker kept', async ({ page }) => {
+		await page.goto(`${AHRI}?vs=yuumi`);
+		const builds = page.getByRole('region', { name: 'Builds' });
+		await expect(builds).toContainText('No builds against Yuumi in this slice yet.');
+		await expect(builds.getByRole('list', { name: 'Most played items' })).toHaveCount(0);
+		const against = builds.getByRole('combobox', { name: 'Against' });
+		await expect(against).toHaveValue('yuumi');
+		// Not in the matchups: last, without a count.
+		await expect(against.locator('option').last()).toHaveText('vs Yuumi');
+	});
+
+	test("a failed call against an opponent says so, without the detail's lists", async ({
+		page
+	}) => {
+		await page.goto(`${AHRI}?vs=mel`);
+		const builds = page.getByRole('region', { name: 'Builds' });
+		await expect(builds).toContainText('Builds against Mel are unavailable right now.');
+		await expect(builds.getByRole('list', { name: 'Most played items' })).toHaveCount(0);
+		await expect(builds.getByRole('combobox', { name: 'Against' })).toHaveValue('mel');
+	});
+
+	test('an unknown opponent or lane is dropped; a role drops the lane', async ({ page }) => {
+		await page.goto(`${AHRI}?vs=nobody`);
+		await expect(page).toHaveURL(AHRI);
+		await page.goto(`${AHRI}?vs=syndra&lane=middle`);
+		await expect(page).toHaveURL(`${AHRI}?vs=syndra`);
+		await page.goto(`${AHRI}?lane=mid&vs=syndra&role=mid`);
+		await expect(page).toHaveURL(`${AHRI}?role=mid&vs=syndra`);
+		await expect(page.getByRole('region', { name: 'Builds' })).toContainText(
+			'Mid · 71 games with a build against Syndra'
+		);
 	});
 
 	test('a champion is found by name or id in any case, at one URL', async ({ page }) => {

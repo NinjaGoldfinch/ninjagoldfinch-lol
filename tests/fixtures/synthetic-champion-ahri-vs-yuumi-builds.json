@@ -1,0 +1,30 @@
+{
+	"_note": "Synthetic: riot-proxy's documented answer for an opponent never met in a lane (Yuumi, 350): 200, role null, totalGames 0, no builds. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&opponentId=350&minGames=0"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HQ030P2YHYTZTQQPRRR2E7"
+		},
+		"body": {
+			"championId": 103,
+			"championName": "Ahri",
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"tier": null,
+			"minTier": null,
+			"side": null,
+			"patch": "all",
+			"role": null,
+			"opponentId": 350,
+			"opponentName": "Yuumi",
+			"computedAt": "2026-10-10T00:10:23.886Z",
+			"totalGames": 0,
+			"builds": []
+		}
+	}
+}

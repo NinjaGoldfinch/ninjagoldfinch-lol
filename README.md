@@ -63,7 +63,7 @@ sha256sum --ignore-missing -c sha256sums && chmod +x riot-proxy-linux-amd64
 cd "$repo" && just gen
 ```
 
-The committed copy is riot-proxy `2.7.0` from the release binary, sha256 `aafca901…088b8`. Production runs 2.7.0, so its `/openapi.json` should have the same sha256. It is excluded from Prettier so it stays that way. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
+The committed copy is riot-proxy `2.7.0` from the release binary, sha256 `aafca901…088b8`. Production's `/openapi.json` has the same sha256 (checked on 2026-10-19). It is excluded from Prettier so it stays that way. `just check` fails if `src/lib/api/schema.d.ts` no longer matches it.
 
 ## Tests and fixtures
 
