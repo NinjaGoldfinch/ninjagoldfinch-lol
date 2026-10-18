@@ -54,6 +54,10 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise, a 503 when spent; optional calls degrade on a throw as on an error response — #63 (ADR-040)
 - [ ] SPD-06 Cloudflare's cache of `__data.json`
 
+## FIX — fixes
+
+- [x] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items — #65
+
 ## Brought forward
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Remaining for P5-01: `cloudflared`, no published port, and the 200 MB image check.

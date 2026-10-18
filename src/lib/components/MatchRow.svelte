@@ -59,7 +59,7 @@
 </script>
 
 <article
-	class="flex flex-wrap items-center gap-x-5 gap-y-3 rounded border border-l-4 border-border bg-surface px-4 py-3 {result.border}"
+	class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded border border-l-4 border-border bg-surface px-4 py-3 {result.border}"
 	aria-label="{result.label} as {match.champion.name}"
 >
 	<div class="w-28 text-sm">
@@ -116,39 +116,44 @@
 		</p>
 	</div>
 
-	<ItemList items={match.items} roleBoundItem={match.roleBoundItem} {version} />
+	<!-- The items and the links wrap as one, so the links never sit alone on a
+	     line of their own. A bot laner's eighth slot, the role quest item, is
+	     the widest a build gets. -->
+	<div class="flex flex-auto items-center gap-x-3">
+		<ItemList items={match.items} roleBoundItem={match.roleBoundItem} {version} />
 
-	<!-- Stacked, so the button doesn't push the row onto another line. -->
-	<div class="ml-auto flex flex-col items-end gap-1">
-		<a {href} class="text-sm text-muted underline-offset-4 hover:text-text hover:underline"
-			>Details<span class="sr-only"> of this match</span></a
-		>
-		{#if enhanced}
-			<button
-				type="button"
-				onclick={toggle}
-				aria-expanded={open}
-				aria-controls={open ? panelId : undefined}
-				aria-label={open ? 'Hide the teams' : 'Show the teams'}
-				title={open ? 'Hide the teams' : 'Show the teams'}
-				class="rounded p-1 text-muted hover:bg-bg hover:text-text"
-				><svg
-					viewBox="0 0 16 16"
-					width="16"
-					height="16"
-					aria-hidden="true"
-					class="block {open ? 'rotate-180' : ''}"
-					><path
-						d="M4 6l4 4 4-4"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/></svg
-				></button
+		<!-- Stacked, so the button doesn't push the row onto another line. -->
+		<div class="ml-auto flex flex-col items-end gap-1">
+			<a {href} class="text-sm text-muted underline-offset-4 hover:text-text hover:underline"
+				>Details<span class="sr-only"> of this match</span></a
 			>
-		{/if}
+			{#if enhanced}
+				<button
+					type="button"
+					onclick={toggle}
+					aria-expanded={open}
+					aria-controls={open ? panelId : undefined}
+					aria-label={open ? 'Hide the teams' : 'Show the teams'}
+					title={open ? 'Hide the teams' : 'Show the teams'}
+					class="rounded p-1 text-muted hover:bg-bg hover:text-text"
+					><svg
+						viewBox="0 0 16 16"
+						width="16"
+						height="16"
+						aria-hidden="true"
+						class="block {open ? 'rotate-180' : ''}"
+						><path
+							d="M4 6l4 4 4-4"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/></svg
+					></button
+				>
+			{/if}
+		</div>
 	</div>
 
 	{#if open}
