@@ -27,9 +27,15 @@ export interface ChampionStats extends Rated {
 	banRate: number | null;
 }
 
-/** riot-proxy's summed row (`stats`): one row, no tier. */
-export function toChampionStats(stats: StatEntry[]): ChampionStats | null {
-	const row = stats.find((s) => s.tier === null);
+/**
+ * riot-proxy's summed row (`stats`). It carries the body's own `tier`: null
+ * over every tier or a range, the tier when one was asked for.
+ */
+export function toChampionStats(
+	stats: StatEntry[],
+	tier: string | null = null
+): ChampionStats | null {
+	const row = stats.find((s) => s.tier === tier);
 	return row
 		? {
 				games: row.games,

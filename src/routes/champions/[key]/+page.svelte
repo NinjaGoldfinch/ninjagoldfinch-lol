@@ -12,7 +12,9 @@
 		championQuery,
 		formatRate,
 		isLowSample,
-		patchLabel
+		patchLabel,
+		rankLabel,
+		rankScope
 	} from '#lib/domain/champion-stats.ts';
 	import type { PageProps } from './$types';
 
@@ -23,7 +25,7 @@
 	const shownPatch = $derived(data.filter.patch ?? data.patch);
 	const role = $derived(ROLES.find((r) => r.slug === data.filter.role)?.label ?? null);
 	const scope = $derived(
-		`Ranked Solo/Duo · every region and tier · ${patchLabel(shownPatch)}${role ? ` · ${role}` : ''}`
+		`Ranked Solo/Duo · ${rankScope(data.filter.rank)} · ${patchLabel(shownPatch)}${role ? ` · ${role}` : ''}`
 	);
 
 	// The open build is in the URL but not in the load, as the table's sort is:
@@ -155,7 +157,11 @@
 		</section>
 
 		<section aria-labelledby="tiers-heading" class="rounded border border-border bg-surface">
-			<h2 id="tiers-heading" class="border-b border-border px-4 py-3 font-semibold">By tier</h2>
+			<h2 id="tiers-heading" class="border-b border-border px-4 py-3 font-semibold">
+				By tier{#if data.filter.rank}<span class="font-normal text-muted"
+						>{` · ${rankLabel(data.filter.rank)}`}</span
+					>{/if}
+			</h2>
 			{#if data.tiers.length === 0}
 				<p class="px-4 py-3 text-sm text-muted">No games recorded by tier yet.</p>
 			{:else}
@@ -206,6 +212,8 @@
 </div>
 
 <p class="mt-6 text-xs text-muted">
-	From archived ranked games. Each rate counts every tier unless its row names one. Low sample:
-	fewer than {LOW_SAMPLE_GAMES} games, so its rates can swing widely.
+	From archived ranked games. Each rate counts {data.filter.rank
+		? rankLabel(data.filter.rank)
+		: 'every tier'} unless its row names one. Low sample: fewer than {LOW_SAMPLE_GAMES} games, so its
+	rates can swing widely.
 </p>

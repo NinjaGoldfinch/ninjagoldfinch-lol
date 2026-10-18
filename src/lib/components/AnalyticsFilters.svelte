@@ -1,14 +1,20 @@
 <script lang="ts">
 	import {
 		DEFAULT_SORT,
+		RANK_OPTIONS,
 		ROLES,
 		championQuery,
 		pickerPatches,
+		rankLabel,
+		rankValue,
 		type ChampionFilter,
 		type ChampionSort
 	} from '#lib/domain/champion-stats.ts';
 
-	/** Role tabs and a patch picker for the champion pages. Both keep the other and the sort. */
+	/**
+	 * Role tabs, and a patch and tier picker, for the champion pages. Each keeps
+	 * the others and the sort.
+	 */
 	let {
 		path,
 		filter,
@@ -27,6 +33,7 @@
 
 	const roleTabs = [{ slug: null, label: 'All roles' }, ...ROLES];
 	const options = $derived(pickerPatches(shownPatch, patches));
+	const rank = $derived(filter.rank ? rankValue(filter.rank) : '');
 
 	const submit = (event: Event & { currentTarget: HTMLSelectElement }) =>
 		event.currentTarget.form?.requestSubmit();
@@ -51,7 +58,7 @@
 	</nav>
 
 	<!-- GET, so every view has its own URL; the role and sort are kept. -->
-	<form method="GET" action={path} class="flex items-center gap-2">
+	<form method="GET" action={path} class="flex flex-wrap items-center gap-2">
 		{#if filter.role}<input type="hidden" name="role" value={filter.role} />{/if}
 		{#if sort !== DEFAULT_SORT}<input type="hidden" name="sort" value={sort} />{/if}
 		<label>
@@ -64,6 +71,25 @@
 				<option value="all" selected={shownPatch === 'all'}>All patches</option>
 				{#each options as patch (patch)}
 					<option value={patch} selected={shownPatch === patch}>Patch {patch}</option>
+				{/each}
+			</select>
+		</label>
+		<label>
+			<span class="sr-only">Tier</span>
+			<select
+				name="rank"
+				onchange={submit}
+				class="h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none"
+			>
+				<option value="" selected={rank === ''}>All tiers</option>
+				{#each [{ label: 'Tier and above', ranks: RANK_OPTIONS.ranges }, { label: 'One tier', ranks: RANK_OPTIONS.tiers }] as group (group.label)}
+					<optgroup label={group.label}>
+						{#each group.ranks as option (rankValue(option))}
+							<option value={rankValue(option)} selected={rank === rankValue(option)}
+								>{rankLabel(option)}</option
+							>
+						{/each}
+					</optgroup>
 				{/each}
 			</select>
 		</label>

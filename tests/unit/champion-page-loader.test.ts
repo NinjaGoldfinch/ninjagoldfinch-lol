@@ -33,7 +33,7 @@ function client(override: (path: string) => Response | undefined = () => undefin
 const failing = (prefix: string) => (path: string) =>
 	path.startsWith(prefix) ? json(503, {}) : undefined;
 const BASE = '/v1/lol/analytics/champions/103';
-const ALL: ChampionFilter = { role: null, patch: 'all' };
+const ALL: ChampionFilter = { role: null, patch: 'all', rank: null };
 
 beforeEach(() => {
 	clearStaticNames();
@@ -96,6 +96,44 @@ describe('loadChampionPage', () => {
 		expect(page.championNames).toContain('Ahri');
 	});
 
+	it('sends a tier and above as minTier on the detail, builds and matchups, not the patch list', async () => {
+		const { page, asked } = await load(undefined, {
+			...ALL,
+			rank: { tier: 'emerald', andAbove: true }
+		});
+		const range = 'queue=RANKED_SOLO_5x5&patch=all&minTier=EMERALD&minGames=0';
+		expect(asked).toEqual(
+			expect.arrayContaining([
+				`${BASE}?${range}&limit=10`,
+				`${BASE}/builds?${range}`,
+				`${BASE}/matchups?${range}&limit=200`,
+				'/v1/lol/analytics/patches?queue=RANKED_SOLO_5x5&championId=103'
+			])
+		);
+		expect(asked.some((path) => /[?&]tier=/.test(path))).toBe(false);
+		// The summed row under a range still has tier null; byTier holds only the range's tiers.
+		expect(page.stats).toMatchObject({ games: 816, winRate: 0.5294 });
+		expect(page.tiers.map((t) => t.tier)).toEqual([
+			'CHALLENGER',
+			'GRANDMASTER',
+			'MASTER',
+			'EMERALD'
+		]);
+	});
+
+	it("sends one tier as tier, and takes that tier's row as the summed one", async () => {
+		const { page, asked } = await load(undefined, {
+			...ALL,
+			rank: { tier: 'master', andAbove: false }
+		});
+		expect(asked).toContain(
+			`${BASE}?queue=RANKED_SOLO_5x5&patch=all&tier=MASTER&minGames=0&limit=10`
+		);
+		expect(asked.some((path) => path.includes('minTier='))).toBe(false);
+		expect(page.stats).toMatchObject({ games: 722, winRate: 0.5277 });
+		expect(page.tiers.map((t) => t.tier)).toEqual(['MASTER']);
+	});
+
 	it("follows the set builds' role for the matchups when none is asked for", async () => {
 		const { page } = await load();
 		expect(page.matchupRole).toBe('MIDDLE');
@@ -103,7 +141,7 @@ describe('loadChampionPage', () => {
 	});
 
 	it('uses the role asked for', async () => {
-		const { page, asked } = await load(undefined, { role: 'mid', patch: 'all' });
+		const { page, asked } = await load(undefined, { role: 'mid', patch: 'all', rank: null });
 		expect(asked).toContain(
 			`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0`
 		);

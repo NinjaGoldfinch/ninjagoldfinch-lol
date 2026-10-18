@@ -37,7 +37,7 @@ beforeEach(() => {
 describe('loadChampions', () => {
 	it('loads the summed rows for a role and patch, the patch list and the icon version', async () => {
 		const { proxy, asked } = client();
-		const page = await loadChampions({ role: 'mid', patch: 'all' }, { client: proxy });
+		const page = await loadChampions({ role: 'mid', patch: 'all', rank: null }, { client: proxy });
 
 		expect(asked).toContain(
 			'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0&limit=500'
@@ -47,12 +47,25 @@ describe('loadChampions', () => {
 		expect(page.ddragonVersion).toBe('16.20.1');
 	});
 
+	it('sends a tier and above on the table only, not the patch list', async () => {
+		const { proxy, asked } = client();
+		const page = await loadChampions(
+			{ role: null, patch: 'all', rank: { tier: 'emerald', andAbove: true } },
+			{ client: proxy }
+		);
+		expect(asked).toContain(
+			'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minTier=EMERALD&minGames=0&limit=500'
+		);
+		expect(asked).toContain('/v1/lol/analytics/patches?queue=RANKED_SOLO_5x5');
+		expect(page.table.rows).toHaveLength(40);
+	});
+
 	it('still loads without the patch list', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const { proxy } = client((path) =>
 			path.startsWith('/v1/lol/analytics/patches') ? json(503, {}) : undefined
 		);
-		const page = await loadChampions({ role: null, patch: 'all' }, { client: proxy });
+		const page = await loadChampions({ role: null, patch: 'all', rank: null }, { client: proxy });
 		expect(page.patches).toEqual([]);
 		expect(page.table.rows.length).toBeGreaterThan(100);
 	});
@@ -63,7 +76,7 @@ describe('loadChampions', () => {
 			if (path.startsWith('/v1/lol/analytics/patches')) throw new TypeError('fetch failed');
 			return undefined;
 		});
-		const page = await loadChampions({ role: null, patch: 'all' }, { client: proxy });
+		const page = await loadChampions({ role: null, patch: 'all', rank: null }, { client: proxy });
 		expect(page.patches).toEqual([]);
 		expect(page.table.rows.length).toBeGreaterThan(100);
 	});
@@ -72,9 +85,10 @@ describe('loadChampions', () => {
 		const { proxy } = client((path) =>
 			path.startsWith('/v1/lol/analytics/champions') ? json(503, {}) : undefined
 		);
-		const failure = await loadChampions({ role: null, patch: 'all' }, { client: proxy }).catch(
-			(e: unknown) => e
-		);
+		const failure = await loadChampions(
+			{ role: null, patch: 'all', rank: null },
+			{ client: proxy }
+		).catch((e: unknown) => e);
 		expect(isHttpError(failure) && failure.status).toBe(503);
 	});
 });

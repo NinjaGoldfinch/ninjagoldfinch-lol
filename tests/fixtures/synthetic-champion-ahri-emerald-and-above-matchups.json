@@ -1,0 +1,268 @@
+{
+	"_note": "Synthetic: the recorded all-roles Ahri matchups relabelled minTier=EMERALD, cut to the 30 most played. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/matchups?queue=RANKED_SOLO_5x5&patch=all&minTier=EMERALD&minGames=0&limit=200"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HQ035TXC2RJZRRRK3FH4QS"
+		},
+		"body": {
+			"championId": 103,
+			"championName": "Ahri",
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"tier": null,
+			"minTier": "EMERALD",
+			"side": null,
+			"patch": "all",
+			"role": null,
+			"computedAt": "2026-10-10T00:10:22.637Z",
+			"matchups": [
+				{
+					"role": "MIDDLE",
+					"opponentId": 517,
+					"opponentName": "Sylas",
+					"games": 126,
+					"wins": 60,
+					"winRate": 0.4762
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 134,
+					"opponentName": "Syndra",
+					"games": 94,
+					"wins": 54,
+					"winRate": 0.5745
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 112,
+					"opponentName": "Viktor",
+					"games": 91,
+					"wins": 48,
+					"winRate": 0.5275
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 238,
+					"opponentName": "Zed",
+					"games": 88,
+					"wins": 41,
+					"winRate": 0.4659
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 157,
+					"opponentName": "Yasuo",
+					"games": 83,
+					"wins": 43,
+					"winRate": 0.5181
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 55,
+					"opponentName": "Katarina",
+					"games": 79,
+					"wins": 40,
+					"winRate": 0.5063
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 90,
+					"opponentName": "Malzahar",
+					"games": 70,
+					"wins": 41,
+					"winRate": 0.5857
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 777,
+					"opponentName": "Yone",
+					"games": 67,
+					"wins": 32,
+					"winRate": 0.4776
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 3,
+					"opponentName": "Galio",
+					"games": 63,
+					"wins": 37,
+					"winRate": 0.5873
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 4,
+					"opponentName": "Twisted Fate",
+					"games": 59,
+					"wins": 33,
+					"winRate": 0.5593
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 910,
+					"opponentName": "Hwei",
+					"games": 59,
+					"wins": 29,
+					"winRate": 0.4915
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 61,
+					"opponentName": "Orianna",
+					"games": 56,
+					"wins": 33,
+					"winRate": 0.5893
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 84,
+					"opponentName": "Akali",
+					"games": 55,
+					"wins": 24,
+					"winRate": 0.4364
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 105,
+					"opponentName": "Fizz",
+					"games": 55,
+					"wins": 26,
+					"winRate": 0.4727
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 127,
+					"opponentName": "Lissandra",
+					"games": 54,
+					"wins": 27,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 8,
+					"opponentName": "Vladimir",
+					"games": 53,
+					"wins": 25,
+					"winRate": 0.4717
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 166,
+					"opponentName": "Akshan",
+					"games": 48,
+					"wins": 19,
+					"winRate": 0.3958
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 99,
+					"opponentName": "Lux",
+					"games": 47,
+					"wins": 24,
+					"winRate": 0.5106
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 893,
+					"opponentName": "Aurora",
+					"games": 47,
+					"wins": 24,
+					"winRate": 0.5106
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 800,
+					"opponentName": "Mel",
+					"games": 46,
+					"wins": 23,
+					"winRate": 0.5
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 101,
+					"opponentName": "Xerath",
+					"games": 42,
+					"wins": 23,
+					"winRate": 0.5476
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 7,
+					"opponentName": "LeBlanc",
+					"games": 41,
+					"wins": 25,
+					"winRate": 0.6098
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 34,
+					"opponentName": "Anivia",
+					"games": 40,
+					"wins": 18,
+					"winRate": 0.45
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 45,
+					"opponentName": "Veigar",
+					"games": 40,
+					"wins": 25,
+					"winRate": 0.625
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 142,
+					"opponentName": "Zoe",
+					"games": 37,
+					"wins": 14,
+					"winRate": 0.3784
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 131,
+					"opponentName": "Diana",
+					"games": 36,
+					"wins": 16,
+					"winRate": 0.4444
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 13,
+					"opponentName": "Ryze",
+					"games": 34,
+					"wins": 20,
+					"winRate": 0.5882
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 39,
+					"opponentName": "Irelia",
+					"games": 33,
+					"wins": 14,
+					"winRate": 0.4242
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 805,
+					"opponentName": "Locke",
+					"games": 33,
+					"wins": 14,
+					"winRate": 0.4242
+				},
+				{
+					"role": "MIDDLE",
+					"opponentId": 1,
+					"opponentName": "Annie",
+					"games": 31,
+					"wins": 15,
+					"winRate": 0.4839
+				}
+			]
+		}
+	}
+}

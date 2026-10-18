@@ -560,3 +560,20 @@ Date: 2026-10-15 · Task: SPD-02
 **Decision.** `patchVersions` in `src/lib/server/patch.ts` holds its answer (the current patch and Riot's version list) for `PATCH_TTL_MS`, 5 minutes, as ADR-013 holds the Data Dragon lookups. Concurrent callers share one request, and a failed fetch is not kept, so the next page tries again. No setting. This extends ADR-013's exception to the no-cache rule: it covers data that cannot change within a patch, never Riot player data or analytics.
 
 **Consequences.** After riot-proxy's mirror moves to a new patch, pages keep the old patch's icons and names for up to 5 minutes; then `staticNames` loads the new patch's lookups once. Each page view makes one riot-proxy call fewer, about 1 ms on production, and a champion page no longer waits on that call before resolving its champion.
+
+## ADR-042: A tier filter: one tier, or a tier and above
+
+Date: 2026-10-19 · Task: VS-02
+
+**Context.** The champion pages showed every tier summed; riot-proxy's `tier` filter (2.6.0) was unused. riot-proxy v2.7.0 adds `minTier`: a tier and every tier above it, summed, with pick and ban rates counting each match once over the matches with a player at or above that tier (riot-proxy ADR-170). The VS handoff proposed ranges only. The owner asked for both: a URL for one tier, and the same with a `+` for that tier and above, from Iron to Challenger.
+
+**Decision.**
+
+- **URL.** `?rank=diamond` is Diamond alone, sent to riot-proxy as `tier=DIAMOND`; `?rank=diamond+` is Diamond and above, sent as `minTier=DIAMOND`. Never both. A `+` left bare in a query string reads as a space, and a form encodes it as `%2B`; all three read as the range, and the page redirects to the bare `+`, which its own links write. Nothing is above Challenger, so `challenger+` redirects to `challenger`. An unknown value is every tier, never a 400 from riot-proxy. The rank sits after the role in the query.
+- **Calls.** The table, detail, set builds and matchups get the rank; the patch lists never do, so the picker lists every patch the slice could have.
+- **Picker.** One `<select>` beside the patch picker, in the same GET form with one Apply button for visitors without JavaScript: All tiers, then Grandmaster+ to Iron+, then each tier alone, highest first. Role tabs, the patch form, the table's champion links and the champion page's links keep the rank. Unplaced (`UNKNOWN`) is not offered: it isn't a rank.
+- **Summed row.** riot-proxy labels the summed row with the body's own `tier`: `null` over every tier or a range, the tier when one is asked for. The table and the champion header take the row whose `tier` is the body's, so a single tier doesn't empty them.
+- **Labels.** The scope line reads `every region · Diamond+` (or `every region and tier`), By tier's heading names the rank, and the note under the page says what each rate counts. With a range, By tier holds the range's tiers; with one tier, its row.
+- **Default.** All tiers, as before, so riot-proxy's warm list needs no change. Each rank is its own riot-proxy cache entry and its own page at the edge: Cloudflare's cache key includes the query string, checked from outside on 2026-10-19 (each `?patch=` and `?role=` view MISS, then HIT with its own content).
+
+**Consequences.** The first view of each rank after a rebuild is a riot-proxy MISS: about 121 ms for the table at `minTier=EMERALD` and 34 ms at `tier=EMERALD`, 2–3 ms for one champion (riot-proxy ADR-170). Low ranges such as Iron+ sum nearly every tier and are unmeasured; if one is slow in production, that goes to riot-proxy. Tests use synthetic range and tier bodies until real ones are recorded.
