@@ -54,6 +54,13 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise, a 503 when spent; optional calls degrade on a throw as on an error response — #63 (ADR-040)
 - [ ] SPD-06 Cloudflare's cache of `__data.json`
 
+## VS — tier ranges and builds against a lane opponent
+
+- [ ] VS-01 riot-proxy spec v2.7.0 from the release binary; fixtures carry every field the spec requires, checked by a test
+- [ ] VS-02 Tier filter: one tier or a tier and above
+- [ ] VS-03 Builds against a lane opponent
+- [~] VS-04 Dropped: `winRateLow` not used for now (owner, 2026-10-19)
+
 ## FIX — fixes
 
 - [x] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items — #65

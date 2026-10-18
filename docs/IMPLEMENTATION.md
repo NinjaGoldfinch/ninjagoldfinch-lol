@@ -560,6 +560,17 @@ riot-proxy v2.6.0 keeps analytics responses in memory and warms the champion tab
 
 **Exit check:** none beyond each task's own; every task records before and after numbers from production in its PR.
 
+### VS — tier ranges and builds against a lane opponent (after riot-proxy v2.7.0)
+
+riot-proxy v2.7.0 adds `minTier` (a tier and every tier above it, summed) on the four champion analytics routes, `opponentId` on set builds (the champion's builds in a lane against one opponent), and `winRateLow` on every build. This series brings them to the champion pages. The plan, with the owner's answers, is `docs/notes/VS-plan.md`.
+
+- [ ] VS-01 riot-proxy spec refreshed to v2.7.0 from the release binary; fixtures carry every field the spec requires; behaviour unchanged
+- [ ] VS-02 A tier filter on `/champions` and `/champions/[key]`: one tier (`?rank=diamond`) or a tier and above (`?rank=diamond+`), Iron to Challenger; all tiers by default
+- [ ] VS-03 Builds against a lane opponent on `/champions/[key]` (`?vs=galio&lane=mid`): a picker built from the matchups, matchup rows linking to it, no fallback to the detail's lists
+- [ ] VS-04 Dropped: `winRateLow` is not shown, sorted on or used for marking (owner, 2026-10-19)
+
+**Exit check:** with JavaScript disabled, `/champions/ahri?rank=diamond+&vs=galio` renders the range and the builds against Galio from the server.
+
 ## Riot policy checklist
 
 These come from Riot's [General Policies](https://developer.riotgames.com/policies/general) (last updated May 29, 2025) and the [League of Legends developer docs](https://developer.riotgames.com/docs/lol). Re-read both before the production key review.

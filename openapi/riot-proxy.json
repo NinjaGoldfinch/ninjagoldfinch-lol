@@ -7,7 +7,7 @@
       "name": "MIT",
       "identifier": "MIT"
     },
-    "version": "2.6.0"
+    "version": "2.7.0"
   },
   "servers": [
     {
@@ -6539,6 +6539,15 @@
             }
           },
           {
+            "name": "minTier",
+            "in": "query",
+            "description": "IRON … CHALLENGER: that tier and every tier above it, summed; `UNKNOWN` is never in a range. Pick and ban rates count each match once, over the matches with a player at or above it. Not with `tier`",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "side",
             "in": "query",
             "description": "`blue` or `red`: only the champion's games on that side, its pick rate over every match in the slice. Omitted: both sides summed",
@@ -6798,6 +6807,15 @@
             }
           },
           {
+            "name": "minTier",
+            "in": "query",
+            "description": "IRON … CHALLENGER: every section summed over that tier and every tier above it, `byTier` a row per tier of the range; `UNKNOWN` is never in a range. `stats`' pick and ban rates count each match once, over the matches with a player at or above it. Not with `tier`",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "side",
             "in": "query",
             "description": "`blue` or `red`: every section from the champion's games on that side only. Omitted: both sides summed",
@@ -7016,7 +7034,7 @@
           "lol"
         ],
         "summary": "Champion set builds",
-        "description": "The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice (its `tier` and `side` included), named in `role`. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. A champion nobody has builds for yet still returns 200 with an empty `builds`.",
+        "description": "The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice (its `tier` and `side` included), named in `role`. With `opponentId`, only the games in a lane against that champion, one player per team, as the matchups route counts them; each build then has its 3rd item, boots, runes and spells, and `next`'s 4th and 5th items, `starter` and `skillOrder` are empty. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. A champion nobody has builds for yet still returns 200 with an empty `builds`.",
         "operationId": "champion_builds",
         "parameters": [
           {
@@ -7057,6 +7075,15 @@
             }
           },
           {
+            "name": "minTier",
+            "in": "query",
+            "description": "IRON … CHALLENGER: only builds of players at that tier or above, summed; `UNKNOWN` is never in a range. Not with `tier`",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "side",
             "in": "query",
             "description": "`blue` or `red`: only builds of players on that side. Omitted: both sides summed",
@@ -7077,7 +7104,7 @@
           {
             "name": "role",
             "in": "query",
-            "description": "TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role",
+            "description": "TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role. With `opponentId`, a lane (not empty); default the lane with the most games against that opponent",
             "required": false,
             "schema": {
               "type": "string"
@@ -7097,6 +7124,16 @@
             "name": "limit",
             "in": "query",
             "description": "1–10 builds, default 3",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "opponentId",
+            "in": "query",
+            "description": "Champion id, ≥ 1: only builds against that champion in the lane. An opponent never met, or the champion itself, gives an empty `builds`",
             "required": false,
             "schema": {
               "type": "integer",
@@ -7310,6 +7347,15 @@
             "name": "tier",
             "in": "query",
             "description": "IRON … CHALLENGER, or UNKNOWN: only games where this champion's player was at that tier; the opponent may have been in another. Omitted: every tier summed",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTier",
+            "in": "query",
+            "description": "IRON … CHALLENGER: only games where this champion's player was at that tier or above, summed; `UNKNOWN` is never in a range. Not with `tier`",
             "required": false,
             "schema": {
               "type": "string"
@@ -13807,6 +13853,7 @@
           "games",
           "wins",
           "winRate",
+          "winRateLow",
           "pickRate",
           "next",
           "starter",
@@ -13835,6 +13882,11 @@
           "winRate": {
             "type": "number",
             "format": "double"
+          },
+          "winRateLow": {
+            "type": "number",
+            "format": "double",
+            "description": "The lower bound of `winRate`'s 95 % Wilson interval: how low it may\ntruly be, given how few games it rests on. 0 for no games."
           },
           "pickRate": {
             "type": "number",
@@ -13891,9 +13943,11 @@
           "platform",
           "queue",
           "tier",
+          "minTier",
           "side",
           "patch",
           "role",
+          "opponentId",
           "computedAt",
           "totalGames",
           "builds"
@@ -13926,6 +13980,13 @@
             ],
             "description": "The tier asked for (the builder's, FLT-02); `null`: every tier summed."
           },
+          "minTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The floor asked for (`minTier`, FLT-03): that tier and every tier above\nit, summed, and `tier` is `null`; `null` when no range was asked for."
+          },
           "side": {
             "type": [
               "string",
@@ -13944,7 +14005,21 @@
               "string",
               "null"
             ],
-            "description": "The role asked for, else the champion's most-played role in the slice;\n`null` when it has no games."
+            "description": "The role asked for, else the champion's most-played role in the slice;\nwith `opponentId`, the lane its builds against that opponent have the\nmost games in. `null` when it has no games."
+          },
+          "opponentId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The lane opponent asked for (FLT-04): only the champion's games in a\nlane against that champion, one player per team; `null` when none was\nasked for."
+          },
+          "opponentName": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "computedAt": {
             "type": [
@@ -13974,6 +14049,7 @@
           "platform",
           "queue",
           "tier",
+          "minTier",
           "side",
           "patch",
           "role",
@@ -14013,6 +14089,13 @@
               "string",
               "null"
             ]
+          },
+          "minTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The floor asked for (`minTier`, FLT-03): that tier and every tier above\nit, summed, and `tier` is `null`; `null` when no range was asked for."
           },
           "side": {
             "type": [
@@ -14240,6 +14323,7 @@
           "platform",
           "queue",
           "tier",
+          "minTier",
           "side",
           "patch",
           "role",
@@ -14273,6 +14357,13 @@
               "null"
             ],
             "description": "The tier asked for (the champion's player's, FLT-02); `null`: every tier summed."
+          },
+          "minTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The floor asked for (`minTier`, FLT-03): that tier and every tier above\nit, summed, and `tier` is `null`; `null` when no range was asked for."
           },
           "side": {
             "type": [
@@ -14481,6 +14572,7 @@
           "platform",
           "queue",
           "tier",
+          "minTier",
           "side",
           "patch",
           "role",
@@ -14504,6 +14596,13 @@
               "string",
               "null"
             ]
+          },
+          "minTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The floor asked for (`minTier`, FLT-03): that tier and every tier above\nit, summed, and `tier` is `null`; `null` when no range was asked for."
           },
           "side": {
             "type": [
