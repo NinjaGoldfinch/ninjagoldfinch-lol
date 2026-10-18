@@ -11,6 +11,7 @@
 		isLowSample,
 		parseSort,
 		patchLabel,
+		rankScope,
 		sortRows,
 		type ChampionSort
 	} from '#lib/domain/champion-stats.ts';
@@ -37,7 +38,9 @@
 </svelte:head>
 
 <h1 class="text-2xl font-semibold">Champions</h1>
-<p class="mt-1 text-sm text-muted">Ranked Solo/Duo · every region and tier · {label}</p>
+<p class="mt-1 text-sm text-muted">
+	Ranked Solo/Duo · {rankScope(data.filter.rank)} · {label}
+</p>
 
 <div class="mt-6">
 	<AnalyticsFilters

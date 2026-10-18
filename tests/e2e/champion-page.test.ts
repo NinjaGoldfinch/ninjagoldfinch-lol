@@ -111,6 +111,43 @@ test.describe('without JavaScript', () => {
 		await expect(page).toHaveURL('/champions');
 	});
 
+	test('a tier and above: the summed rates and only its tiers', async ({ page }) => {
+		await page.goto(`${AHRI}?rank=emerald+`);
+		await expect(page.getByRole('main')).toContainText(
+			'Ranked Solo/Duo · every region · Emerald+ · All patches'
+		);
+		await expect(page.getByRole('combobox', { name: 'Tier' })).toHaveValue('emerald+');
+		// Synthetic minTier=EMERALD detail: 816 games over Emerald to Challenger, 432 wins.
+		const rates = page.locator('dl[aria-label="Rates"]');
+		await expect(rates).toContainText('Games 816');
+		await expect(rates).toContainText('Win rate 52.9%');
+		const tiers = page.getByRole('region', { name: 'By tier · Emerald+' }).locator('tbody tr');
+		await expect(tiers.getByRole('rowheader')).toHaveText([
+			'Challenger',
+			'Grandmaster',
+			'Master',
+			'Emerald'
+		]);
+		await expect(page.getByRole('main')).toContainText('Each rate counts Emerald+ unless');
+		await expect(
+			page.getByRole('navigation', { name: 'Role' }).getByRole('link', { name: 'Mid' })
+		).toHaveAttribute('href', `${AHRI}?role=mid&rank=emerald+`);
+	});
+
+	test("one tier: that tier's rates and its row", async ({ page }) => {
+		await page.goto(AHRI);
+		await page.getByRole('combobox', { name: 'Tier' }).selectOption({ label: 'Master' });
+		await page.getByRole('button', { name: 'Apply' }).click();
+		await expect(page).toHaveURL(`${AHRI}?rank=master`);
+		await expect(page.getByRole('main')).toContainText('every region · Master · All patches');
+		// riot-proxy labels the summed row MASTER under tier=MASTER; it is still the header's.
+		const rates = page.locator('dl[aria-label="Rates"]');
+		await expect(rates).toContainText('Games 722');
+		await expect(rates).toContainText('Win rate 52.8%');
+		const tiers = page.getByRole('region', { name: 'By tier · Master' }).locator('tbody tr');
+		await expect(tiers.getByRole('rowheader')).toHaveText(['Master']);
+	});
+
 	test('a champion is found by name or id in any case, at one URL', async ({ page }) => {
 		await page.goto('/champions/AHRI?role=&patch=all');
 		await expect(page).toHaveURL(AHRI);

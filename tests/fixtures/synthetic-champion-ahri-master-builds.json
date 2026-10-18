@@ -1,0 +1,471 @@
+{
+	"_note": "Synthetic: the recorded all-roles Ahri builds relabelled tier=MASTER, totalGames scaled by 0.4. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/analytics/champions/103/builds?queue=RANKED_SOLO_5x5&patch=all&tier=MASTER&minGames=0"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json; charset=utf-8",
+			"x-request-id": "01M4HQ030P2YHYTZTQQPRRR2E7"
+		},
+		"body": {
+			"championId": 103,
+			"championName": "Ahri",
+			"platform": null,
+			"queue": "RANKED_SOLO_5x5",
+			"tier": "MASTER",
+			"minTier": null,
+			"side": null,
+			"patch": "all",
+			"role": "MIDDLE",
+			"opponentId": null,
+			"computedAt": "2026-10-10T00:10:23.886Z",
+			"totalGames": 798,
+			"builds": [
+				{
+					"core": [3118, 4645],
+					"games": 550,
+					"wins": 271,
+					"winRate": 0.4927,
+					"winRateLow": 0.4511,
+					"pickRate": 0.2758,
+					"next": [
+						[
+							{
+								"itemId": 3089,
+								"games": 142,
+								"winRate": 0.5211
+							},
+							{
+								"itemId": 3157,
+								"games": 132,
+								"winRate": 0.5606
+							},
+							{
+								"itemId": 3041,
+								"games": 36,
+								"winRate": 0.75
+							}
+						],
+						[
+							{
+								"itemId": 3089,
+								"games": 39,
+								"winRate": 0.7179
+							},
+							{
+								"itemId": 3157,
+								"games": 34,
+								"winRate": 0.6471
+							},
+							{
+								"itemId": 3041,
+								"games": 17,
+								"winRate": 0.6471
+							}
+						],
+						[
+							{
+								"itemId": 3089,
+								"games": 9,
+								"winRate": 0.6667
+							},
+							{
+								"itemId": 3157,
+								"games": 9,
+								"winRate": 0.4444
+							},
+							{
+								"itemId": 3135,
+								"games": 6,
+								"winRate": 1
+							}
+						]
+					],
+					"starter": [
+						{
+							"items": [1056, 2003, 2003],
+							"games": 548,
+							"winRate": 0.4927
+						},
+						{
+							"items": [1056, 2003],
+							"games": 1,
+							"winRate": 1
+						},
+						{
+							"items": [1082, 2031],
+							"games": 1,
+							"winRate": 0
+						}
+					],
+					"boots": [
+						{
+							"itemId": 3020,
+							"games": 370,
+							"winRate": 0.4946
+						},
+						{
+							"itemId": 3158,
+							"games": 110,
+							"winRate": 0.4636
+						},
+						{
+							"itemId": 3111,
+							"games": 48,
+							"winRate": 0.6042
+						}
+					],
+					"skillOrder": [
+						{
+							"order": "QWE",
+							"games": 507,
+							"winRate": 0.4931
+						},
+						{
+							"order": "QEW",
+							"games": 42,
+							"winRate": 0.5
+						},
+						{
+							"order": "WQE",
+							"games": 1,
+							"winRate": 0
+						}
+					],
+					"runes": [
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8200,
+							"games": 429,
+							"winRate": 0.4825
+						},
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8300,
+							"games": 47,
+							"winRate": 0.4894
+						},
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8400,
+							"games": 29,
+							"winRate": 0.6552
+						}
+					],
+					"spells": [
+						{
+							"spellA": 4,
+							"spellB": 12,
+							"games": 285,
+							"winRate": 0.4807
+						},
+						{
+							"spellA": 4,
+							"spellB": 14,
+							"games": 258,
+							"winRate": 0.5
+						},
+						{
+							"spellA": 3,
+							"spellB": 4,
+							"games": 4,
+							"winRate": 1
+						}
+					]
+				},
+				{
+					"core": [3118, 3100],
+					"games": 232,
+					"wins": 129,
+					"winRate": 0.556,
+					"winRateLow": 0.4917,
+					"pickRate": 0.1163,
+					"next": [
+						[
+							{
+								"itemId": 3089,
+								"games": 49,
+								"winRate": 0.6122
+							},
+							{
+								"itemId": 3157,
+								"games": 34,
+								"winRate": 0.5882
+							},
+							{
+								"itemId": 4645,
+								"games": 27,
+								"winRate": 0.4074
+							}
+						],
+						[
+							{
+								"itemId": 3089,
+								"games": 24,
+								"winRate": 0.625
+							},
+							{
+								"itemId": 3157,
+								"games": 16,
+								"winRate": 0.875
+							},
+							{
+								"itemId": 3041,
+								"games": 11,
+								"winRate": 0.6364
+							}
+						],
+						[
+							{
+								"itemId": 3041,
+								"games": 6,
+								"winRate": 0.5
+							},
+							{
+								"itemId": 3135,
+								"games": 5,
+								"winRate": 1
+							},
+							{
+								"itemId": 3089,
+								"games": 4,
+								"winRate": 1
+							}
+						]
+					],
+					"starter": [
+						{
+							"items": [1056, 2003, 2003],
+							"games": 229,
+							"winRate": 0.5502
+						},
+						{
+							"items": [1054, 2003],
+							"games": 1,
+							"winRate": 1
+						},
+						{
+							"items": [1086, 2003, 2003],
+							"games": 1,
+							"winRate": 1
+						}
+					],
+					"boots": [
+						{
+							"itemId": 3020,
+							"games": 113,
+							"winRate": 0.5398
+						},
+						{
+							"itemId": 3158,
+							"games": 94,
+							"winRate": 0.5851
+						},
+						{
+							"itemId": 3111,
+							"games": 21,
+							"winRate": 0.5238
+						}
+					],
+					"skillOrder": [
+						{
+							"order": "QWE",
+							"games": 214,
+							"winRate": 0.5561
+						},
+						{
+							"order": "QEW",
+							"games": 18,
+							"winRate": 0.5556
+						}
+					],
+					"runes": [
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8200,
+							"games": 171,
+							"winRate": 0.5673
+						},
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8400,
+							"games": 27,
+							"winRate": 0.5926
+						},
+						{
+							"keystoneId": 8229,
+							"subStyleId": 8100,
+							"games": 11,
+							"winRate": 0.3636
+						}
+					],
+					"spells": [
+						{
+							"spellA": 4,
+							"spellB": 14,
+							"games": 119,
+							"winRate": 0.5126
+						},
+						{
+							"spellA": 4,
+							"spellB": 12,
+							"games": 108,
+							"winRate": 0.6111
+						},
+						{
+							"spellA": 3,
+							"spellB": 4,
+							"games": 3,
+							"winRate": 0.3333
+						}
+					]
+				},
+				{
+					"core": [2503, 3100],
+					"games": 218,
+					"wins": 126,
+					"winRate": 0.578,
+					"winRateLow": 0.5116,
+					"pickRate": 0.1093,
+					"next": [
+						[
+							{
+								"itemId": 3089,
+								"games": 58,
+								"winRate": 0.5345
+							},
+							{
+								"itemId": 3157,
+								"games": 35,
+								"winRate": 0.6286
+							},
+							{
+								"itemId": 3041,
+								"games": 17,
+								"winRate": 0.8824
+							}
+						],
+						[
+							{
+								"itemId": 3089,
+								"games": 20,
+								"winRate": 0.65
+							},
+							{
+								"itemId": 3041,
+								"games": 12,
+								"winRate": 0.9167
+							},
+							{
+								"itemId": 3157,
+								"games": 9,
+								"winRate": 0.5556
+							}
+						],
+						[
+							{
+								"itemId": 3089,
+								"games": 5,
+								"winRate": 0.6
+							},
+							{
+								"itemId": 3135,
+								"games": 2,
+								"winRate": 1
+							},
+							{
+								"itemId": 3137,
+								"games": 2,
+								"winRate": 1
+							}
+						]
+					],
+					"starter": [
+						{
+							"items": [1056, 2003, 2003],
+							"games": 217,
+							"winRate": 0.5806
+						},
+						{
+							"items": [1056, 2003, 2003, 2055],
+							"games": 1,
+							"winRate": 0
+						}
+					],
+					"boots": [
+						{
+							"itemId": 3158,
+							"games": 134,
+							"winRate": 0.5896
+						},
+						{
+							"itemId": 3020,
+							"games": 51,
+							"winRate": 0.5294
+						},
+						{
+							"itemId": 3111,
+							"games": 27,
+							"winRate": 0.5926
+						}
+					],
+					"skillOrder": [
+						{
+							"order": "QWE",
+							"games": 215,
+							"winRate": 0.5814
+						},
+						{
+							"order": "QEW",
+							"games": 3,
+							"winRate": 0.3333
+						}
+					],
+					"runes": [
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8200,
+							"games": 142,
+							"winRate": 0.5775
+						},
+						{
+							"keystoneId": 8992,
+							"subStyleId": 8100,
+							"games": 21,
+							"winRate": 0.4762
+						},
+						{
+							"keystoneId": 8112,
+							"subStyleId": 8400,
+							"games": 13,
+							"winRate": 0.6923
+						}
+					],
+					"spells": [
+						{
+							"spellA": 4,
+							"spellB": 14,
+							"games": 125,
+							"winRate": 0.584
+						},
+						{
+							"spellA": 4,
+							"spellB": 12,
+							"games": 88,
+							"winRate": 0.5682
+						},
+						{
+							"spellA": 3,
+							"spellB": 4,
+							"games": 2,
+							"winRate": 1
+						}
+					]
+				}
+			]
+		}
+	}
+}

@@ -40,6 +40,31 @@ export const ROLES = [
 
 export type RoleSlug = (typeof ROLES)[number]['slug'];
 
+/** Riot's tiers by URL value, highest first, with riot-proxy's name and the label shown. */
+export const TIERS = [
+	{ slug: 'challenger', proxy: 'CHALLENGER', label: 'Challenger' },
+	{ slug: 'grandmaster', proxy: 'GRANDMASTER', label: 'Grandmaster' },
+	{ slug: 'master', proxy: 'MASTER', label: 'Master' },
+	{ slug: 'diamond', proxy: 'DIAMOND', label: 'Diamond' },
+	{ slug: 'emerald', proxy: 'EMERALD', label: 'Emerald' },
+	{ slug: 'platinum', proxy: 'PLATINUM', label: 'Platinum' },
+	{ slug: 'gold', proxy: 'GOLD', label: 'Gold' },
+	{ slug: 'silver', proxy: 'SILVER', label: 'Silver' },
+	{ slug: 'bronze', proxy: 'BRONZE', label: 'Bronze' },
+	{ slug: 'iron', proxy: 'IRON', label: 'Iron' }
+] as const;
+
+export type TierSlug = (typeof TIERS)[number]['slug'];
+
+/** One tier, or that tier and every tier above it. ADR-042. */
+export interface RankFilter {
+	tier: TierSlug;
+	andAbove: boolean;
+}
+
+/** `diamond`, `diamond+`; a `+` left unencoded in a URL arrives as a space. */
+const RANK = /^([a-z]+)([+ ])?$/;
+
 /** `major.minor`, as riot-proxy names an aggregated patch. */
 const PATCH = /^\d+\.\d+$/;
 
@@ -48,6 +73,8 @@ export interface ChampionFilter {
 	role: RoleSlug | null;
 	/** `all`, a `major.minor`, or null for riot-proxy's newest patch. */
 	patch: string | null;
+	/** null for every tier summed. */
+	rank: RankFilter | null;
 }
 
 /** The patch the URL means when it names none, as a filter value. */
@@ -56,8 +83,8 @@ function defaultPatch(): string | null {
 }
 
 /**
- * Reads `?role=mid&patch=16.19`. `patch=newest` is riot-proxy's newest patch;
- * anything not offered falls back to the default.
+ * Reads `?role=mid&rank=diamond+&patch=16.19`. `patch=newest` is riot-proxy's
+ * newest patch; anything not offered falls back to the default.
  */
 export function parseChampionFilter(params: URLSearchParams): ChampionFilter {
 	const role = ROLES.find((r) => r.slug === params.get('role'))?.slug ?? null;
@@ -69,33 +96,78 @@ export function parseChampionFilter(params: URLSearchParams): ChampionFilter {
 				? null
 				: patch === 'all' || (patch !== null && PATCH.test(patch))
 					? patch
-					: defaultPatch()
+					: defaultPatch(),
+		rank: parseRank(params.get('rank'))
 	};
 }
 
 /**
+ * `diamond` is Diamond alone, `diamond+` Diamond and every tier above it.
+ * Nothing is above Challenger, so `challenger+` is Challenger. Anything else
+ * is every tier.
+ */
+export function parseRank(value: string | null): RankFilter | null {
+	const match = RANK.exec(value ?? '');
+	const tier = TIERS.find((t) => t.slug === match?.[1])?.slug;
+	if (!match || !tier) return null;
+	return { tier, andAbove: match[2] !== undefined && tier !== 'challenger' };
+}
+
+/** `diamond+`, as the URL writes a rank. */
+export function rankValue(rank: RankFilter): string {
+	return `${rank.tier}${rank.andAbove ? '+' : ''}`;
+}
+
+/** `Diamond+`, `Diamond`, or `All tiers`. */
+export function rankLabel(rank: RankFilter | null): string {
+	if (!rank) return 'All tiers';
+	const label = TIERS.find((t) => t.slug === rank.tier)?.label ?? rank.tier;
+	return `${label}${rank.andAbove ? '+' : ''}`;
+}
+
+/** `every region and tier`, or `every region · Diamond+`, for a page's scope line. */
+export function rankScope(rank: RankFilter | null): string {
+	return rank ? `every region · ${rankLabel(rank)}` : 'every region and tier';
+}
+
+/** The ranks a picker offers: each tier and above (Grandmaster+ to Iron+), then each tier alone. */
+export const RANK_OPTIONS: { ranges: RankFilter[]; tiers: RankFilter[] } = {
+	ranges: TIERS.filter((t) => t.slug !== 'challenger').map((t) => ({
+		tier: t.slug,
+		andAbove: true
+	})),
+	tiers: TIERS.map((t) => ({ tier: t.slug, andAbove: false }))
+};
+
+/**
  * The query string for a filter and sort, leaving out defaults:
- * `?role=mid&patch=16.19&sort=win`, or ``.
+ * `?role=mid&rank=diamond+&patch=16.19&sort=win`, or ``. A rank's `+` is
+ * written as is, not as `%2B`, so the URL reads as the picker does.
  */
 export function championQuery(filter: ChampionFilter, sort: ChampionSort = DEFAULT_SORT): string {
 	const params = new URLSearchParams();
 	if (filter.role !== null) params.set('role', filter.role);
+	if (filter.rank !== null) params.set('rank', rankValue(filter.rank));
 	if (filter.patch !== defaultPatch()) params.set('patch', filter.patch ?? 'newest');
 	if (sort !== DEFAULT_SORT) params.set('sort', sort);
-	const query = params.toString();
+	const query = params.toString().replace(/(^|&)rank=([a-z]+)%2B(?=&|$)/, '$1rank=$2+');
 	return query ? `?${query}` : '';
 }
 
 /**
  * riot-proxy's analytics query for a filter, keys in a fixed order (the mock
- * proxy matches recorded paths exactly). No tier: rows summed over every tier.
+ * proxy matches recorded paths exactly). A rank is `tier` for one tier or
+ * `minTier` for it and above, never both; without one, rows are summed over
+ * every tier.
  */
 export function analyticsQuery(filter: ChampionFilter, limit?: number) {
 	const role = ROLES.find((r) => r.slug === filter.role)?.proxy;
+	const tier = TIERS.find((t) => t.slug === filter.rank?.tier)?.proxy;
 	return {
 		queue: ANALYTICS_QUEUE,
 		...(filter.patch !== null && { patch: filter.patch }),
 		...(role && { role }),
+		...(tier && (filter.rank?.andAbove ? { minTier: tier } : { tier })),
 		minGames: MIN_GAMES,
 		...(limit !== undefined && { limit })
 	};
@@ -128,8 +200,10 @@ export interface ChampionTable {
 }
 
 /**
- * riot-proxy's summed rows (no tier: one per champion), named for the page.
- * A row with a tier would be one tier's share only, so any are left out.
+ * riot-proxy's summed rows, one per champion, named for the page. A summed
+ * row carries the body's own `tier`: null over every tier or a range, the
+ * tier when one was asked for. Any other row is one tier's share only, so
+ * it is left out.
  */
 export function toChampionTable(body: ChampionStatsResponse, names: StaticNames): ChampionTable {
 	return {
@@ -137,7 +211,7 @@ export function toChampionTable(body: ChampionStatsResponse, names: StaticNames)
 		totalGames: body.totalGames,
 		computedAt: body.computedAt,
 		rows: body.champions
-			.filter((c) => c.tier === null)
+			.filter((c) => c.tier === body.tier)
 			.map((c) => ({
 				id: c.championId,
 				key: names.champions[c.championId]?.id ?? null,

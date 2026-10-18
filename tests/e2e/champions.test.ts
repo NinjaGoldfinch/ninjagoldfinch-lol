@@ -84,11 +84,46 @@ test.describe('without JavaScript', () => {
 		await expect(rows.filter({ hasText: 'Low sample' })).toHaveCount(173);
 	});
 
+	test('the tier picker shows a tier and above, and the links keep it', async ({ page }) => {
+		await page.goto('/champions');
+		await expect(page.getByRole('combobox', { name: 'Tier' })).toHaveValue('');
+		await page.getByRole('combobox', { name: 'Tier' }).selectOption({ label: 'Emerald+' });
+		await page.getByRole('button', { name: 'Apply' }).click();
+		// The form sends rank=emerald%2B; the page answers at the URL it writes itself.
+		await expect(page).toHaveURL('/champions?rank=emerald+');
+		await expect(page.getByRole('combobox', { name: 'Tier' })).toHaveValue('emerald+');
+		await expect(page.getByRole('main')).toContainText(
+			'Ranked Solo/Duo · every region · Emerald+ · All patches'
+		);
+		// riot-proxy's minTier=EMERALD table (synthetic: its 40 most played champions).
+		await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(40);
+		await expect(page.getByRole('link', { name: 'Mid' })).toHaveAttribute(
+			'href',
+			'/champions?role=mid&rank=emerald+'
+		);
+		await page.getByRole('link', { name: 'Ahri', exact: true }).click();
+		await expect(page).toHaveURL('/champions/ahri?rank=emerald+');
+		await page.getByRole('link', { name: '‹ All champions' }).click();
+		await expect(page).toHaveURL('/champions?rank=emerald+');
+	});
+
+	test('choosing All tiers again drops the rank', async ({ page }) => {
+		await page.goto('/champions?rank=emerald+');
+		await page.getByRole('combobox', { name: 'Tier' }).selectOption({ label: 'All tiers' });
+		await page.getByRole('button', { name: 'Apply' }).click();
+		await expect(page).toHaveURL('/champions');
+		await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(recorded.length);
+	});
+
 	test('a URL with defaults or unknown values redirects to the clean one', async ({ page }) => {
 		await page.goto('/champions?role=&patch=all&sort=pick');
 		await expect(page).toHaveURL('/champions');
 		await page.goto('/champions?role=MIDDLE&sort=games');
 		await expect(page).toHaveURL('/champions');
+		await page.goto('/champions?rank=mythic');
+		await expect(page).toHaveURL('/champions');
+		await page.goto('/champions?rank=emerald%2B');
+		await expect(page).toHaveURL('/champions?rank=emerald+');
 	});
 });
 

@@ -139,7 +139,7 @@ export async function loadChampionPage(
 		championId: found.championId,
 		champion: found.champion,
 		patch: detail.data.patch,
-		stats: toChampionStats(detail.data.stats),
+		stats: toChampionStats(detail.data.stats, detail.data.tier),
 		tiers: toTierRows(detail.data.byTier),
 		setBuilds,
 		popular: toPopularChoices(detail.data, names),

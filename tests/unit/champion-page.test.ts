@@ -37,6 +37,12 @@ describe('toChampionStats', () => {
 		});
 	});
 
+	it('takes the row of the tier asked for, as riot-proxy labels it', () => {
+		const master = { ...detail.stats[0], tier: 'MASTER', games: 722 };
+		expect(toChampionStats([master], 'MASTER')?.games).toBe(722);
+		expect(toChampionStats([master])).toBeNull();
+	});
+
 	it('is null with no summed row', () => {
 		expect(toChampionStats([])).toBeNull();
 		expect(toChampionStats([{ ...detail.stats[0], tier: 'MASTER' }])).toBeNull();
