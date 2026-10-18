@@ -56,7 +56,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 ## FIX — fixes
 
-- [ ] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items
+- [x] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items — #65
 
 ## Brought forward
 
