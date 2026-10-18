@@ -905,7 +905,7 @@ export interface paths {
         };
         /**
          * Champion set builds
-         * @description The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice (its `tier` and `side` included), named in `role`. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. A champion nobody has builds for yet still returns 200 with an empty `builds`.
+         * @description The item paths players take on this champion: each build is the first two finished items, with the most common 3rd, 4th and 5th items, starter, boots, skill order, runes and spells of the players who built it (at most three each). Worked out from archived match timelines, so matches archived without one aren't counted, nor are players who finished fewer than two items. Without `role`, the champion's most-played role in the slice (its `tier` and `side` included), named in `role`. With `opponentId`, only the games in a lane against that champion, one player per team, as the matchups route counts them; each build then has its 3rd item, boots, runes and spells, and `next`'s 4th and 5th items, `starter` and `skillOrder` are empty. Sends an `ETag`; a matching `If-None-Match` gets 304. Kept in memory until the next recompute: `X-Cache: HIT` from memory, `MISS` read from the tables. A champion nobody has builds for yet still returns 200 with an empty `builds`.
          */
         get: operations["champion_builds"];
         put?: never;
@@ -1870,6 +1870,12 @@ export interface components {
             winRate: number;
             /**
              * Format: double
+             * @description The lower bound of `winRate`'s 95 % Wilson interval: how low it may
+             *     truly be, given how few games it rests on. 0 for no games.
+             */
+            winRateLow: number;
+            /**
+             * Format: double
              * @description The build's share of the champion's games that had a build (`totalGames`).
              */
             pickRate: number;
@@ -1891,14 +1897,28 @@ export interface components {
             queue: string;
             /** @description The tier asked for (the builder's, FLT-02); `null`: every tier summed. */
             tier: string | null;
+            /**
+             * @description The floor asked for (`minTier`, FLT-03): that tier and every tier above
+             *     it, summed, and `tier` is `null`; `null` when no range was asked for.
+             */
+            minTier: string | null;
             /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
             side: string | null;
             patch: string | null;
             /**
              * @description The role asked for, else the champion's most-played role in the slice;
-             *     `null` when it has no games.
+             *     with `opponentId`, the lane its builds against that opponent have the
+             *     most games in. `null` when it has no games.
              */
             role: string | null;
+            /**
+             * Format: int64
+             * @description The lane opponent asked for (FLT-04): only the champion's games in a
+             *     lane against that champion, one player per team; `null` when none was
+             *     asked for.
+             */
+            opponentId: number | null;
+            opponentName?: string | null;
             computedAt: string | null;
             /**
              * Format: int64
@@ -1917,6 +1937,11 @@ export interface components {
             platform: string | null;
             queue: string;
             tier: string | null;
+            /**
+             * @description The floor asked for (`minTier`, FLT-03): that tier and every tier above
+             *     it, summed, and `tier` is `null`; `null` when no range was asked for.
+             */
+            minTier: string | null;
             /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
             side: string | null;
             patch: string | null;
@@ -2029,6 +2054,11 @@ export interface components {
             queue: string;
             /** @description The tier asked for (the champion's player's, FLT-02); `null`: every tier summed. */
             tier: string | null;
+            /**
+             * @description The floor asked for (`minTier`, FLT-03): that tier and every tier above
+             *     it, summed, and `tier` is `null`; `null` when no range was asked for.
+             */
+            minTier: string | null;
             /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
             side: string | null;
             patch: string | null;
@@ -2115,6 +2145,11 @@ export interface components {
             platform: string | null;
             queue: string;
             tier: string | null;
+            /**
+             * @description The floor asked for (`minTier`, FLT-03): that tier and every tier above
+             *     it, summed, and `tier` is `null`; `null` when no range was asked for.
+             */
+            minTier: string | null;
             /** @description `blue` or `red` when the request named one; `null`: both sides summed. */
             side: string | null;
             patch: string | null;
@@ -7286,6 +7321,8 @@ export interface operations {
                 queue?: string;
                 /** @description IRON … CHALLENGER, or UNKNOWN: that tier's rows. Omitted: one row per champion summed over every tier, pick and ban rates over every match in the slice */
                 tier?: string;
+                /** @description IRON … CHALLENGER: that tier and every tier above it, summed; `UNKNOWN` is never in a range. Pick and ban rates count each match once, over the matches with a player at or above it. Not with `tier` */
+                minTier?: string;
                 /** @description `blue` or `red`: only the champion's games on that side, its pick rate over every match in the slice. Omitted: both sides summed */
                 side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
@@ -7402,6 +7439,8 @@ export interface operations {
                 queue?: string;
                 /** @description IRON … CHALLENGER, or UNKNOWN: `stats` and `byTier` are that tier's row, and the matchups, items, runes and spells that tier's players'. Omitted: `stats` is one row summed over every tier, pick and ban rates over every match in the slice, `byTier` a row per tier, and the other sections every tier summed */
                 tier?: string;
+                /** @description IRON … CHALLENGER: every section summed over that tier and every tier above it, `byTier` a row per tier of the range; `UNKNOWN` is never in a range. `stats`' pick and ban rates count each match once, over the matches with a player at or above it. Not with `tier` */
+                minTier?: string;
                 /** @description `blue` or `red`: every section from the champion's games on that side only. Omitted: both sides summed */
                 side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
@@ -7521,16 +7560,20 @@ export interface operations {
                 queue?: string;
                 /** @description IRON … CHALLENGER, or UNKNOWN: only builds of players at that tier. Omitted: every tier summed */
                 tier?: string;
+                /** @description IRON … CHALLENGER: only builds of players at that tier or above, summed; `UNKNOWN` is never in a range. Not with `tier` */
+                minTier?: string;
                 /** @description `blue` or `red`: only builds of players on that side. Omitted: both sides summed */
                 side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */
                 patch?: string;
-                /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role */
+                /** @description TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY or empty; default the champion's most-played role. With `opponentId`, a lane (not empty); default the lane with the most games against that opponent */
                 role?: string;
                 /** @description ≥ 0, games a build needs; default 0, every build */
                 minGames?: number;
                 /** @description 1–10 builds, default 3 */
                 limit?: number;
+                /** @description Champion id, ≥ 1: only builds against that champion in the lane. An opponent never met, or the champion itself, gives an empty `builds` */
+                opponentId?: number;
                 /** @description `exclude` (default) or `include` */
                 remakes?: string;
             };
@@ -7640,6 +7683,8 @@ export interface operations {
                 queue?: string;
                 /** @description IRON … CHALLENGER, or UNKNOWN: only games where this champion's player was at that tier; the opponent may have been in another. Omitted: every tier summed */
                 tier?: string;
+                /** @description IRON … CHALLENGER: only games where this champion's player was at that tier or above, summed; `UNKNOWN` is never in a range. Not with `tier` */
+                minTier?: string;
                 /** @description `blue` or `red`: only games where this champion was on that side. Omitted: both sides summed */
                 side?: string;
                 /** @description `major.minor`, or `all` to sum every aggregated patch; default the newest aggregated patch */

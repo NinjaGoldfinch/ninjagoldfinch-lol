@@ -13,6 +13,7 @@
 			"platform": null,
 			"queue": "RANKED_SOLO_5x5",
 			"championId": null,
+			"side": null,
 			"patches": [
 				{
 					"patch": "16.20",

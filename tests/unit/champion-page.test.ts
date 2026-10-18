@@ -96,6 +96,13 @@ describe('toSetBuilds', () => {
 		expect(first.next[0][0]).toMatchObject({ id: 3089, games: 142, winRate: 0.5211 });
 	});
 
+	it("reads a v2.7.0 body: no range, no opponent, each build's winRateLow", () => {
+		expect(builds).toMatchObject({ tier: null, minTier: null, side: null, opponentId: null });
+		expect(builds.builds.map((b) => b.winRateLow)).toEqual([0.4511, 0.4917, 0.5116]);
+		expect(set.builds).toHaveLength(3);
+		expect(set.builds[0]).toMatchObject({ games: 550, winRate: 0.4927 });
+	});
+
 	it('leaves a part out when nobody chose one', () => {
 		const empty = toSetBuilds(
 			{

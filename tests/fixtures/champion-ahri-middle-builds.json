@@ -14,8 +14,12 @@
 			"championName": "Ahri",
 			"platform": null,
 			"queue": "RANKED_SOLO_5x5",
+			"tier": null,
+			"minTier": null,
+			"side": null,
 			"patch": "all",
 			"role": "MIDDLE",
+			"opponentId": null,
 			"computedAt": "2026-10-10T00:10:23.886Z",
 			"totalGames": 1994,
 			"builds": [
@@ -24,6 +28,7 @@
 					"games": 550,
 					"wins": 271,
 					"winRate": 0.4927,
+					"winRateLow": 0.4511,
 					"pickRate": 0.2758,
 					"next": [
 						[
@@ -175,6 +180,7 @@
 					"games": 232,
 					"wins": 129,
 					"winRate": 0.556,
+					"winRateLow": 0.4917,
 					"pickRate": 0.1163,
 					"next": [
 						[
@@ -321,6 +327,7 @@
 					"games": 218,
 					"wins": 126,
 					"winRate": 0.578,
+					"winRateLow": 0.5116,
 					"pickRate": 0.1093,
 					"next": [
 						[

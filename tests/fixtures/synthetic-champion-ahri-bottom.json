@@ -16,6 +16,8 @@
 			"platform": null,
 			"queue": "RANKED_SOLO_5x5",
 			"tier": null,
+			"minTier": null,
+			"side": null,
 			"patch": "all",
 			"role": "BOTTOM",
 			"computedAt": "2026-10-10T00:10:16.020Z",
