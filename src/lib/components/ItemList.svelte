@@ -12,7 +12,7 @@
 	const slots = $derived(itemSlots({ items, roleBoundItem }));
 </script>
 
-<ul class="flex gap-1" aria-label="Items">
+<ul class="flex shrink-0 gap-1" aria-label="Items">
 	<!-- Inventory packed left, then the trinket, then the role quest slot. -->
 	{#each slots as item, i (i)}
 		<li>

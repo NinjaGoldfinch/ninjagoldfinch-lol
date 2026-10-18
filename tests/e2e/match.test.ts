@@ -471,3 +471,36 @@ test('an old match URL with the wrong region still opens the match: its id names
 	await expect(page).toHaveURL('/match/OC1_712351051');
 	await expect(page.getByRole('main')).toContainText('UTC · Oceania');
 });
+
+// A bot laner's row has an eighth item slot, the role quest item. No profile
+// fixture has one, so a copy of the last slot stands in for it. At the widest
+// page the row holds it on one line; narrower, the items and the Details link
+// wrap together, so the link never sits on a line of its own.
+for (const [width, oneLine] of [
+	[1280, true],
+	[1024, false],
+	[800, false]
+] as const) {
+	test(`at ${width}px, a bot laner's Details link stays beside the items`, async ({ page }) => {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto('/summoner/NinjaGoldfinch-OCENZ');
+		const row = page.getByRole('article').first();
+		const items = row.getByRole('list', { name: 'Items' });
+		await expect(items.getByRole('listitem')).toHaveCount(7);
+		await items.evaluate((list) => {
+			const last = list.lastElementChild;
+			if (last) list.append(last.cloneNode(true));
+		});
+
+		const box = await row.boundingBox();
+		const list = await items.boundingBox();
+		const link = await row.getByRole('link', { name: 'Details of this match' }).boundingBox();
+		if (!box || !list || !link) throw new Error('row not laid out');
+		// Eight 34px icons with 4px between them, none squeezed.
+		expect(list.width).toBe(8 * 34 + 7 * 4);
+		expect(link.y).toBeLessThan(list.y + list.height);
+		expect(link.x).toBeGreaterThan(list.x + list.width);
+		// One line is under 100px tall; a second line takes it past that.
+		expect(box.height < 100).toBe(oneLine);
+	});
+}
