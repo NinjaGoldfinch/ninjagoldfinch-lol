@@ -6,7 +6,9 @@
 		type PopularChoices,
 		type RuneChoice,
 		type SetBuilds,
-		type SpellPair
+		type SpellPair,
+		type VsChoice,
+		type VsPick
 	} from '#lib/domain/champion-page.ts';
 	import { formatRate, isLowSample } from '#lib/domain/champion-stats.ts';
 	import ItemIcon from './ItemIcon.svelte';
@@ -17,13 +19,21 @@
 	 * games: the top runes, spells, skill order, starter and boots, then the item
 	 * path with each later step's options. With no set builds, or when they
 	 * failed, the champion detail's most played items, runes and spells.
+	 *
+	 * A *vs* picker leads the tabs. Against an opponent riot-proxy sends no
+	 * skill order, starter or 4th and 5th items, so those are left out, and
+	 * there is no fallback: the detail's lists aren't against anyone. ADR-043.
 	 */
 	let {
 		setBuilds,
 		popular,
 		version,
 		open,
-		tabHref
+		tabHref,
+		vs,
+		choices,
+		pickerAction,
+		fields
 	}: {
 		setBuilds: SetBuilds | null;
 		popular: PopularChoices;
@@ -31,11 +41,22 @@
 		/** The open tab, 0-based. */
 		open: number;
 		tabHref: (index: number) => string;
+		/** The lane opponent picked; null for every game. */
+		vs: VsPick | null;
+		/** The opponents the picker offers. */
+		choices: VsChoice[];
+		/** Where the picker's GET form goes. */
+		pickerAction: string;
+		/** The view's other fields, kept by the picker. */
+		fields: [string, string][];
 	} = $props();
 
 	const build = $derived(setBuilds?.builds[open] ?? setBuilds?.builds[0]);
 	const label = 'text-xs font-medium tracking-wide text-muted uppercase';
 	const games = (n: number) => `${n.toLocaleString('en')} ${n === 1 ? 'game' : 'games'}`;
+
+	const submit = (event: Event & { currentTarget: HTMLSelectElement }) =>
+		event.currentTarget.form?.requestSubmit();
 </script>
 
 {#snippet rated(winRate: number, n: number)}
@@ -92,10 +113,44 @@
 		{#if setBuilds && build}
 			<p class="text-sm text-muted">
 				{setBuilds.role ? `${roleLabel(setBuilds.role)} · ` : ''}{games(setBuilds.totalGames)} with a
-				build
+				build{vs ? ` against ${vs.name}` : ''}
 			</p>
 		{/if}
 	</div>
+
+	{#if choices.length > 0 || vs}
+		<!-- GET, so each pick has its own URL; the role, tier and patch are kept. -->
+		<form
+			method="GET"
+			action={pickerAction}
+			aria-label="Builds against an opponent"
+			class="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3"
+		>
+			{#each fields as [name, value] (name)}<input type="hidden" {name} {value} />{/each}
+			<label>
+				<span class="sr-only">Against</span>
+				<select
+					name="vs"
+					onchange={submit}
+					class="h-9 max-w-full rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none"
+				>
+					<option value="" selected={!vs}>vs any opponent</option>
+					{#each choices as choice (choice.opponentId)}
+						<option value={choice.slug} selected={vs?.opponentId === choice.opponentId}
+							>vs {choice.name}{choice.games === null
+								? ''
+								: ` · ${choice.games.toLocaleString('en')}`}</option
+						>
+					{/each}
+				</select>
+			</label>
+			<noscript>
+				<button type="submit" class="h-9 rounded border border-border bg-surface px-3 text-sm">
+					Apply
+				</button>
+			</noscript>
+		</form>
+	{/if}
 
 	{#if setBuilds && build}
 		<nav aria-label="Builds" class="flex flex-wrap gap-2 border-b border-border px-4 py-3">
@@ -144,24 +199,28 @@
 							>{/if}
 					</dd>
 				</div>
-				<div>
-					<dt class={label}>Skills</dt>
-					<dd class="mt-1 text-sm font-semibold">
-						{build.skillOrder ? formatSkillOrder(build.skillOrder) : '–'}
-					</dd>
-				</div>
-				<div>
-					<dt class={label}>Starter</dt>
-					<dd class="mt-1">
-						{#if build.starter}
-							<span class="flex gap-0.5">
-								{#each build.starter as item (item.id)}
-									<ItemIcon {version} {item} count={item.count} />
-								{/each}
-							</span>
-						{:else}<span class="text-muted">–</span>{/if}
-					</dd>
-				</div>
+				{#if !vs || build.skillOrder}
+					<div>
+						<dt class={label}>Skills</dt>
+						<dd class="mt-1 text-sm font-semibold">
+							{build.skillOrder ? formatSkillOrder(build.skillOrder) : '–'}
+						</dd>
+					</div>
+				{/if}
+				{#if !vs || build.starter}
+					<div>
+						<dt class={label}>Starter</dt>
+						<dd class="mt-1">
+							{#if build.starter}
+								<span class="flex gap-0.5">
+									{#each build.starter as item (item.id)}
+										<ItemIcon {version} {item} count={item.count} />
+									{/each}
+								</span>
+							{:else}<span class="text-muted">–</span>{/if}
+						</dd>
+					</div>
+				{/if}
 				<div>
 					<dt class={label}>Boots</dt>
 					<dd class="mt-1">
@@ -202,6 +261,12 @@
 				</ol>
 			</div>
 		</div>
+	{:else if vs}
+		<p class="px-4 py-4 text-sm text-muted">
+			{setBuilds
+				? `No builds against ${vs.name} in this slice yet.`
+				: `Builds against ${vs.name} are unavailable right now.`}
+		</p>
 	{:else}
 		<div class="flex flex-col gap-5 px-4 py-4">
 			<p class="text-sm text-muted">

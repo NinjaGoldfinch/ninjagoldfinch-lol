@@ -9,6 +9,7 @@ import {
 	formatRate,
 	parseChampionFilter,
 	parseSort,
+	filterFields,
 	RANK_OPTIONS,
 	rankLabel,
 	patchLabel,
@@ -139,6 +140,17 @@ describe('championQuery', () => {
 		expect(championQuery({ role: null, patch: 'all', rank: { ...rank, andAbove: false } })).toBe(
 			'?rank=emerald'
 		);
+	});
+
+	it("lists the same fields, unencoded, for a form's hidden inputs", () => {
+		expect(
+			filterFields({ role: 'mid', patch: '16.19', rank: { tier: 'gold', andAbove: true } })
+		).toEqual([
+			['role', 'mid'],
+			['rank', 'gold+'],
+			['patch', '16.19']
+		]);
+		expect(filterFields({ role: null, patch: 'all', rank: null })).toEqual([]);
 	});
 
 	it('round-trips through parseChampionFilter', () => {

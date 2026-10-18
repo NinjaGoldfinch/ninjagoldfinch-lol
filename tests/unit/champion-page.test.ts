@@ -7,8 +7,12 @@ import {
 	toChampionStats,
 	toMatchups,
 	toPopularChoices,
+	parseVsPick,
 	toSetBuilds,
-	toTierRows
+	toTierRows,
+	vsChoices,
+	withPick,
+	type VsPick
 } from '#lib/domain/champion-page.ts';
 import { fixtureBody, recordedNames } from './fixtures.ts';
 
@@ -192,5 +196,127 @@ describe('openBuild, roleLabel and formatSkillOrder', () => {
 
 	it("writes Udyr's four-skill order", () => {
 		expect(formatSkillOrder('RWEQ')).toBe('R › W › E › Q');
+	});
+});
+
+describe('toSetBuilds against a lane opponent', () => {
+	const against = toSetBuilds(
+		fixtureBody(
+			`${BASE}/builds?queue=RANKED_SOLO_5x5&patch=all&opponentId=134&minGames=0`
+		) as Schemas['ChampionBuildsResponse'],
+		names
+	);
+
+	it("names the opponent and riot-proxy's lane", () => {
+		expect(against).toMatchObject({ role: 'MIDDLE', opponentId: 134, totalGames: 71 });
+		expect(toSetBuilds(builds, names).opponentId).toBeNull();
+	});
+
+	it('keeps the 3rd item and leaves out the empty 4th and 5th, starter and skills', () => {
+		const first = against.builds[0];
+		expect(first.next).toHaveLength(1);
+		expect(first.next[0].length).toBeGreaterThan(0);
+		expect(first.starter).toBeNull();
+		expect(first.skillOrder).toBeNull();
+		expect(first.boots).not.toBeNull();
+		expect(first.runes?.keystone).not.toBeNull();
+		expect(first.spells).not.toBeNull();
+	});
+
+	it('keeps empty steps without an opponent, where they mean nobody chose one', () => {
+		const empty = toSetBuilds(
+			{ ...builds, builds: [{ ...builds.builds[0], next: [[], [], []] }] },
+			names
+		);
+		expect(empty.builds[0].next).toEqual([[], [], []]);
+	});
+});
+
+describe('parseVsPick and withPick', () => {
+	const params = (query: string) => new URLSearchParams(query);
+	const syndra = { opponentId: 134, slug: 'syndra', name: 'Syndra' };
+
+	it("reads an opponent by its champion page's name, and a lane", () => {
+		expect(parseVsPick(params('vs=syndra&lane=mid'), names.champions, null)).toEqual({
+			...syndra,
+			lane: 'mid'
+		});
+		expect(parseVsPick(params('vs=kaisa'), names.champions, null)).toMatchObject({
+			opponentId: 145,
+			name: "Kai'Sa",
+			lane: null
+		});
+	});
+
+	it('drops an unknown opponent, and only the lane when it is unknown', () => {
+		expect(parseVsPick(params(''), names.champions, null)).toBeNull();
+		expect(parseVsPick(params('vs=Syndra'), names.champions, null)).toBeNull();
+		expect(parseVsPick(params('vs=134'), names.champions, null)).toBeNull();
+		expect(parseVsPick(params('vs=nobody&lane=mid'), names.champions, null)).toBeNull();
+		expect(parseVsPick(params('vs=syndra&lane=MIDDLE'), names.champions, null)).toEqual({
+			...syndra,
+			lane: null
+		});
+	});
+
+	it('drops the lane when a role is picked: the role is the lane', () => {
+		expect(parseVsPick(params('vs=syndra&lane=top'), names.champions, 'mid')).toEqual({
+			...syndra,
+			lane: null
+		});
+	});
+
+	it('adds the pick to a query, after the filter', () => {
+		expect(withPick('', null)).toBe('');
+		expect(withPick('', { slug: 'syndra', lane: null })).toBe('?vs=syndra');
+		expect(withPick('?rank=gold+', { slug: 'syndra', lane: 'mid' })).toBe(
+			'?rank=gold+&vs=syndra&lane=mid'
+		);
+	});
+});
+
+describe('vsChoices', () => {
+	const entry = (opponentId: number, role: string, games: number) => ({
+		opponentId,
+		opponentName: null,
+		role,
+		games,
+		wins: 0,
+		winRate: 0
+	});
+
+	it('lists each opponent once, games summed over lanes, most first', () => {
+		const choices = vsChoices(matchups, null, names);
+		const sylas = choices.find((c) => c.name === 'Sylas');
+		// Sylas: 126 in Mid, 2 as Support, 1 in Top.
+		expect(sylas).toEqual({ opponentId: 517, slug: 'sylas', name: 'Sylas', games: 129 });
+		expect(choices.filter((c) => c.opponentId === 517)).toHaveLength(1);
+		expect(choices[0].name).toBe('Sylas');
+		const games = choices.map((c) => c.games ?? 0);
+		expect(games).toEqual(games.toSorted((a, b) => b - a));
+	});
+
+	it('breaks ties by name', () => {
+		const tied = [
+			entry(134, 'MIDDLE', 5),
+			entry(103, 'MIDDLE', 5),
+			entry(81, 'MIDDLE', 3),
+			entry(81, 'BOTTOM', 2)
+		];
+		expect(vsChoices(tied, null, names).map((c) => c.name)).toEqual(['Ahri', 'Ezreal', 'Syndra']);
+	});
+
+	it('puts a picked opponent the list lacks last, without a count', () => {
+		const yuumi: VsPick = { opponentId: 350, slug: 'yuumi', name: 'Yuumi', lane: null };
+		const choices = vsChoices([entry(134, 'MIDDLE', 5)], yuumi, names);
+		expect(choices.at(-1)).toEqual({ opponentId: 350, slug: 'yuumi', name: 'Yuumi', games: null });
+		const listed = vsChoices([entry(350, 'UTILITY', 2)], yuumi, names);
+		expect(listed).toEqual([{ opponentId: 350, slug: 'yuumi', name: 'Yuumi', games: 2 }]);
+	});
+
+	it("leaves out an opponent Data Dragon doesn't know: it has no URL", () => {
+		expect(vsChoices([{ ...entry(9999, 'MIDDLE', 50), opponentName: 'New' }], null, names)).toEqual(
+			[]
+		);
 	});
 });

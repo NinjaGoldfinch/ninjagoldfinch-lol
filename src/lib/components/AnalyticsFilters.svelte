@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withPick, type VsPick } from '#lib/domain/champion-page.ts';
 	import {
 		DEFAULT_SORT,
 		RANK_OPTIONS,
@@ -20,7 +21,8 @@
 		filter,
 		shownPatch,
 		patches,
-		sort = DEFAULT_SORT
+		sort = DEFAULT_SORT,
+		vs = null
 	}: {
 		/** The page the links and the form go to. */
 		path: string;
@@ -29,6 +31,8 @@
 		shownPatch: string | null;
 		patches: string[];
 		sort?: ChampionSort;
+		/** A champion page's lane opponent, kept by every control; a role tab drops its lane. */
+		vs?: VsPick | null;
 	} = $props();
 
 	const roleTabs = [{ slug: null, label: 'All roles' }, ...ROLES];
@@ -46,7 +50,10 @@
 				{@const current = filter.role === tab.slug}
 				<li>
 					<a
-						href="{path}{championQuery({ ...filter, role: tab.slug }, sort)}"
+						href="{path}{withPick(
+							championQuery({ ...filter, role: tab.slug }, sort),
+							vs && { slug: vs.slug, lane: null }
+						)}"
 						aria-current={current ? 'page' : undefined}
 						class="block rounded border px-3 py-1.5 text-sm {current
 							? 'border-accent bg-accent text-bg'
@@ -58,9 +65,16 @@
 	</nav>
 
 	<!-- GET, so every view has its own URL; the role and sort are kept. -->
-	<form method="GET" action={path} class="flex flex-wrap items-center gap-2">
+	<form
+		method="GET"
+		action={path}
+		aria-label="Patch and tier"
+		class="flex flex-wrap items-center gap-2"
+	>
 		{#if filter.role}<input type="hidden" name="role" value={filter.role} />{/if}
 		{#if sort !== DEFAULT_SORT}<input type="hidden" name="sort" value={sort} />{/if}
+		{#if vs}<input type="hidden" name="vs" value={vs.slug} />{/if}
+		{#if vs?.lane}<input type="hidden" name="lane" value={vs.lane} />{/if}
 		<label>
 			<span class="sr-only">Patch</span>
 			<select

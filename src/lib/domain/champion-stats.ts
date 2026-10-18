@@ -145,13 +145,22 @@ export const RANK_OPTIONS: { ranges: RankFilter[]; tiers: RankFilter[] } = {
  * written as is, not as `%2B`, so the URL reads as the picker does.
  */
 export function championQuery(filter: ChampionFilter, sort: ChampionSort = DEFAULT_SORT): string {
-	const params = new URLSearchParams();
-	if (filter.role !== null) params.set('role', filter.role);
-	if (filter.rank !== null) params.set('rank', rankValue(filter.rank));
-	if (filter.patch !== defaultPatch()) params.set('patch', filter.patch ?? 'newest');
-	if (sort !== DEFAULT_SORT) params.set('sort', sort);
+	const params = new URLSearchParams(filterFields(filter, sort));
 	const query = params.toString().replace(/(^|&)rank=([a-z]+)%2B(?=&|$)/, '$1rank=$2+');
 	return query ? `?${query}` : '';
+}
+
+/** The fields `championQuery` writes, unencoded: a form's hidden inputs keep the view. */
+export function filterFields(
+	filter: ChampionFilter,
+	sort: ChampionSort = DEFAULT_SORT
+): [string, string][] {
+	const fields: [string, string][] = [];
+	if (filter.role !== null) fields.push(['role', filter.role]);
+	if (filter.rank !== null) fields.push(['rank', rankValue(filter.rank)]);
+	if (filter.patch !== defaultPatch()) fields.push(['patch', filter.patch ?? 'newest']);
+	if (sort !== DEFAULT_SORT) fields.push(['sort', sort]);
+	return fields;
 }
 
 /**
