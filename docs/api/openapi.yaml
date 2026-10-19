@@ -1,0 +1,529 @@
+openapi: 3.1.0
+info:
+  title: ninjagoldfinch.lol
+  version: 0.0.1
+  summary: The HTTP surface of the ninjagoldfinch.lol website.
+  description: |
+    Hand-written from the route code at commit e7c395c (2026-10-19); see
+    docs/api/endpoints.md for the prose reference and source lines.
+
+    The site serves HTML pages rendered on the server, not a JSON API. Every
+    page also has a SvelteKit data endpoint, `<page path>/__data.json`, used
+    for client-side navigation; it runs the same load and carries the same
+    Cache-Control. Those endpoints are framework-generated and not listed
+    individually here.
+
+    Error pages are HTML with one of three states: 404 Not found, 429 Too
+    many requests, 503 Temporarily unavailable (docs/api/errors.md).
+    Cache-Control on errors and form posts is set centrally: 404 is
+    `public, s-maxage=60`, any other error and every non-GET/HEAD response
+    is `no-store`.
+
+    For local development the same paths are served by `just dev` on
+    http://localhost:5173.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://ninjagoldfinch.lol
+    description: production
+tags:
+  - name: pages
+    description: Server-rendered HTML pages.
+  - name: redirects
+    description: Old URLs that redirect permanently to the current scheme.
+  - name: health
+    description: Liveness for monitoring.
+security: []
+paths:
+  /:
+    get:
+      tags: [pages]
+      operationId: getHome
+      summary: Home page with the search form and recent searches
+      description: No server load; sends no Cache-Control header.
+      responses:
+        '200':
+          $ref: '#/components/responses/Html'
+  /about:
+    get:
+      tags: [pages]
+      operationId: getAbout
+      summary: About page, prerendered at build time
+      responses:
+        '200':
+          $ref: '#/components/responses/Html'
+  /healthz:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness; does not call riot-proxy
+      responses:
+        '200':
+          description: The server is up.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+              example:
+                ok: true
+  /search:
+    get:
+      tags: [pages]
+      operationId: search
+      summary: Header search; redirects to a profile or a champion page
+      description: |
+        A query containing `#` is a Riot ID and redirects to its profile
+        without calling riot-proxy. Anything else is matched against champion
+        names and redirects to that champion's builds when one matches;
+        otherwise the form re-renders with a hint.
+      parameters:
+        - name: q
+          in: query
+          description: A Riot ID (`Name#TAG`) or a champion name.
+          schema:
+            type: string
+          example: 'NinjaGoldfinch#OCENZ'
+        - name: riotId
+          in: query
+          deprecated: true
+          description: The field's name before champion search; read when `q` is absent.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The search form, with a hint when the query matched nothing.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            text/html:
+              schema:
+                type: string
+        '303':
+          description: Redirect to `/summoner/{riotId}` or `/champions/{key}#builds`.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+  /summoner/{riotId}:
+    parameters:
+      - $ref: '#/components/parameters/RiotId'
+    get:
+      tags: [pages]
+      operationId: getProfile
+      summary: A player's profile, rank and a page of ten matches
+      parameters:
+        - name: queue
+          in: query
+          description: Queue filter. Only the listed queue IDs are honoured; anything else is ignored.
+          schema:
+            type: integer
+            enum: [420, 440, 400, 490, 480, 450, 1700]
+        - name: champion
+          in: query
+          description: Champion ID filter, 1 to 10000.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+        - name: page
+          in: query
+          description: 1-based page of ten matches, at most 1001.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1001
+            default: 1
+      responses:
+        '200':
+          description: |
+            The profile. Cache-Control is the profile policy, or `no-store`
+            when the match history could not be loaded.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              example: 'public, s-maxage=60, stale-while-revalidate=300'
+          content:
+            text/html:
+              schema:
+                type: string
+        '307':
+          $ref: '#/components/responses/CanonicalRedirect'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/Unreachable'
+    post:
+      tags: [pages]
+      operationId: refreshProfile
+      summary: Refresh form action (`?/refresh`)
+      description: |
+        SvelteKit form action, selected by a query key that starts with `/`:
+        `POST /summoner/{riotId}?/refresh`, optionally after the filter
+        (`?queue=420&/refresh`). Asks riot-proxy to re-read the profile and
+        the match page from Riot (once a minute per player) and returns the
+        fresh profile. Cross-origin posts are refused with 403.
+      parameters:
+        - name: /refresh
+          in: query
+          required: true
+          allowEmptyValue: true
+          description: Selects the refresh action; has no value.
+          schema:
+            type: string
+        - name: queue
+          in: query
+          schema:
+            type: integer
+        - name: champion
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |
+            HTML page without JavaScript; with `use:enhance` the browser sends
+            `x-sveltekit-action: true` and gets the action result as JSON.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            text/html:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Cross-site form post refused (Origin does not match the build-time ORIGIN).
+        '415':
+          description: Not a form submission.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/Unreachable'
+  /summoner/{region}/{riotId}:
+    parameters:
+      - $ref: '#/components/parameters/RegionSlug'
+      - $ref: '#/components/parameters/RiotId'
+    get:
+      tags: [redirects]
+      operationId: legacyProfile
+      summary: Old profile URL with a region; redirects permanently
+      responses:
+        '308':
+          description: Redirect to `/summoner/{riotId}`, keeping the query.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /match/{matchId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags: [pages]
+      operationId: getMatch
+      summary: A match's scoreboard, builds and timeline
+      description: |
+        The region is the one the match id's prefix names. `player`, `tab`
+        and `build` are read by the page in the browser, not by the server
+        load, so they do not change the data; each URL is still its own edge
+        cache entry.
+      parameters:
+        - name: player
+          in: query
+          description: Riot ID to highlight, written `GameName-TAG`.
+          schema:
+            type: string
+          example: NinjaGoldfinch-OCENZ
+        - name: tab
+          in: query
+          description: Anything other than `timeline` shows the scoreboard.
+          schema:
+            type: string
+            enum: [timeline]
+        - name: build
+          in: query
+          description: Participant ID whose build to open.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: |
+            The match. Cache-Control is the match policy, or `no-store` when
+            the timeline could not be loaded.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              example: 'public, s-maxage=86400, stale-while-revalidate=86400'
+          content:
+            text/html:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/Unreachable'
+  /match/{region}/{matchId}:
+    parameters:
+      - $ref: '#/components/parameters/RegionSlug'
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags: [redirects]
+      operationId: legacyMatch
+      summary: Old match URL with a region; redirects permanently
+      responses:
+        '308':
+          description: Redirect to `/match/{matchId}`, keeping the query.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /champions:
+    get:
+      tags: [pages]
+      operationId: getChampions
+      summary: Champion table of win, pick and ban rates (Ranked Solo/Duo)
+      parameters:
+        - $ref: '#/components/parameters/Role'
+        - $ref: '#/components/parameters/Patch'
+        - $ref: '#/components/parameters/Rank'
+        - name: sort
+          in: query
+          description: Read by the page without re-running the load; default `pick`.
+          schema:
+            type: string
+            enum: [pick, win, ban]
+            default: pick
+      responses:
+        '200':
+          $ref: '#/components/responses/AnalyticsHtml'
+        '307':
+          $ref: '#/components/responses/CanonicalRedirect'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/Unreachable'
+  /champions/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        description: |
+          Data Dragon's champion id in lower case (`ahri`, `monkeyking`). Any
+          spelling of the id or display name redirects to it.
+        schema:
+          type: string
+        example: ahri
+    get:
+      tags: [pages]
+      operationId: getChampion
+      summary: A champion's rates, set builds, matchups and rates by tier
+      parameters:
+        - $ref: '#/components/parameters/Role'
+        - $ref: '#/components/parameters/Patch'
+        - $ref: '#/components/parameters/Rank'
+        - name: vs
+          in: query
+          description: Lane opponent for the set builds, as its champion page key.
+          schema:
+            type: string
+          example: syndra
+        - name: lane
+          in: query
+          description: The lane against the opponent; ignored when `role` is set.
+          schema:
+            type: string
+            enum: [top, jungle, mid, bot, support]
+        - name: build
+          in: query
+          description: 1-based set build tab; read by the page, not the load.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          $ref: '#/components/responses/AnalyticsHtml'
+        '308':
+          description: Redirect to the canonical key and query.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/Unreachable'
+  /robots.txt:
+    get:
+      tags: [pages]
+      operationId: getRobots
+      summary: Static robots.txt
+      responses:
+        '200':
+          description: robots.txt
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  parameters:
+    RiotId:
+      name: riotId
+      in: path
+      required: true
+      description: Riot ID written `GameName-TAG`, URL-encoded; split on the last hyphen.
+      schema:
+        type: string
+      example: Hide%20on%20bush-KR1
+    RegionSlug:
+      name: region
+      in: path
+      required: true
+      description: A site region slug from the old URL scheme.
+      schema:
+        type: string
+        enum: [br, eune, euw, jp, kr, lan, las, me, na, oce, ru, sea, tw, tr, vn]
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      description: Riot match ID; its prefix names the platform.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9]+_[0-9]+$'
+      example: OC1_712351051
+    Role:
+      name: role
+      in: query
+      description: Role filter; default every role.
+      schema:
+        type: string
+        enum: [top, jungle, mid, bot, support]
+    Patch:
+      name: patch
+      in: query
+      description: '`all` (default), `newest`, or a `major.minor` patch.'
+      schema:
+        type: string
+        pattern: '^(all|newest|[0-9]+\.[0-9]+)$'
+      example: '16.19'
+    Rank:
+      name: rank
+      in: query
+      description: One tier (`diamond`) or a tier and above (`diamond+`); default every tier.
+      schema:
+        type: string
+        pattern: '^(challenger|grandmaster|master|diamond|emerald|platinum|gold|silver|bronze|iron)\+?$'
+      example: diamond+
+  headers:
+    NoStore:
+      schema:
+        type: string
+        const: no-store
+    Location:
+      schema:
+        type: string
+  responses:
+    Html:
+      description: An HTML page.
+      content:
+        text/html:
+          schema:
+            type: string
+    AnalyticsHtml:
+      description: An analytics page.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: 'public, s-maxage=600, stale-while-revalidate=600'
+      content:
+        text/html:
+          schema:
+            type: string
+    CanonicalRedirect:
+      description: Redirect to the same page with defaults and unknown values removed from the query.
+      headers:
+        Location:
+          $ref: '#/components/headers/Location'
+    NotFound:
+      description: Not found error page.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: 'public, s-maxage=60'
+      content:
+        text/html:
+          schema:
+            type: string
+    TooManyRequests:
+      description: riot-proxy reported QUOTA_EXCEEDED or RATE_LIMITED; the page names the wait when known.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        text/html:
+          schema:
+            type: string
+    Unavailable:
+      description: A riot-proxy call timed out, or riot-proxy answered with an error the site maps to 503.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        text/html:
+          schema:
+            type: string
+    Unreachable:
+      description: riot-proxy refused the connection, or another unexpected exception; handleError shows "Temporarily unavailable" with status 500.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        text/html:
+          schema:
+            type: string

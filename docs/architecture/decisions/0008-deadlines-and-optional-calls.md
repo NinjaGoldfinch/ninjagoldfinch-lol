@@ -1,0 +1,31 @@
+# 0008: A deadline on every riot-proxy call; optional calls fail on their own
+
+Each riot-proxy call has a time budget by route, and a call a page can do without degrades only its own section when it fails, times out or throws.
+
+## Context
+
+The proxy client had no timeout, so a riot-proxy that stopped answering held pages until the socket gave up, and a thrown call failed the whole page even where it was meant to be optional (ADR-040, `docs/DECISIONS.md:544`). riot-proxy's player and match routes may wait on Riot for up to 25 s per request.
+
+## Decision
+
+- `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s otherwise (`src/lib/server/proxy.ts:55-64`).
+- `withTimeout` combines the caller's signal with `AbortSignal.timeout(budget)` and reads the body inside the deadline; a spent budget is `error(503)` (`src/lib/server/proxy.ts:68-87`).
+- `optional()` turns a throw into a 503 response for that call alone (`src/lib/server/errors.ts:41-58`). Optional: the profile's match page, the match timeline, the table's patch list, the champion page's builds, matchups and patch list.
+
+## Consequences
+
+- A hung riot-proxy costs a page at most 5 s or 30 s (`docs/DECISIONS.md:552`).
+- No setting: the budgets are constants.
+
+## Status
+
+Accepted (SPD-05, PR #63).
+
+## Evidence
+
+`tests/unit/proxy.test.ts`, `tests/unit/errors.test.ts`, loader tests.
+
+---
+
+**Sources:** `docs/DECISIONS.md:L540-L552`, `src/lib/server/proxy.ts:L55-L87`, `src/lib/server/errors.ts:L41-L58`
+**Last verified:** 2026-10-19 against commit `85d9cf8`
