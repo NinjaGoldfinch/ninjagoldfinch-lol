@@ -217,3 +217,15 @@ Since P3, also: the match page's build follows riot-proxy's BLD-04 definitions (
 Open with riot-proxy: Viego's possession can log skill points he didn't spend. A writeup and a handoff for a Viego-only rule went to riot-proxy on 2026-10-10; the site will mirror the rule once it lands.
 
 Tagged `phase-P4` on the commit that records this check. Paused for owner review before P5.
+
+### VS exit check — passed 2026-10-19
+
+Production, `main` at eb09022 (#68) deployed by the owner, behind riot-proxy v2.7.0. Its `/openapi.json` has the committed spec's sha256 (`aafca901…088b8`), and a builds rebuild had filled the opponent tables: Ahri's builds against Syndra answered 200, Mid, 404 games, three builds, with the 4th and 5th items, starter and skill order empty as the spec says.
+
+```text
+$ curl -sL 'http://127.0.0.1:3000/champions/ahri?rank=diamond+&vs=syndra' | grep -o '[^>]*against Syndra[^<]*'
+				build against Syndra
+<a href="/champions/ahri?rank=diamond+&amp;vs=syndra&amp;lane=mid#builds" title="Builds against Syndra" …>49.9%
+```
+
+The server-rendered page holds the Diamond+ builds against Syndra, and its matchup links keep the rank and the pick. The owner also saw the _vs_ picker in a browser. VS-04 was dropped.
