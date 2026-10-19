@@ -557,8 +557,15 @@ riot-proxy v2.6.0 keeps analytics responses in memory and warms the champion tab
 - [ ] SPD-04 Dropped: stream the champion page's builds, matchups and patch list. At most about 110 ms on a champion's first view per rebuild, at the cost of "Loading…" cards without JavaScript; warming those calls is riot-proxy's (ADR-039)
 - [ ] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise; a timeout is a 503, and optional calls degrade on their own
 - [ ] SPD-06 Check and document Cloudflare's cache of `__data.json`
+- [ ] SPD-07 Timing for each load: one server log line per load over 100 ms, naming the route id and each riot-proxy call's spec path with its time; no `Server-Timing` header; cold and warm timings of each page type recorded
+- [ ] SPD-08 Profile, match and champions loads start the patch and static-data calls alongside their main calls; same pages, same fallbacks
+- [ ] SPD-09 Static data loaded at start-up through the `init` hook; after `PATCH_TTL_MS` the patch refreshes in the background; on a new patch, pages keep the old one until its lookups have loaded
+- [ ] SPD-10 Preconnect to the image hosts from `src/lib/assets.ts`; the champion header icon and the profile icon eager with `fetchpriority="high"`; `decoding="async"` on every `<img>`
+- [ ] SPD-11 Smaller page data, only if SPD-07 shows the size matters: the profile's champion names not sent twice, matchups trimmed to what the page uses; names stay in the page
 
 **Exit check:** none beyond each task's own; every task records before and after numbers from production in its PR.
+
+SPD-07 to SPD-11 come from the plan approved on 2026-10-20, with the owner's answers, in `docs/notes/page-speed.md`.
 
 ### VS — tier ranges and builds against a lane opponent (after riot-proxy v2.7.0)
 
