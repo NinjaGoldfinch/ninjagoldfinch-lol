@@ -23,7 +23,9 @@ export function describeError(status: number, retryAfter?: number): ErrorView {
 	};
 }
 
-function formatWait(seconds: number): string {
+function formatWait(wait: number): string {
+	// riot-proxy's retryAfter can be fractional; never promise less than it says.
+	const seconds = Math.ceil(wait);
 	if (seconds <= 1) return '1 second';
 	if (seconds < 60) return `${seconds} seconds`;
 	const minutes = Math.ceil(seconds / 60);

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ChampionSummary } from '#lib/domain/champion-summary.ts';
+	import { summaryCaption, type ChampionSummary } from '#lib/domain/champion-summary.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 
 	let {
@@ -12,10 +12,7 @@
 <section aria-labelledby="champions">
 	<h2 id="champions" class="text-sm font-medium tracking-wide text-muted uppercase">Champions</h2>
 	<!-- Says what it covers: only the page of matches shown, not all-time stats. -->
-	<p class="mt-1 text-xs text-muted">
-		From the {matchCount}
-		{matchCount === 1 ? 'match' : 'matches'} shown
-	</p>
+	<p class="mt-1 text-xs text-muted">{summaryCaption(champions, matchCount)}</p>
 	{#if champions.length === 0}
 		<p class="mt-2 text-sm text-muted">No games to summarise.</p>
 	{:else}

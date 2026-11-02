@@ -179,7 +179,7 @@ export function kdaRatio(kills: number, deaths: number, assists: number): string
 	return deaths === 0 ? 'Perfect' : ((kills + assists) / deaths).toFixed(2);
 }
 
-/** CS per minute to one place. */
+/** CS per minute to one place; a dash without a duration, rather than a rate of 0. */
 export function csPerMinute(cs: number, seconds: number): string {
-	return seconds > 0 ? ((cs * 60) / seconds).toFixed(1) : '0.0';
+	return seconds > 0 ? ((cs * 60) / seconds).toFixed(1) : '–';
 }

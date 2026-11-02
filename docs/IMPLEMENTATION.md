@@ -581,7 +581,7 @@ The owner's review of the code and docs on 2026-11-03 found security, caching an
 - [ ] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query
 - [ ] RV-05 Lower-case match ids redirect to upper case
 - [ ] RV-06 Match tabs keep the scroll; recent searches recorded on every profile
-- [ ] RV-07 Match and profile edge cases: skill order, a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait
+- [ ] RV-07 Match and profile edge cases: a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait; the skill order kept, as riot-proxy ranks a skill never levelled last
 - [ ] RV-08 Champion pages: the tier in their wording, `?vs=` without regard to case
 - [ ] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint
 - [ ] RV-10 One definition each for duplicated helpers and labels
