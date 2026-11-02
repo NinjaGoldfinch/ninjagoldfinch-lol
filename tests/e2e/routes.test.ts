@@ -180,6 +180,19 @@ test('opened profiles appear under recent searches', async ({ page }) => {
 	);
 });
 
+test('a profile reached from another profile is remembered too', async ({ page }) => {
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
+	// The header search navigates in the page, keeping the profile component.
+	await search(page, 'Synthetic#TEST');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Synthetic#TEST');
+	await page.goto('/');
+
+	const recent = page.getByRole('region', { name: 'Recent searches' });
+	await expect(recent.getByRole('link', { name: /Synthetic#TEST/ })).toBeVisible();
+	await expect(recent.getByRole('link', { name: /NinjaGoldfinch#OCENZ/ })).toBeVisible();
+});
+
 test('/about shows what the site is and the legal notice', async ({ page }) => {
 	await page.goto('/about');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('About ninjagoldfinch.lol');

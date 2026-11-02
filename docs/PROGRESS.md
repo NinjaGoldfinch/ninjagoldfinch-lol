@@ -72,7 +72,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-03 Every outbound call has a deadline that fires; anything but the caller's abort is a 503; a deadline on CommunityDragon; a 429 kept as a 429 — #75 (ADR-044)
 - [x] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query — #76 (ADR-045)
 - [x] RV-05 Lower-case match ids redirect to upper case — #77
-- [ ] RV-06 Match tabs keep the scroll; recent searches recorded on every profile
+- [x] RV-06 Match tabs keep the scroll; recent searches recorded on every profile — #78
 - [ ] RV-07 Match and profile edge cases: skill order, a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait
 - [ ] RV-08 Champion pages: the tier in their wording, `?vs=` without regard to case
 - [ ] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint
