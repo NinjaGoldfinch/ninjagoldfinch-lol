@@ -78,7 +78,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint — #81
 - [x] RV-10 One definition each for duplicated helpers and labels — #82
 - [x] RV-11 Docs brought up to date with the ADRs; finished notes archived — #83
-- [ ] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example`
+- [x] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example` — #84
 - [ ] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers
 
 ## Brought forward

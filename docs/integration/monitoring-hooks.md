@@ -10,7 +10,7 @@ What ninjagoldfinch.lol exposes for monitoring: its health endpoint, the log lin
 | readiness      | no     | Nothing checks that riot-proxy is reachable or the key is accepted                                                                  | —                                   |
 | metrics        | no     | No Prometheus or other metrics endpoint                                                                                             | —                                   |
 
-`/healthz` is used by the Docker `HEALTHCHECK` (`Dockerfile:22`), by Playwright to know the server is up (`playwright.config.ts:20`), and by the deploy procedure (`README.md:102`). On production it is reachable only on the host (`curl -s http://127.0.0.1:3000/healthz`) or through the Tunnel at `https://ninjagoldfinch.lol/healthz`.
+`/healthz` is used by the Docker `HEALTHCHECK` (`Dockerfile:22-24`), by Playwright to know the server is up (`playwright.config.ts:20`), and by the deploy procedure (`README.md:102`). On production it is reachable only on the host (`curl -s http://127.0.0.1:3000/healthz`) or through the Tunnel at `https://ninjagoldfinch.lol/healthz`.
 
 To check the dependency the site cannot run without, probe riot-proxy's own readiness, `GET http://127.0.0.1:8080/readyz` (200 or 503 with `sqlite`, `limiter` and reader status; no key, no quota) (`riot-proxy:src/routes/health.rs:1,47-106`).
 
@@ -70,5 +70,5 @@ These are derived from the log lines above; none is configured anywhere in this 
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/hooks.server.ts:L20-L24`, `src/lib/server/proxy.ts:L11-L62,L124-L128`, `src/lib/server/profile.ts:L83-L111`, `src/lib/server/match.ts:L50-L64`, `src/lib/server/patch.ts:L79`, `src/lib/server/champions.ts:L46-L47`, `src/lib/server/static-data.ts:L75`, `src/lib/server/champion-page.ts:L95,L148`, `src/lib/server/cdragon.ts:L21-L32`, `src/routes/search/+page.server.ts:L39`, `Dockerfile:L22`, `playwright.config.ts:L20`, `README.md:L101-L102`, `riot-proxy:src/routes/health.rs:L47-L106`, `riot-proxy:src/app.rs:L107-L115`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, owner-supplied unit (2026-10-19)
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/hooks.server.ts:L20-L24`, `src/lib/server/proxy.ts:L11-L62,L124-L128`, `src/lib/server/profile.ts:L83-L111`, `src/lib/server/match.ts:L50-L64`, `src/lib/server/patch.ts:L79`, `src/lib/server/champions.ts:L46-L47`, `src/lib/server/static-data.ts:L75`, `src/lib/server/champion-page.ts:L95,L148`, `src/lib/server/cdragon.ts:L21-L32`, `src/routes/search/+page.server.ts:L39`, `Dockerfile:L22-L24`, `playwright.config.ts:L20`, `README.md:L101-L102`, `riot-proxy:src/routes/health.rs:L47-L106`, `riot-proxy:src/app.rs:L107-L115`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, owner-supplied unit (2026-10-19)
+**Last verified:** 2026-11-03 against commit `23a4f41`
