@@ -136,6 +136,14 @@ export function goldLead(frames: GoldFrame[]): GoldPoint[] {
 	);
 }
 
+/**
+ * Whether the lead can be charted: the chart's x axis is the game's length,
+ * so it needs a frame after the first (a timeline of one frame is 0 s long).
+ */
+export function canChart(points: GoldPoint[]): boolean {
+	return (points.at(-1)?.at ?? 0) > 0;
+}
+
 /** Each side's largest lead and when it was; null for a side that never led. */
 export function largestLeads(points: GoldPoint[]): {
 	first: GoldPoint | null;

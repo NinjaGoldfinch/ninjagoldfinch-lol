@@ -14,6 +14,12 @@ describe('describeError', () => {
 		expect(describeError(429).detail).toContain('Try again in a minute.');
 	});
 
+	it('rounds a fractional wait up to whole seconds', () => {
+		expect(describeError(429, 2.5).detail).toContain('Try again in 3 seconds.');
+		expect(describeError(429, 0.2).detail).toContain('Try again in 1 second.');
+		expect(describeError(429, 59.5).detail).toContain('Try again in 1 minute.');
+	});
+
 	it('describes everything else as unavailable', () => {
 		for (const status of [500, 502, 503]) {
 			expect(describeError(status).title).toBe('Temporarily unavailable');

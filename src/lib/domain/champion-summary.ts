@@ -21,6 +21,19 @@ export interface ChampionSummary {
 }
 
 /**
+ * What the champion summary covers: the matches shown, less the remakes it
+ * leaves out. `shown` counts every row, remakes included.
+ */
+export function summaryCaption(champions: ChampionSummary[], shown: number): string {
+	const games = champions.reduce((n, c) => n + c.games, 0);
+	const remakes = shown - games;
+	const caption = `From the ${games} ${games === 1 ? 'match' : 'matches'} shown`;
+	return remakes > 0
+		? `${caption}, leaving out ${remakes} ${remakes === 1 ? 'remake' : 'remakes'}`
+		: caption;
+}
+
+/**
  * Groups the given match rows by champion. Remakes are left out: they are not
  * real games. Most played first, then most wins, then by name.
  */

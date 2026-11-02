@@ -4,6 +4,7 @@
 	import type { TeamScoreboard } from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
 	import {
+		canChart,
 		formatLead,
 		goldAxis,
 		goldLead,
@@ -169,6 +170,8 @@
 			<p class="text-sm text-muted">The timeline is unavailable right now.</p>
 		{:else if points.length === 0}
 			<p class="text-sm text-muted">Gold difference needs two teams.</p>
+		{:else if !canChart(points)}
+			<p class="text-sm text-muted">The timeline is too short to chart.</p>
 		{:else}
 			<p class="text-sm">
 				{#each [leads.first, leads.second] as lead, i (i)}

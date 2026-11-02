@@ -148,7 +148,8 @@ describe('match formatting', () => {
 
 	it('gives CS per minute', () => {
 		expect(csPerMinute(181, 1952)).toBe('5.6');
-		expect(csPerMinute(0, 0)).toBe('0.0');
+		expect(csPerMinute(0, 0)).toBe('–');
+		expect(csPerMinute(0, 60)).toBe('0.0');
 	});
 });
 

@@ -10,6 +10,7 @@ import {
 } from '#lib/api/match.ts';
 import { teamGold } from '#lib/domain/match-detail.ts';
 import {
+	canChart,
 	formatLead,
 	goldAxis,
 	goldLead,
@@ -23,6 +24,19 @@ import {
 	type ObjectiveKill
 } from '#lib/domain/timeline.ts';
 import { MATCH_PATH, TIMELINE_PATH, fixtureBody } from './fixtures.ts';
+
+describe('canChart', () => {
+	it('needs a frame after the first', () => {
+		expect(canChart([])).toBe(false);
+		expect(canChart([{ at: 0, lead: 0 }])).toBe(false);
+		expect(
+			canChart([
+				{ at: 0, lead: 0 },
+				{ at: 60, lead: 120 }
+			])
+		).toBe(true);
+	});
+});
 
 // The raw recorded payloads, read without the site's parsers, to check the
 // charts' numbers against.
