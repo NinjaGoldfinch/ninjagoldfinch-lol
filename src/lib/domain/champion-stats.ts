@@ -125,6 +125,11 @@ export function rankLabel(rank: RankFilter | null): string {
 	return `${label}${rank.andAbove ? '+' : ''}`;
 }
 
+/** What a page's rates count: `every tier`, or `Diamond+` with a tier picked. */
+export function rateScope(rank: RankFilter | null): string {
+	return rank ? rankLabel(rank) : 'every tier';
+}
+
 /** `every region and tier`, or `every region · Diamond+`, for a page's scope line. */
 export function rankScope(rank: RankFilter | null): string {
 	return rank ? `every region · ${rankLabel(rank)}` : 'every region and tier';

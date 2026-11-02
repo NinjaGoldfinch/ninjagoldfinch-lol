@@ -248,9 +248,15 @@ describe('parseVsPick and withPick', () => {
 		});
 	});
 
+	it('reads the opponent without regard to case, as the champion route does', () => {
+		expect(parseVsPick(params('vs=Syndra'), names.champions, null)).toEqual({
+			...syndra,
+			lane: null
+		});
+	});
+
 	it('drops an unknown opponent, and only the lane when it is unknown', () => {
 		expect(parseVsPick(params(''), names.champions, null)).toBeNull();
-		expect(parseVsPick(params('vs=Syndra'), names.champions, null)).toBeNull();
 		expect(parseVsPick(params('vs=134'), names.champions, null)).toBeNull();
 		expect(parseVsPick(params('vs=nobody&lane=mid'), names.champions, null)).toBeNull();
 		expect(parseVsPick(params('vs=syndra&lane=MIDDLE'), names.champions, null)).toEqual({

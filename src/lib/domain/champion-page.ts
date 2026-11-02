@@ -237,7 +237,9 @@ export function parseVsPick(
 	champions: Record<number, Named>,
 	role: RoleSlug | null
 ): VsPick | null {
-	const vs = params.get('vs');
+	// Slugs are lower case; `?vs=Syndra` names the same pick, and the page's
+	// redirect writes it as `syndra`.
+	const vs = params.get('vs')?.toLowerCase();
 	if (!vs) return null;
 	const found = Object.entries(champions).find(([, c]) => championSlug(c) === vs);
 	if (!found) return null;

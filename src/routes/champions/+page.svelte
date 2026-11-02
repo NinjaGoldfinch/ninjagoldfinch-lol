@@ -12,6 +12,7 @@
 		parseSort,
 		patchLabel,
 		rankScope,
+		rateScope,
 		sortRows,
 		type ChampionSort
 	} from '#lib/domain/champion-stats.ts';
@@ -53,7 +54,9 @@
 </div>
 
 {#if rows.length === 0}
-	<p class="mt-6 text-muted">No games recorded for this patch and role yet.</p>
+	<p class="mt-6 text-muted">
+		No games recorded for this patch and role{data.filter.rank ? ' in this tier' : ''} yet.
+	</p>
 {:else}
 	<!-- Narrow screens scroll the table inside its box, not the page. -->
 	<div class="mt-4 overflow-x-auto rounded border border-border bg-surface">
@@ -118,7 +121,8 @@
 		</table>
 	</div>
 	<p class="mt-3 text-xs text-muted">
-		From archived ranked games. Each rate counts every tier. Low sample: fewer than {LOW_SAMPLE_GAMES}
+		From archived ranked games. Each rate counts {rateScope(data.filter.rank)}. Low sample: fewer
+		than {LOW_SAMPLE_GAMES}
 		games, so its rates can swing widely.
 	</p>
 {/if}
