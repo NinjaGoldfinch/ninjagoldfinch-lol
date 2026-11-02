@@ -571,6 +571,26 @@ riot-proxy v2.7.0 adds `minTier` (a tier and every tier above it, summed) on the
 
 **Exit check:** with JavaScript disabled, `/champions/ahri?rank=diamond+&vs=galio` renders the range and the builds against Galio from the server.
 
+### RV — fixes from the code review of 2026-11-03
+
+The owner's review of the code and docs on 2026-11-03 found security, caching and display bugs, dead code and stale docs. The findings, task by task, are in `docs/notes/RV-plan.md`.
+
+- [ ] RV-01 The deploy test cannot touch the real repo: every `GIT_*` location variable unset
+- [ ] RV-02 Riot IDs checked before they reach riot-proxy: no `.` or `..`, the spec's lengths; the proxy client refuses a rewritten path
+- [ ] RV-03 Every outbound call has a deadline that fires; anything but the caller's abort is a 503; a deadline on CommunityDragon; a 429 kept as a 429
+- [ ] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query
+- [ ] RV-05 Lower-case match ids redirect to upper case
+- [ ] RV-06 Match tabs keep the scroll; recent searches recorded on every profile
+- [ ] RV-07 Match and profile edge cases: skill order, a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait
+- [ ] RV-08 Champion pages: the tier in their wording, `?vs=` without regard to case
+- [ ] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint
+- [ ] RV-10 One definition each for duplicated helpers and labels
+- [ ] RV-11 Docs brought up to date with the ADRs; finished notes archived
+- [ ] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example`
+- [ ] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers
+
+**Exit check:** none beyond each task's own.
+
 ## Riot policy checklist
 
 These come from Riot's [General Policies](https://developer.riotgames.com/policies/general) (last updated May 29, 2025) and the [League of Legends developer docs](https://developer.riotgames.com/docs/lol). Re-read both before the production key review.
