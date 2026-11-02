@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	DEFAULT_REGION,
-	REGIONS,
-	findRegion,
-	regionForMatchId,
-	regionForPlatform
-} from '#lib/domain/regions.ts';
+import { REGIONS, findRegion, regionForMatchId, regionForPlatform } from '#lib/domain/regions.ts';
 
 describe('REGIONS', () => {
 	it('has unique lower-case slugs and unique platforms', () => {
@@ -19,10 +13,6 @@ describe('REGIONS', () => {
 		for (const r of REGIONS) {
 			expect(['americas', 'europe', 'asia', 'sea']).toContain(r.route);
 		}
-	});
-
-	it('includes the default region', () => {
-		expect(findRegion(DEFAULT_REGION)).toMatchObject({ platform: 'oc1', route: 'sea' });
 	});
 });
 

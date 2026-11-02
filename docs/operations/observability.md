@@ -64,7 +64,7 @@ Prometheus and Grafana on `ngf-mon-syd1` are planned, scraping riot-proxy's `/me
 
 ## Tracing
 
-None. The site has no `instrumentation.server.ts` and no OpenTelemetry dependency (`package.json:23-52`). riot-proxy's tracing spans carry the request id, which is the only cross-service correlation.
+None. The site has no `instrumentation.server.ts` and no OpenTelemetry dependency (`package.json:21-50`). riot-proxy's tracing spans carry the request id, which is the only cross-service correlation.
 
 ## ninja-monitor
 
@@ -72,5 +72,5 @@ Watches the `ninjagoldfinch-lol` unit on the host: down after 30 s (repeated eve
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L11-L66`, `src/hooks.server.ts:L20-L24`, `src/lib/server/profile.ts:L85,L116`, `src/routes/healthz/+server.ts:L5-L6`, `Dockerfile:L22`, `playwright.config.ts:L18-L20`, `package.json:L23-L52`, `README.md:L100`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/lib/server/proxy.ts:L11-L66`, `src/hooks.server.ts:L20-L24`, `src/lib/server/profile.ts:L85,L116`, `src/routes/healthz/+server.ts:L5-L6`, `Dockerfile:L22`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L100`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
+**Last verified:** 2026-11-03 against commit `6d46c74`

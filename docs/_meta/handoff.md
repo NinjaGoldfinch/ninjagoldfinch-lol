@@ -32,7 +32,7 @@ All passed the per-document checklist (one H1, summary, vocabulary names, source
 | Where                                                       | Disagreement                                                                                                    | What Pass A did                                     | Recommendation                                                                 |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `docs/DECISIONS.md:504` (ADR-038)                           | Says production is "2 vCPU, 4 GB"; production is now ONI-4 6 vCPU / 12 GB (`riot-proxy:docs/DECISIONS.md:1510`) | Docs use the new host and note the change           | Add an ADR or note in this repo recording the move                             |
-| `README.md:12`                                              | "Node 22.17 or later"; `package.json:7` says `>=22.18`; ADR-038 says 22.18                                      | Docs use `package.json`                             | Fix the README line                                                            |
+| `README.md:12`                                              | "Node 22.17 or later"; `package.json:8` says `>=22.18`; ADR-038 says 22.18                                      | Docs use `package.json`                             | Fix the README line                                                            |
 | `deploy/proxmox/README.md:3`                                | Default `PROXY_URL` "the dev instance at `http://192.168.68.46:8080`"; ADR-039 says it is gone                  | Documented as dormant                               | Reword when the preview VM returns                                             |
 | `docs/IMPLEMENTATION.md:23-47,327-402`                      | Plan's Docker + compose + Caddy deployment, `/summoner/kr/…` URLs, runtime `ORIGIN`                             | Docs follow ADR-014, ADR-037, ADR-038               | Leave the plan as history; the docs supersede it                               |
 | `CLAUDE.md:62`                                              | "Every load sets Cache-Control"; `/` has no load and sends none (observed)                                      | Documented as fact                                  | Harmless (no proxy data); optionally add a `+page.server.ts` or a hook default |
@@ -88,4 +88,4 @@ The owner also asked where the env file lives: `/etc/ninjagoldfinch-lol/env` (un
 ---
 
 **Sources:** this repo at `e7c395c`; `../riot-proxy` at `48f32aa`; owner answers of 2026-10-19
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `6d46c74`

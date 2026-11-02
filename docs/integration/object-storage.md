@@ -4,7 +4,7 @@ ninjagoldfinch.lol reads and writes no object store. This page says so with evid
 
 ## The site
 
-A search of `src/`, `tests/` and `deploy/` for S3, R2, bucket, Onidel and object-store clients finds nothing, and the only runtime dependency is `openapi-fetch` (`package.json:50-52`; inventory sections 5 and 6). The site:
+A search of `src/`, `tests/` and `deploy/` for S3, R2, bucket, Onidel and object-store clients finds nothing, and the only runtime dependency is `openapi-fetch` (`package.json:48-50`; inventory sections 5 and 6). The site:
 
 - holds no object-storage credentials (its production settings are `NODE_ENV`, `HOST`, `PORT`, `PROXY_URL` and `PROXY_KEY`, owner-supplied 2026-10-19);
 - receives archived match and timeline bodies only through riot-proxy's HTTP routes;
@@ -66,5 +66,5 @@ Matches already rendered stay at the edge for a day (`src/lib/server/cache.ts:8-
 
 ---
 
-**Sources:** `package.json:L50-L52`, `src/lib/assets.ts:L1-L8`, `src/lib/server/match.ts:L45`, `src/lib/server/cache.ts:L8-L9`, `README.md:L103-L111`, `riot-proxy:src/archive/pack.rs:L1-L133`, `riot-proxy:src/archive/recovery.rs:L5-L8`, `riot-proxy:src/archive/objects.rs:L1-L42`, `riot-proxy:src/archive/matches.rs:L242-L293`, `riot-proxy:src/config.rs:L736`, `riot-proxy:deploy/README.md:L14-L46`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L20`, `riot-proxy:deploy/riot-proxy-replica.timer`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L810-L820`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `package.json:L48-L50`, `src/lib/assets.ts:L1-L8`, `src/lib/server/match.ts:L45`, `src/lib/server/cache.ts:L8-L9`, `README.md:L103-L111`, `riot-proxy:src/archive/pack.rs:L1-L133`, `riot-proxy:src/archive/recovery.rs:L5-L8`, `riot-proxy:src/archive/objects.rs:L1-L42`, `riot-proxy:src/archive/matches.rs:L242-L293`, `riot-proxy:src/config.rs:L736`, `riot-proxy:deploy/README.md:L14-L46`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L20`, `riot-proxy:deploy/riot-proxy-replica.timer`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L810-L820`, owner-supplied env names (2026-10-19)
+**Last verified:** 2026-11-03 against commit `6d46c74`

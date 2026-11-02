@@ -25,9 +25,6 @@ describe('summariseChampions', () => {
 			wins: 4,
 			losses: 2,
 			winRate: 67,
-			kills: '12.2',
-			deaths: '4.7',
-			assists: '4.3',
 			kda: '3.54',
 			csPerMinute: '7.1'
 		});

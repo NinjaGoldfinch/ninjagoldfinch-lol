@@ -117,8 +117,6 @@ export interface SetBuilds {
 	 * played, or against an opponent the lane they met in most.
 	 */
 	role: string | null;
-	/** The lane opponent the builds are against; null for every game. */
-	opponentId: number | null;
 	/** Games in that role that had a build. */
 	totalGames: number;
 	builds: SetBuild[];
@@ -134,7 +132,6 @@ export function toSetBuilds(
 	const against = body.opponentId !== null;
 	return {
 		role: body.role,
-		opponentId: body.opponentId,
 		totalGames: body.totalGames,
 		builds: body.builds.map((b) => {
 			const rune = b.runes[0];

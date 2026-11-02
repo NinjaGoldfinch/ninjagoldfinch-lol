@@ -27,7 +27,7 @@ sudo apt-get install -y nodejs git
 node --version     # must be v22.18 or later
 ```
 
-Ubuntu 26.04's packaged Node is new enough (`riot-proxy:docs/design/12-object-storage-and-hosting.md:614`; `docs/DECISIONS.md:513`). The repo's `.npmrc` sets `engine-strict=true`, so `pnpm install` refuses an older Node (`.npmrc:1`, `package.json:6-8`).
+Ubuntu 26.04's packaged Node is new enough (`riot-proxy:docs/design/12-object-storage-and-hosting.md:614`; `docs/DECISIONS.md:513`). The repo's `.npmrc` sets `engine-strict=true`, so `pnpm install` refuses an older Node (`.npmrc:1`, `package.json:7-9`).
 
 ## 2. pnpm
 
@@ -36,7 +36,7 @@ sudo npm install -g pnpm@12.10.1
 pnpm --version     # 12.10.1
 ```
 
-The repo pins `pnpm@12.10.1` (`package.json:5`). Ubuntu 26.04's `node-corepack` (0.24) cannot load pnpm 12, so production installs it with `npm install -g` rather than `corepack enable` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-804`). If `npm` is not on the box, `sudo apt-get install -y npm` first.
+The repo pins `pnpm@12.10.1` (`package.json:6`). Ubuntu 26.04's `node-corepack` (0.24) cannot load pnpm 12, so production installs it with `npm install -g` rather than `corepack enable` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-804`). If `npm` is not on the box, `sudo apt-get install -y npm` first.
 
 ## 3. System user and directories
 
@@ -177,5 +177,5 @@ Expect `cache-control: public, s-maxage=600, stale-while-revalidate=600` on `/ch
 
 ---
 
-**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L5-L8`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L5-L6`, `README.md:L88-L115`, `docs/DECISIONS.md:L171-L184,L500-L514`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
-**Last verified:** 2026-10-20 against commit `85d9cf8` (build, env file and start-up checks run locally; not run on a fresh Ubuntu 26.04 server)
+**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L6-L9`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L5-L6`, `README.md:L88-L115`, `docs/DECISIONS.md:L171-L184,L500-L514`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
+**Last verified:** 2026-11-03 against commit `6d46c74` (citations only; build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)

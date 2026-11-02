@@ -67,7 +67,7 @@ export interface ProfileData {
  *
  * `refresh` asks riot-proxy to re-read both from Riot, spending quota; it
  * allows that once a minute per player and otherwise answers from cache.
- * `filter` picks the match page: a queue, and which page of ten.
+ * `filter` picks the match page: a queue, a champion, and which page of ten.
  */
 export async function loadProfile(
 	id: RiotId,
@@ -80,7 +80,7 @@ export async function loadProfile(
 	});
 	if (!profile.response.ok || !profile.data) toHttpError(profile.response, profile.error);
 	const body = profile.data;
-	const region = body.platform ? regionForPlatform(body.platform) : undefined;
+	const region = regionForPlatform(body.platform);
 	if (!region) {
 		console.error(`profile ${id.gameName}#${id.tagLine}: unknown platform ${body.platform}`);
 		error(503, 'Temporarily unavailable');

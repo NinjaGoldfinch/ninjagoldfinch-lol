@@ -11,10 +11,6 @@ export interface ChampionSummary {
 	losses: number;
 	/** Whole percent. */
 	winRate: number;
-	/** Averages per game, to one place. */
-	kills: string;
-	deaths: string;
-	assists: string;
 	kda: string;
 	/** CS per minute over the games with a known duration. */
 	csPerMinute: string;
@@ -54,7 +50,6 @@ export function summariseChampions(rows: MatchRow[]): ChampionSummary[] {
 				sum((r) => r.deaths),
 				sum((r) => r.assists)
 			];
-			const average = (total: number) => (total / games.length).toFixed(1);
 
 			return {
 				id: games[0].champion.id,
@@ -64,9 +59,6 @@ export function summariseChampions(rows: MatchRow[]): ChampionSummary[] {
 				wins,
 				losses: games.length - wins,
 				winRate: Math.round((wins * 100) / games.length),
-				kills: average(kills),
-				deaths: average(deaths),
-				assists: average(assists),
 				kda: kdaRatio(kills, deaths, assists),
 				csPerMinute: csPerMinute(
 					timed.reduce((n, r) => n + r.cs, 0),

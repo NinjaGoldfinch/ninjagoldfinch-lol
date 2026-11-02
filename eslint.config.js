@@ -35,8 +35,9 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// CLAUDE.md: no non-null `!`, on proxy data or anywhere else.
+			'@typescript-eslint/no-non-null-assertion': 'error'
+		}
 	}
 );
