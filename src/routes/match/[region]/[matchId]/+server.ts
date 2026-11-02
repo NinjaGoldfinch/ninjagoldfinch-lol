@@ -7,5 +7,5 @@ import type { RequestHandler } from './$types';
 // links move permanently to the URL without one, keeping the query (ADR-037).
 export const GET: RequestHandler = ({ params, url }) => {
 	if (!findRegion(params.region)) error(404, 'Not found');
-	redirect(308, matchPath(params.matchId) + url.search);
+	redirect(308, matchPath(params.matchId.toUpperCase()) + url.search);
 };
