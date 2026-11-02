@@ -4,7 +4,7 @@ The repo has no GitHub Actions. One command, `just check`, defines "passing", an
 
 ## Context
 
-The plan keeps CI/CD out of scope and asks for Actions to be disabled on the private repo (`docs/IMPLEMENTATION.md:17,90`). GitHub branch protection is unavailable for this private repo on the current plan (ADR-003, `docs/DECISIONS.md:35`).
+The plan keeps CI/CD out of scope and asks for Actions to be disabled on the private repo (`docs/IMPLEMENTATION.md:19,92`). GitHub branch protection is unavailable for this private repo on the current plan (ADR-003, `docs/DECISIONS.md:35`).
 
 ## Decision
 
@@ -16,7 +16,7 @@ The plan keeps CI/CD out of scope and asks for Actions to be disabled on the pri
 
 - Nothing on GitHub stops a direct push to `main` (`docs/DECISIONS.md:39`).
 - E2E tests (`just e2e`) are not part of the gate.
-- A future pipeline would call the same command (`docs/IMPLEMENTATION.md:319`).
+- A future pipeline would call the same command (`docs/IMPLEMENTATION.md:323`).
 
 ## Status
 
@@ -28,5 +28,5 @@ Accepted.
 
 ---
 
-**Sources:** `justfile:L1-L28`, `.githooks/pre-commit:L1-L27`, `.githooks/pre-push:L1-L3`, `CLAUDE.md:L11-L12`, `docs/IMPLEMENTATION.md:L17,L90,L319`, `docs/DECISIONS.md:L21-L39`
+**Sources:** `justfile:L1-L28`, `.githooks/pre-commit:L1-L27`, `.githooks/pre-push:L1-L3`, `CLAUDE.md:L11-L12`, `docs/IMPLEMENTATION.md:L19,L92,L323`, `docs/DECISIONS.md:L21-L39`
 **Last verified:** 2026-10-19 against commit `85d9cf8`

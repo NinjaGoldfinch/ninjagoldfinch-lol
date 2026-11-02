@@ -8,7 +8,7 @@ Short answers to questions a new contributor, operator or integrator is likely t
 No. `just check` and `just e2e` use fixtures and the mock proxy, and `just dev` can run against the mock too ([workflows/development-setup.md](../workflows/development-setup.md#option-a-against-the-mock-proxy-no-riot-proxy-no-riot-key)). You need one only to see live data from a riot-proxy you run yourself.
 
 **Is there a shared development riot-proxy?**
-No. The LAN dev proxy at `192.168.68.46:8080` is dormant, and `PROXY_URL` has no default: "there is no shared dev instance" (`README.md:44`). Run riot-proxy locally with `AUTH_DISABLED=true` ([workflows/development-setup.md](../workflows/development-setup.md#option-b-against-a-riot-proxy-you-run-yourself)).
+No. The LAN dev proxy at `192.168.68.46:8080` is dormant, and `PROXY_URL` has no default: "there is no shared dev instance" (`README.md:45`). Run riot-proxy locally with `AUTH_DISABLED=true` ([workflows/development-setup.md](../workflows/development-setup.md#option-b-against-a-riot-proxy-you-run-yourself)).
 
 **Why can't the site just call Riot or Data Dragon from the server?**
 All data comes from riot-proxy, which owns the Riot key, the rate limits and the caches; the site may not work around it (`CLAUDE.md:18-22`). The Browser does load images from the Data Dragon CDN and CommunityDragon directly, and the server reads one CommunityDragon file for stat shard names ([architecture/overview.md](../architecture/overview.md)).
@@ -58,7 +58,7 @@ Either the site's riot-proxy quota or the Riot key's budget is used up; the page
 A profile page is cached at the edge for 60 s and may be served stale for up to 5 minutes while it refreshes (`src/lib/server/cache.ts:6-7`); riot-proxy caches Riot data with its own TTLs ([data/caching.md](../data/caching.md)). The Refresh button asks riot-proxy to re-read from Riot.
 
 **Is the production key's name `ninjagoldfinch-web` or `ninjagoldfinch-lol-prod`?**
-Production uses `ninjagoldfinch-lol-prod` (owner, 2026-10-19). Older repo docs suggest `ninjagoldfinch-web` (`deploy/proxmox/README.md:55`, `docs/IMPLEMENTATION.md:187`).
+Production uses `ninjagoldfinch-lol-prod` (owner, 2026-10-19). The original plan suggests `ninjagoldfinch-web` (`docs/IMPLEMENTATION.md:189`), now marked superseded there.
 
 **Can I use the site as an API?**
 No. It serves HTML pages, redirects and `/healthz` only; consumers wanting data should get their own riot-proxy key ([api/endpoints.md](../api/endpoints.md)).
@@ -73,5 +73,5 @@ The committed spec is riot-proxy 2.7.0; riot-proxy facts were read from its repo
 
 ---
 
-**Sources:** `CLAUDE.md:L11-L24,L59`, `README.md:L44`, `justfile:L15-L22`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `vite.config.ts:L16-L19`, `src/lib/server/cache.ts:L6-L7`, `src/lib/domain/matches.ts:L156-L158`, `deploy/proxmox/README.md:L55`, `docs/IMPLEMENTATION.md:L187`, and the linked pages
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `CLAUDE.md:L11-L24,L59`, `README.md:L45`, `justfile:L15-L22`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `vite.config.ts:L16-L19`, `src/lib/server/cache.ts:L6-L7`, `src/lib/domain/matches.ts:L156-L158`, `docs/IMPLEMENTATION.md:L189`, and the linked pages
+**Last verified:** 2026-11-03 against commit `fbba06d`

@@ -135,7 +135,7 @@ curl -s "$B/summoner/NinjaGoldfinch-OCENZ/__data.json" | head -c 120; echo
 
 ## 8. On production
 
-On `ngf-prod-syd1` the site listens on `127.0.0.1:3000` (`README.md:99-101`):
+On `ngf-prod-syd1` the site listens on `127.0.0.1:3000` (`README.md:100-102`):
 
 ```sh
 curl -s http://127.0.0.1:3000/healthz
@@ -146,5 +146,5 @@ The second shows the site's cache policy and, through Cloudflare, whether the ed
 
 ---
 
-**Sources:** `tests/mock-proxy/server.ts:L1-L12`, `tests/mock-proxy/mock.ts:L27-L48`, `playwright.config.ts:L15-L31`, `README.md:L99-L101`; commands run 2026-10-19 against `node build` and the mock proxy
+**Sources:** `tests/mock-proxy/server.ts:L1-L12`, `tests/mock-proxy/mock.ts:L27-L48`, `playwright.config.ts:L15-L31`, `README.md:L100-L102`; commands run 2026-10-19 against `node build` and the mock proxy
 **Last verified:** 2026-10-19 against commit `85d9cf8`

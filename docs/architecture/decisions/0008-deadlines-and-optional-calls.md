@@ -4,7 +4,7 @@ Each riot-proxy call has a time budget by route, and a call a page can do withou
 
 ## Context
 
-The proxy client had no timeout, so a riot-proxy that stopped answering held pages until the socket gave up, and a thrown call failed the whole page even where it was meant to be optional (ADR-040, `docs/DECISIONS.md:544`). riot-proxy's player and match routes may wait on Riot for up to 25 s per request.
+The proxy client had no timeout, so a riot-proxy that stopped answering held pages until the socket gave up, and a thrown call failed the whole page even where it was meant to be optional (ADR-040, `docs/DECISIONS.md:546`). riot-proxy's player and match routes may wait on Riot for up to 25 s per request.
 
 ## Decision
 
@@ -14,7 +14,7 @@ The proxy client had no timeout, so a riot-proxy that stopped answering held pag
 
 ## Consequences
 
-- A hung riot-proxy costs a page at most 5 s or 30 s (`docs/DECISIONS.md:552`).
+- A hung riot-proxy costs a page at most 5 s or 30 s (`docs/DECISIONS.md:554`).
 - No setting: the budgets are constants.
 
 ## Status
@@ -29,5 +29,5 @@ Accepted (SPD-05, PR #63).
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L540-L552`, `src/lib/server/proxy.ts:L68-L134`, `src/lib/server/cdragon.ts:L11-L32`, `tests/unit/proxy.test.ts:L154-L169`, `src/lib/server/errors.ts:L41-L58`
+**Sources:** `docs/DECISIONS.md:L542-L554`, `src/lib/server/proxy.ts:L68-L134`, `src/lib/server/cdragon.ts:L11-L32`, `tests/unit/proxy.test.ts:L154-L169`, `src/lib/server/errors.ts:L41-L58`
 **Last verified:** 2026-11-03 against commit `2948c82`

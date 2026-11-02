@@ -50,11 +50,11 @@ git push -u origin <branch>
 
 Open a PR against `main`, then squash-merge it (`CLAUDE.md:8`). Every PR ships tests for what it changes (`CLAUDE.md:10`). After merging, tick the task in `docs/PROGRESS.md` with the PR number, and record any decision as an ADR in `docs/DECISIONS.md` (`CLAUDE.md:28-29`).
 
-If the PR changes the riot-proxy spec, it is its own task: `chore(api): riot-proxy spec v<version> from the release` (commits `4859ae7`, `d452f64`), following `README.md:46-66`. Deploy the riot-proxy release before or with the site change that needs it.
+If the PR changes the riot-proxy spec, it is its own task: `chore(api): riot-proxy spec v<version> from the release` (commits `4859ae7`, `d452f64`), following `README.md:47-67`. Deploy the riot-proxy release before or with the site change that needs it.
 
 ### 4. Deploy to production
 
-On `ngf-prod-syd1`, as a user with sudo (`README.md:103-113`):
+On `ngf-prod-syd1`, as a user with sudo (`README.md:104-114`):
 
 ```sh
 cd /opt/ninjagoldfinch-lol
@@ -64,7 +64,7 @@ sudo -H -u ninjagoldfinch-lol env ORIGIN=https://ninjagoldfinch.lol pnpm build
 sudo systemctl restart ninjagoldfinch-lol
 ```
 
-- `ORIGIN` goes on the build command because the origin is fixed at build time; adapter-node 6 does not read it at runtime, and form posts such as Refresh are accepted only from that origin (`vite.config.ts:16-19`, ADR-014, `README.md:115`).
+- `ORIGIN` goes on the build command because the origin is fixed at build time; adapter-node 6 does not read it at runtime, and form posts such as Refresh are accepted only from that origin (`vite.config.ts:16-19`, ADR-014, `README.md:114`).
 - **The build is not isolated from the running server.** adapter-node deletes `build/` before writing the new one (`node_modules/@sveltejs/adapter-node/index.js:17`, adapter-node 6.0.0). The running server streams static files from the paths it recorded at boot and imports route modules lazily (`build/server/manifest.js`, `build/server/adapter-node-handler.js:379-404`), so between the build and the restart some requests can fail. Run the build and the restart back to back.
 - `Restart=always` with `RestartSec=2` brings the service back if it exits (owner-supplied unit, [inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo)). Nothing in the repo measures the restart's downtime. Cloudflare's edge keeps serving cached pages within their `s-maxage` and `stale-while-revalidate` windows ([data/caching.md](../data/caching.md)).
 
@@ -96,5 +96,5 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 
 ---
 
-**Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L514`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L46-L66,L103-L115`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L5-L6`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
+**Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L516`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L47-L67,L104-L114`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L5-L6`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-03 against commit `8cc2076`

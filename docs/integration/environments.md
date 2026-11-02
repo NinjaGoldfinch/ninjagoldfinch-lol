@@ -17,15 +17,15 @@ The places ninjagoldfinch.lol runs, which riot-proxy each one talks to, with whi
 - Host `ngf-prod-syd1`, Onidel ONI-4 in Sydney, Ubuntu 26.04, shared with riot-proxy and `cloudflared` (`riot-proxy:docs/DECISIONS.md:1510`).
 - Service `ninjagoldfinch-lol.service`: `/usr/bin/node build` in `/opt/ninjagoldfinch-lol` as user `ninjagoldfinch-lol`, settings from `/etc/ninjagoldfinch-lol/env` (owner-supplied unit, 2026-10-19).
 - Settings present: `NODE_ENV`, `HOST`, `PORT`, `PROXY_URL`, `PROXY_KEY` (names supplied by the owner, 2026-10-19). `HOST=127.0.0.1` (`docs/DECISIONS.md:509`); `PROXY_URL=http://127.0.0.1:8080` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:630`); `CDRAGON_URL` and `PUBLIC_SITE_NAME` take their defaults.
-- Built with `ORIGIN=https://ninjagoldfinch.lol` (`README.md:109`).
+- Built with `ORIGIN=https://ninjagoldfinch.lol` (`README.md:110`).
 - Public only through the Cloudflare Tunnel; the edge caches pages per `Cache-Control`.
 - riot-proxy runs with auth on; it refuses `AUTH_DISABLED` when `ENV=production` (`riot-proxy:src/config.rs:658-662`).
 
-> **TODO (unverified):** the value of `PORT` in production. `README.md:99` says the site listens on `127.0.0.1:3000` and the Tunnel routes to `:3000` (`riot-proxy:docs/design/13-admin-dashboard.md:64`), so it is presumably `3000`.
+> **TODO (unverified):** the value of `PORT` in production. `README.md:100` says the site listens on `127.0.0.1:3000` and the Tunnel routes to `:3000` (`riot-proxy:docs/design/13-admin-dashboard.md:64`), so it is presumably `3000`.
 
 ## Local dev
 
-The site needs a riot-proxy; there is no shared development instance (`.env.example:1-3`, `README.md:45`). Run riot-proxy on your own machine:
+The site needs a riot-proxy; there is no shared development instance (`.env.example:1-3`, `README.md:46`). Run riot-proxy on your own machine:
 
 1. Get riot-proxy: a release binary checked against `sha256sums`, the image `ghcr.io/ninjagoldfinch/riot-proxy:2`, or `cargo build --release` (`riot-proxy:README.md:7-26`).
 2. In riot-proxy's `.env`, set your development `RIOT_API_KEY`, and either `AUTH_DISABLED=true` or mint a key with `riot-proxy key create --name <your-dev-key>` (`riot-proxy:README.md:60-72`).
@@ -54,7 +54,7 @@ Unit tests (`just check`) need neither. Nothing in either reaches riot-proxy or 
 
 ## Dormant: the LAN dev proxy
 
-A riot-proxy on the owner's Proxmox node at `http://192.168.68.46:8080`, running with auth disabled, served site development and the P1–P4 exit checks (`docs/PROGRESS.md:107,126,156,193`). It is not running. ADR-039 removed it from the docs (`docs/DECISIONS.md:536`); `deploy/proxmox/README.md:3` still mentions it. Nothing in the code depends on it: `PROXY_URL` has no default (`src/lib/server/env.ts:10-15`).
+A riot-proxy on the owner's Proxmox node at `http://192.168.68.46:8080`, running with auth disabled, served site development and the P1–P4 exit checks (`docs/PROGRESS.md:107,126,156,193`). It is not running. ADR-039 removed it from the docs (`docs/DECISIONS.md:538`), and RV-11 removed the last mention from `deploy/proxmox/README.md`. Nothing in the code depends on it: `PROXY_URL` has no default (`src/lib/server/env.ts:10-15`).
 
 To use it again, start it and set `PROXY_URL=http://192.168.68.46:8080` with an empty `PROXY_KEY`.
 
@@ -64,5 +64,5 @@ VM 104 `ninjagoldfinch-web` at `192.168.68.47` built the site in Docker from a g
 
 ---
 
-**Sources:** `.env.example:L1-L21`, `README.md:L45,L99,L109`, `src/lib/server/env.ts:L10-L55`, `vite.config.ts:L16-L19`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `deploy/proxmox/README.md:L3`, `deploy/proxmox/create-vm.sh:L26-L28`, `docs/PROGRESS.md:L70-L72,L107,L126,L156,L193`, `docs/DECISIONS.md:L509,L536`, `riot-proxy:README.md:L7-L26,L60-L72`, `riot-proxy:src/config.rs:L314-L316,L658-L662,L695-L768`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L630`, `riot-proxy:docs/design/13-admin-dashboard.md:L64`, owner-supplied unit, env names and answers (2026-10-19); `pnpm dev` run 2026-10-19
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `.env.example:L1-L21`, `README.md:L46,L100,L110`, `src/lib/server/env.ts:L10-L55`, `vite.config.ts:L16-L19`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `deploy/proxmox/README.md:L3`, `deploy/proxmox/create-vm.sh:L26-L28`, `docs/PROGRESS.md:L70-L72,L107,L126,L156,L193`, `docs/DECISIONS.md:L509,L538`, `riot-proxy:README.md:L7-L26,L60-L72`, `riot-proxy:src/config.rs:L314-L316,L658-L662,L695-L768`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L630`, `riot-proxy:docs/design/13-admin-dashboard.md:L64`, owner-supplied unit, env names and answers (2026-10-19); `pnpm dev` run 2026-10-19
+**Last verified:** 2026-11-03 against commit `fbba06d`

@@ -29,7 +29,7 @@ Each box is one of the numbered steps below.
 
 ## 1. Refresh the spec (only if the route is missing)
 
-Download the release binary, check it against `sha256sums`, print its spec into `openapi/riot-proxy.json`, then regenerate the types. The exact commands are in `README.md:55-62`:
+Download the release binary, check it against `sha256sums`, print its spec into `openapi/riot-proxy.json`, then regenerate the types. The exact commands are in `README.md:56-63`:
 
 ```sh
 repo=$PWD; v=<version>; cd "$(mktemp -d)"
@@ -40,9 +40,9 @@ sha256sum --ignore-missing -c sha256sums && chmod +x riot-proxy-linux-amd64
 cd "$repo" && just gen
 ```
 
-- `head -c -1` strips the trailing newline, so the file stays byte-identical to what riot-proxy serves at `/openapi.json`; `openapi/` is excluded from Prettier for the same reason (`README.md:61,64`, `.prettierignore:15-16`).
+- `head -c -1` strips the trailing newline, so the file stays byte-identical to what riot-proxy serves at `/openapi.json`; `openapi/` is excluded from Prettier for the same reason (`README.md:62,65`, `.prettierignore:15-16`).
 - `just gen` rewrites `src/lib/api/schema.d.ts` (`justfile:15-17`). Never edit that file by hand (`CLAUDE.md:23`); `just check` fails if it drifts from the spec (`justfile:22`).
-- A spec bump is its own task and PR, like `chore(api): riot-proxy spec v2.7.0 from the release (#66)` in the git log. Update the version and sha256 in `README.md:64` and the "verified against" line in [integration/contract.md](../integration/contract.md).
+- A spec bump is its own task and PR, like `chore(api): riot-proxy spec v2.7.0 from the release (#66)` in the git log. Update the version and sha256 in `README.md:65` and the "verified against" line in [integration/contract.md](../integration/contract.md).
 
 ## 2. Call it from a loader
 
@@ -90,8 +90,8 @@ No `any` and no non-null `!` on proxy data (`CLAUDE.md:60`).
 
 Every path the code requests needs a fixture, or the mock proxy answers 500 (`tests/mock-proxy/mock.ts:27-43`).
 
-- **Record** one from a riot-proxy you can reach (spends Riot rate limit): `just fixture <name> '<path exactly as the client sends it>'` (`justfile:34-36`, `README.md:70-76`). The recorder replaces `puuid`, `summonerId` and `metadata.participants` with `fixture-puuid-…` placeholders and keeps only `content-type`, `x-cache`, `x-cache-age`, `x-request-id` and `retry-after` (`tests/record-fixture.ts:41-78`, `tests/redact.ts:1-38`). Trim large Data Dragon files with `--keep`.
-- **Write a synthetic one** for states you cannot record on demand, named `synthetic-*.json`, with a `_note` saying it is not a recording (`README.md:78`, ADR-017; example `tests/fixtures/synthetic-match-rate-limited.json`).
+- **Record** one from a riot-proxy you can reach (spends Riot rate limit): `just fixture <name> '<path exactly as the client sends it>'` (`justfile:34-36`, `README.md:71-77`). The recorder replaces `puuid`, `summonerId` and `metadata.participants` with `fixture-puuid-…` placeholders and keeps only `content-type`, `x-cache`, `x-cache-age`, `x-request-id` and `retry-after` (`tests/record-fixture.ts:41-78`, `tests/redact.ts:1-38`). Trim large Data Dragon files with `--keep`.
+- **Write a synthetic one** for states you cannot record on demand, named `synthetic-*.json`, with a `_note` saying it is not a recording (`README.md:79`, ADR-017; example `tests/fixtures/synthetic-match-rate-limited.json`).
 
 `tests/unit/fixtures-spec.test.ts` fails if a 200 fixture lacks a field the spec requires (`tests/unit/fixtures-spec.test.ts:84-95`). Check the file has no `rpx_` or `RGAPI-` strings before staging; the pre-commit hook refuses them (`.githooks/pre-commit:10-23`).
 
@@ -104,5 +104,5 @@ Every path the code requests needs a fixture, or the mock proxy answers 500 (`te
 
 ---
 
-**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L55-L78`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/match.ts:L33-L52`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023)
+**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L56-L79`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/match.ts:L33-L52`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023)
 **Last verified:** 2026-11-03 against commit `03faa33`

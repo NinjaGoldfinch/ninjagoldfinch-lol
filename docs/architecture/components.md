@@ -4,7 +4,7 @@ The modules inside ninjagoldfinch.lol, what each is responsible for, and which w
 
 ## Layers
 
-The code is split so that anything holding the riot-proxy key stays on the server, and anything that shapes data is a pure function with a unit test (`CLAUDE.md:31-42`, `docs/IMPLEMENTATION.md:170`).
+The code is split so that anything holding the riot-proxy key stays on the server, and anything that shapes data is a pure function with a unit test (`CLAUDE.md:31-42`, `docs/IMPLEMENTATION.md:172`).
 
 | Layer           | Path                                                            | Runs on           | Responsibility                                                                                                                   |
 | --------------- | --------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -115,5 +115,5 @@ Each has a test in `tests/unit/` with the same base name.
 
 ---
 
-**Sources:** `src/hooks.server.ts:L6-L25`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L70-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champions.ts:L33-L58`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
+**Sources:** `src/hooks.server.ts:L6-L25`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L70-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champions.ts:L33-L58`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L172`
 **Last verified:** 2026-11-03 against commit `03faa33`

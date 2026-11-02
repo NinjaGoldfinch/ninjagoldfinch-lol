@@ -62,7 +62,7 @@ sequenceDiagram
 - Payloads are HTML pages, `__data.json` for client navigation, and `POST ?/refresh` form actions (see [../api/endpoints.md](../api/endpoints.md)).
 - Cloudflare's caching follows the site's `Cache-Control` (`src/lib/server/cache.ts:5-16`).
 
-> **TODO (unverified):** whether adapter-node is told the real client address (`ADDRESS_HEADER=CF-Connecting-IP`, as the plan suggests in `docs/IMPLEMENTATION.md:388`). It is not among the variable names in `/etc/ninjagoldfinch-lol/env`, so the site probably sees `127.0.0.1` for every client; nothing in the code reads the client address today.
+> **TODO (unverified):** whether adapter-node is told the real client address (`ADDRESS_HEADER=CF-Connecting-IP`, as the plan suggests in `docs/IMPLEMENTATION.md:392`). It is not among the variable names in `/etc/ninjagoldfinch-lol/env`, so the site probably sees `127.0.0.1` for every client; nothing in the code reads the client address today.
 
 ## 2. The site to riot-proxy
 
@@ -118,9 +118,9 @@ ninja-monitor runs on `ngf-prod-syd1` and watches `ninjagoldfinch-lol` alongside
 
 ## 6. Deploys from GitHub
 
-A deploy pulls `main` over SSH with a read-only deploy key belonging to the `ninjagoldfinch-lol` user (`README.md:96,103-111`; `riot-proxy:docs/design/12-object-storage-and-hosting.md:617-619`). Separately, a developer refreshing the committed spec downloads riot-proxy's release binary and `sha256sums` from GitHub releases (`README.md:55-64`). Neither happens at runtime.
+A deploy pulls `main` over SSH with a read-only deploy key belonging to the `ninjagoldfinch-lol` user (`README.md:97,104-112`; `riot-proxy:docs/design/12-object-storage-and-hosting.md:617-619`). Separately, a developer refreshing the committed spec downloads riot-proxy's release binary and `sha256sums` from GitHub releases (`README.md:56-65`). Neither happens at runtime.
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L63-L67`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L64`, `README.md:L55-L64,L96-L111`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L388`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
+**Sources:** `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L63-L67`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L64`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L392`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
 **Last verified:** 2026-11-03 against commit `03faa33`

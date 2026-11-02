@@ -6,47 +6,47 @@ Commit inspected: `e7c395c` on branch `docs/VS-exit-check` (clean tree), 2026-10
 
 ## 1. Languages, runtimes and tooling
 
-| Item                    | Value                                                                                             | Source                                                          |
-| ----------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Language                | TypeScript (strict), Svelte 5 components                                                          | `tsconfig.json:4`, `vite.config.ts:10-13`                       |
-| Runtime                 | Node, `engines.node` `>=22.18`                                                                    | `package.json:7-9`                                              |
-| Node on this box        | v22.23.3                                                                                          | `node --version`                                                |
-| Package manager         | pnpm 12.10.1, pinned through `packageManager` (corepack)                                          | `package.json:6`, `pnpm --version`                              |
-| Lockfile                | `pnpm-lock.yaml` (pnpm's own version kept out of it)                                              | `pnpm-workspace.yaml:3-8`, `docs/DECISIONS.md:57-65`            |
-| Framework               | SvelteKit 3.0.1 (installed), `@sveltejs/adapter-node` 6.0.0                                       | `node_modules/@sveltejs/kit/package.json`, `package.json:24-25` |
-| UI                      | Svelte 5.57.2, Tailwind CSS 4.3.3                                                                 | `node_modules/*/package.json`                                   |
-| Build                   | Vite 8.3.3                                                                                        | `node_modules/vite/package.json`                                |
-| Only runtime dependency | `openapi-fetch` 0.17.0                                                                            | `package.json:48-50`                                            |
-| Type generation         | `openapi-typescript` ^7.13.0 (dev)                                                                | `package.json:33`, `justfile:16-17`                             |
-| Tests                   | Vitest 4.1.11 (unit), Playwright 1.64.0 (e2e)                                                     | `package.json:18-19`                                            |
-| Lint and format         | ESLint 10 + typescript-eslint + eslint-plugin-svelte; Prettier 3 with svelte and tailwind plugins | `eslint.config.js`, `prettier.config.js`                        |
-| Task runner             | just 1.58.0 on this box                                                                           | `justfile`, `just --version`                                    |
-| Docs note               | README says Node 22.17 or later; `package.json` says `>=22.18`; ADR-038 says 22.18                | `README.md:12`, `package.json:8`, `docs/DECISIONS.md:513`       |
+| Item                    | Value                                                                                              | Source                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Language                | TypeScript (strict), Svelte 5 components                                                           | `tsconfig.json:4`, `vite.config.ts:10-13`                       |
+| Runtime                 | Node, `engines.node` `>=22.18`                                                                     | `package.json:7-9`                                              |
+| Node on this box        | v22.23.3                                                                                           | `node --version`                                                |
+| Package manager         | pnpm 12.10.1, pinned through `packageManager` (corepack)                                           | `package.json:6`, `pnpm --version`                              |
+| Lockfile                | `pnpm-lock.yaml` (pnpm's own version kept out of it)                                               | `pnpm-workspace.yaml:3-8`, `docs/DECISIONS.md:57-65`            |
+| Framework               | SvelteKit 3.0.1 (installed), `@sveltejs/adapter-node` 6.0.0                                        | `node_modules/@sveltejs/kit/package.json`, `package.json:24-25` |
+| UI                      | Svelte 5.57.2, Tailwind CSS 4.3.3                                                                  | `node_modules/*/package.json`                                   |
+| Build                   | Vite 8.3.3                                                                                         | `node_modules/vite/package.json`                                |
+| Only runtime dependency | `openapi-fetch` 0.17.0                                                                             | `package.json:48-50`                                            |
+| Type generation         | `openapi-typescript` ^7.13.0 (dev)                                                                 | `package.json:33`, `justfile:16-17`                             |
+| Tests                   | Vitest 4.1.11 (unit), Playwright 1.64.0 (e2e)                                                      | `package.json:18-19`                                            |
+| Lint and format         | ESLint 10 + typescript-eslint + eslint-plugin-svelte; Prettier 3 with svelte and tailwind plugins  | `eslint.config.js`, `prettier.config.js`                        |
+| Task runner             | just 1.58.0 on this box                                                                            | `justfile`, `just --version`                                    |
+| Docs note               | README, `package.json` (`>=22.18`) and ADR-038 all say Node 22.18 or later (README fixed in RV-11) | `README.md:12`, `package.json:8`, `docs/DECISIONS.md:513`       |
 
 ## 2. Directory tree (tracked files, depth 3)
 
-| Path                  | Purpose                                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------ |
-| `.githooks/`          | `pre-commit` (refuses commits on `main` and key-like strings), `pre-push` (runs `just check`)    |
-| `.vscode/`            | Editor recommendations                                                                           |
-| `deploy/`             | `compose.yaml` for the LAN preview VM                                                            |
-| `deploy/proxmox/`     | `create-vm.sh`, `ninjagoldfinch-update`, `test.sh`, README for the Proxmox preview VM            |
-| `docs/`               | `IMPLEMENTATION.md` (plan), `DECISIONS.md` (ADR-001…043), `PROGRESS.md`                          |
-| `docs/notes/`         | `VS-plan.md`, `match-layouts.md` and its screenshots in `match-layouts/`                         |
-| `openapi/`            | `riot-proxy.json`, the committed riot-proxy OpenAPI spec (v2.7.0)                                |
-| `src/`                | `app.html`, `app.css`, `app.d.ts`, `env.ts` (env declarations), `hooks.server.ts`                |
-| `src/lib/api/`        | `schema.d.ts` (generated), hand-typed parsers `match.ts`, `ddragon.ts`, `cdragon.ts`, `riot.ts`  |
-| `src/lib/assets/`     | `favicon.svg`                                                                                    |
-| `src/lib/components/` | 19 Svelte components                                                                             |
-| `src/lib/domain/`     | 15 pure modules (each with a unit test)                                                          |
-| `src/lib/server/`     | Server-only: proxy client, env rules, errors, cache policies, loaders, in-memory lookups         |
-| `src/routes/`         | Pages and endpoints (section 4)                                                                  |
-| `static/`             | `robots.txt`                                                                                     |
-| `tests/unit/`         | 34 Vitest files                                                                                  |
-| `tests/e2e/`          | 5 Playwright files                                                                               |
-| `tests/fixtures/`     | 54 recorded or synthetic riot-proxy responses; `builds/` holds riot-proxy's golden build fixture |
-| `tests/mock-proxy/`   | Mock riot-proxy replaying fixtures                                                               |
-| `tests/` (files)      | `record-fixture.ts`, `redact.ts`                                                                 |
+| Path                  | Purpose                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| `.githooks/`          | `pre-commit` (refuses commits on `main` and key-like strings), `pre-push` (runs `just check`)     |
+| `.vscode/`            | Editor recommendations                                                                            |
+| `deploy/`             | `compose.yaml` for the LAN preview VM                                                             |
+| `deploy/proxmox/`     | `create-vm.sh`, `ninjagoldfinch-update`, `test.sh`, README for the Proxmox preview VM             |
+| `docs/`               | `IMPLEMENTATION.md` (plan), `DECISIONS.md` (ADR-001…043), `PROGRESS.md`                           |
+| `docs/notes/`         | `RV-plan.md`, `match-layouts.md` (the decision only); finished plans in `archive/` (`VS-plan.md`) |
+| `openapi/`            | `riot-proxy.json`, the committed riot-proxy OpenAPI spec (v2.7.0)                                 |
+| `src/`                | `app.html`, `app.css`, `app.d.ts`, `env.ts` (env declarations), `hooks.server.ts`                 |
+| `src/lib/api/`        | `schema.d.ts` (generated), hand-typed parsers `match.ts`, `ddragon.ts`, `cdragon.ts`, `riot.ts`   |
+| `src/lib/assets/`     | `favicon.svg`                                                                                     |
+| `src/lib/components/` | 19 Svelte components                                                                              |
+| `src/lib/domain/`     | 15 pure modules (each with a unit test)                                                           |
+| `src/lib/server/`     | Server-only: proxy client, env rules, errors, cache policies, loaders, in-memory lookups          |
+| `src/routes/`         | Pages and endpoints (section 4)                                                                   |
+| `static/`             | `robots.txt`                                                                                      |
+| `tests/unit/`         | 34 Vitest files                                                                                   |
+| `tests/e2e/`          | 5 Playwright files                                                                                |
+| `tests/fixtures/`     | 54 recorded or synthetic riot-proxy responses; `builds/` holds riot-proxy's golden build fixture  |
+| `tests/mock-proxy/`   | Mock riot-proxy replaying fixtures                                                                |
+| `tests/` (files)      | `record-fixture.ts`, `redact.ts`                                                                  |
 
 Untracked build artefacts present on disk: `build/`, `.svelte-kit/`, `node_modules/`, `test-results/` (all in `.gitignore:1-25`).
 
@@ -54,7 +54,7 @@ Untracked build artefacts present on disk: `build/`, `.svelte-kit/`, `node_modul
 
 | Entry point                              | What it is                                        | Source                                      |
 | ---------------------------------------- | ------------------------------------------------- | ------------------------------------------- |
-| `node build`                             | Production server (adapter-node output)           | `Dockerfile:23`, `README.md:92`             |
+| `node build`                             | Production server (adapter-node output)           | `Dockerfile:23`, `README.md:93`             |
 | `pnpm dev` / `just dev`                  | Vite dev server                                   | `package.json:11`, `justfile:12-13`         |
 | `node tests/mock-proxy/server.ts [port]` | Mock riot-proxy, default port 8787                | `tests/mock-proxy/server.ts:1-12`           |
 | `node tests/record-fixture.ts`           | Fixture recorder (`just fixture`)                 | `tests/record-fixture.ts`, `justfile:35-36` |
@@ -138,14 +138,14 @@ No database, migrations, on-disk files, Redis or object storage in this repo.
 | `NINJAGOLDFINCH_REPO`, `NINJAGOLDFINCH_DIR`, `NINJAGOLDFINCH_DEPLOY_KEY`                                                                                                                                                           | `deploy/proxmox/ninjagoldfinch-update:12-14`                                                                                                                                                                                                                               | repo SSH URL, `/opt/ninjagoldfinch`, `~/.ssh/ninjagoldfinch-deploy` | No                               |
 | `create-vm.sh` flags                                                                                                                                                                                                               | `deploy/proxmox/create-vm.sh:38-85`: `--ssh-keys`, `--generate-key`, `--key-dir`, `--vmid`, `--name`, `--storage`, `--snippets`, `--bridge`, `--cores` (2), `--memory` (2048), `--disk` (16G), `--ip`, `--gw`, `--user`, `--image-dir`, `--dry-run`, `--print-vendor-data` | as listed                                                           | `--ssh-keys` or `--generate-key` |
 
-Files: `.env` (local, from `.env.example`), `deploy/.env` (preview VM, `deploy/compose.yaml:13`), `/etc/ninjagoldfinch-lol/env` (production, `README.md:98`; not in the repo).
+Files: `.env` (local, from `.env.example`), `deploy/.env` (preview VM, `deploy/compose.yaml:13`), `/etc/ninjagoldfinch-lol/env` (production, `README.md:99`; not in the repo).
 
 ## 8. CI/CD
 
 - No `.github/` directory; no GitHub Actions. CLAUDE.md forbids adding any (`CLAUDE.md:11-12`).
 - Local gate: `.githooks/pre-push` runs `just check` (`.githooks/pre-push:1-3`).
 - `.githooks/pre-commit` refuses commits on `main` and added lines matching `(rpx_|RGAPI-)[A-Za-z0-9_-]` (`.githooks/pre-commit:1-27`, ADR-002).
-- Deploys are manual: production per `README.md:103-113`; preview VM per `deploy/proxmox/README.md:91-99`.
+- Deploys are manual: production per `README.md:104-114`; preview VM per `deploy/proxmox/README.md:91-99`.
 
 ## 9. Build, test, release and deploy tooling
 
@@ -155,8 +155,8 @@ Files: `.env` (local, from `.env.example`), `deploy/.env` (preview VM, `deploy/c
 | `Dockerfile`                                 | `Dockerfile:1-23`          | Two-stage `node:22-alpine`; `HEALTHCHECK` on `/healthz`; used by the preview VM only                                      |
 | `deploy/compose.yaml`                        | `deploy/compose.yaml:1-14` | One `web` service, port 3000                                                                                              |
 | Proxmox scripts                              | `deploy/proxmox/`          | Debian 13 VM, Docker, deploy key, `ninjagoldfinch-update`                                                                 |
-| systemd unit                                 | not in repo                | `ninjagoldfinch-lol.service` described in `README.md:97` and ADR-038                                                      |
-| Reverse proxy                                | not in repo                | Cloudflare Tunnel to `127.0.0.1:3000` (ADR-038, `README.md:92-99`); no Caddy/nginx config                                 |
+| systemd unit                                 | not in repo                | `ninjagoldfinch-lol.service` described in `README.md:98` and ADR-038                                                      |
+| Reverse proxy                                | not in repo                | Cloudflare Tunnel to `127.0.0.1:3000` (ADR-038, `README.md:93-100`); no Caddy/nginx config                                |
 
 ## 10. Existing documentation
 
@@ -219,7 +219,7 @@ Read from `../riot-proxy` (shallow clone at `48f32aa`, 2026-10-19; `Cargo.toml:3
 - Scopes `read` and `admin` (`src/consumers.rs:18-36`). Create `riot-proxy key create --name <n> [--scopes] [--quota]`, list, revoke (soft) (`src/cli/key.rs:11-79`, `src/consumers.rs:228-251`). No rotate command.
 - Quota: in-memory 60 s sliding window; `X-RateLimit-Limit/Remaining/Reset`; over quota `QUOTA_EXCEEDED` 429 with `Retry-After`; resets on restart (`src/http/quota.rs:1-135`).
 - `AUTH_DISABLED=true` runs requests as `dev-local` (read+admin, quota 100,000); refused when `ENV=production` (`src/http/auth.rs:8-9,43-52`, `src/config.rs:658-662`).
-- Key names: `admin-main` appears once (`docs/design/12-object-storage-and-hosting.md:855`). `ninjagoldfinch-lol-prod` and `ninjagoldfinch-web` appear nowhere in riot-proxy; `ninjagoldfinch-web` is the name this repo suggests (`docs/IMPLEMENTATION.md:187`, `deploy/proxmox/README.md:69`).
+- Key names: `admin-main` appears once (`docs/design/12-object-storage-and-hosting.md:855`). `ninjagoldfinch-lol-prod` and `ninjagoldfinch-web` appear nowhere in riot-proxy; `ninjagoldfinch-web` is the name the original plan suggests (`docs/IMPLEMENTATION.md:189`, marked superseded).
 
 ### Routes the site calls
 
@@ -246,12 +246,12 @@ Riot client: 25 s per request, 10 s connect; 5xx retried twice (250 ms, 750 ms);
 
 ### CI/CD
 
-`.github/workflows/ci.yml` (push to `main`, PRs; no secrets; publishes nothing), `edge.yml` (pushes `ghcr.io/ninjagoldfinch/riot-proxy:edge`, `GITHUB_TOKEN`), `release.yml` (`v*` tags; binaries, `sha256sums`, multi-arch image; `GITHUB_TOKEN`). The site's spec refresh downloads `riot-proxy-linux-amd64` and `sha256sums` from a release (`README.md:58-64` in this repo).
+`.github/workflows/ci.yml` (push to `main`, PRs; no secrets; publishes nothing), `edge.yml` (pushes `ghcr.io/ninjagoldfinch/riot-proxy:edge`, `GITHUB_TOKEN`), `release.yml` (`v*` tags; binaries, `sha256sums`, multi-arch image; `GITHUB_TOKEN`). The site's spec refresh downloads `riot-proxy-linux-amd64` and `sha256sums` from a release (`README.md:59-65` in this repo).
 
 ### Discrepancies noted
 
 - `.env.example:34` vs `src/config.rs:111` on the `JOB_KIND_LIMITS` default.
-- `deploy/proxmox/README.md:3` (this repo) still names `http://192.168.68.46:8080`; ADR-039 says the LAN dev instance is gone.
+- `deploy/proxmox/README.md` (this repo) named `http://192.168.68.46:8080` until RV-11; ADR-039 says the LAN dev instance is gone.
 
 ## 14. Owner-supplied evidence (not in any repo)
 
@@ -283,7 +283,7 @@ Cited elsewhere as `owner:systemctl-cat-2026-10-19`.
 
 ### Variable names in `/etc/ninjagoldfinch-lol/env`, pasted by the owner 2026-10-19 (names only)
 
-`NODE_ENV`, `HOST`, `PORT`, `PROXY_URL`, `PROXY_KEY`. This matches `README.md:98`. `CDRAGON_URL` and `PUBLIC_SITE_NAME` are not set, so their defaults apply (`src/lib/server/env.ts:17-25`, `src/env.ts:17-22`); `ORIGIN` is given only on the build command (`README.md:109-113`). Values are not recorded; `HOST` is `127.0.0.1` per ADR-038 (`docs/DECISIONS.md:509`).
+`NODE_ENV`, `HOST`, `PORT`, `PROXY_URL`, `PROXY_KEY`. This matches `README.md:99`. `CDRAGON_URL` and `PUBLIC_SITE_NAME` are not set, so their defaults apply (`src/lib/server/env.ts:17-25`, `src/env.ts:17-22`); `ORIGIN` is given only on the build command (`README.md:110-114`). Values are not recorded; `HOST` is `127.0.0.1` per ADR-038 (`docs/DECISIONS.md:509`).
 
 ### Owner answers, 2026-10-19
 

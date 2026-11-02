@@ -71,8 +71,8 @@ sudo -H -u ninjagoldfinch-lol pnpm install --frozen-lockfile
 sudo -H -u ninjagoldfinch-lol env ORIGIN=https://ninjagoldfinch.lol pnpm build
 ```
 
-- `ORIGIN` must be given on the build command: adapter-node 6 does not read it at runtime, and form posts (Refresh) are accepted only from the origin fixed at build time (`vite.config.ts:16-19`, ADR-014, `README.md:113-115`). Without it the site guesses the origin from the `Host` header and assumes HTTPS.
-- The build output is `build/`; `node build` runs it (`README.md:92`).
+- `ORIGIN` must be given on the build command: adapter-node 6 does not read it at runtime, and form posts (Refresh) are accepted only from the origin fixed at build time (`vite.config.ts:16-19`, ADR-014, `README.md:114`). Without it the site guesses the origin from the `Host` header and assumes HTTPS.
+- The build output is `build/`; `node build` runs it (`README.md:93`).
 - The build itself never reads `PROXY_URL` or `PROXY_KEY`: env validation is skipped while building (`src/env.ts:5-10`).
 
 ## 6. Settings file
@@ -91,7 +91,7 @@ EOF
 sudo stat -c '%a %U' /etc/ninjagoldfinch-lol/env   # 600 root
 ```
 
-These five names are the ones production sets (owner-supplied, [inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo); `README.md:98`). `HOST=127.0.0.1` keeps the site off the public interface (ADR-038, `docs/DECISIONS.md:509`). Every setting is described in [configuration.md](./configuration.md). Never paste the key into a shell history you keep, a ticket or this repo.
+These five names are the ones production sets (owner-supplied, [inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo); `README.md:99`). `HOST=127.0.0.1` keeps the site off the public interface (ADR-038, `docs/DECISIONS.md:509`). Every setting is described in [configuration.md](./configuration.md). Never paste the key into a shell history you keep, a ticket or this repo.
 
 ## 7. systemd unit
 
@@ -177,5 +177,5 @@ Expect `cache-control: public, s-maxage=600, stale-while-revalidate=600` on `/ch
 
 ---
 
-**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L6-L9`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L5-L6`, `README.md:L88-L115`, `docs/DECISIONS.md:L171-L184,L500-L514`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
+**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L6-L9`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L5-L6`, `README.md:L89-L114`, `docs/DECISIONS.md:L171-L184,L500-L516`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
 **Last verified:** 2026-11-03 against commit `6d46c74` (citations only; build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)

@@ -59,7 +59,7 @@ The site does not use `api.ninjagoldfinch.lol`; it calls riot-proxy on loopback.
 | Cloudflare         | `cloudflared` system service                                                       | not documented                                         | none (outbound)           | token `/etc/cloudflared/token`                                                                                                                                                   |
 | ninja-monitor      | ninja-monitor                                                                      | not documented here                                    | API over SSH forward only | not in either repo                                                                                                                                                               |
 
-Sources for the table: site unit and paths from the owner-supplied `systemctl cat ninjagoldfinch-lol` ([inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo)) and `README.md:94-101`; the site user's home from `riot-proxy:docs/design/12-object-storage-and-hosting.md:614-615`; riot-proxy's user and paths from `riot-proxy:docs/design/12-object-storage-and-hosting.md:586-594`; the replica unit from `riot-proxy:deploy/riot-proxy-replica.service:1-33` and `.timer:1-10`; the offsite job from `riot-proxy:docs/DECISIONS.md:1511` and `riot-proxy:docs/design/12-object-storage-and-hosting.md:810-812`; cloudflared from `riot-proxy:docs/design/12-object-storage-and-hosting.md:803-806`; ninja-monitor from `riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`.
+Sources for the table: site unit and paths from the owner-supplied `systemctl cat ninjagoldfinch-lol` ([inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo)) and `README.md:95-102`; the site user's home from `riot-proxy:docs/design/12-object-storage-and-hosting.md:614-615`; riot-proxy's user and paths from `riot-proxy:docs/design/12-object-storage-and-hosting.md:586-594`; the replica unit from `riot-proxy:deploy/riot-proxy-replica.service:1-33` and `.timer:1-10`; the offsite job from `riot-proxy:docs/DECISIONS.md:1511` and `riot-proxy:docs/design/12-object-storage-and-hosting.md:810-812`; cloudflared from `riot-proxy:docs/design/12-object-storage-and-hosting.md:803-806`; ninja-monitor from `riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`.
 
 Coordination rules that follow from sharing the box:
 
@@ -75,13 +75,13 @@ ninjagoldfinch.lol reads and writes no bucket. riot-proxy writes match and timel
 
 ## How the site is deployed
 
-The site is built on the host from a git checkout pulled with a read-only deploy key, and runs as `node build` under systemd (ADR-038, `docs/DECISIONS.md:500-514`). Production does not use the `Dockerfile` or `deploy/compose.yaml`; those are for the dormant preview VM ([preview-vm.md](./preview-vm.md)). Step-by-step: [install.md](./install.md) for a new host, [upgrade-and-rollback.md](./upgrade-and-rollback.md) for a release.
+The site is built on the host from a git checkout pulled with a read-only deploy key, and runs as `node build` under systemd (ADR-038, `docs/DECISIONS.md:500-516`). Production does not use the `Dockerfile` or `deploy/compose.yaml`; those are for the dormant preview VM ([preview-vm.md](./preview-vm.md)). Step-by-step: [install.md](./install.md) for a new host, [upgrade-and-rollback.md](./upgrade-and-rollback.md) for a release.
 
 ## Logs and data
 
 | What            | Where                                                                                                                      |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Site logs       | journald: `sudo journalctl -u ninjagoldfinch-lol` (`README.md:100`)                                                        |
+| Site logs       | journald: `sudo journalctl -u ninjagoldfinch-lol` (`README.md:101`)                                                        |
 | Site state      | none on disk; in-memory holds only ([data/caching.md](../data/caching.md))                                                 |
 | Site settings   | `/etc/ninjagoldfinch-lol/env`, root-only (`riot-proxy:docs/design/12-object-storage-and-hosting.md:623-626` (`umask 077`)) |
 | riot-proxy logs | JSON on stdout (`riot-proxy:README.md:132`), so journald under its unit                                                    |
@@ -89,5 +89,5 @@ The site is built on the host from a git checkout pulled with a read-only deploy
 
 ---
 
-**Sources:** `riot-proxy:docs/DECISIONS.md:L1507-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L586-L594,L612-L626,L803-L838,L904-L917`, `riot-proxy:docs/design/13-admin-dashboard.md:L39,L44-L67`, `riot-proxy:deploy/README.md:L1-L36`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L33`, `riot-proxy:deploy/riot-proxy-replica.timer:L1-L10`, `riot-proxy:PROGRESS.md:L335`, `riot-proxy:README.md:L132`, `README.md:L88-L115`, `docs/DECISIONS.md:L500-L514`, owner-supplied unit (inventory section 14)
+**Sources:** `riot-proxy:docs/DECISIONS.md:L1507-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L586-L594,L612-L626,L803-L838,L904-L917`, `riot-proxy:docs/design/13-admin-dashboard.md:L39,L44-L67`, `riot-proxy:deploy/README.md:L1-L36`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L33`, `riot-proxy:deploy/riot-proxy-replica.timer:L1-L10`, `riot-proxy:PROGRESS.md:L335`, `riot-proxy:README.md:L132`, `README.md:L89-L114`, `docs/DECISIONS.md:L500-L516`, owner-supplied unit (inventory section 14)
 **Last verified:** 2026-10-20 against commit `85d9cf8`

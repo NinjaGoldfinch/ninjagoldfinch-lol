@@ -6,13 +6,13 @@ What ninjagoldfinch.lol depends on from riot-proxy: the routes, parameters, resp
 
 | Item                   | Value                                                                                                                                   |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Canonical contract     | riot-proxy's OpenAPI document, served at `/openapi.json` and printed by `riot-proxy spec` (`README.md:51-53`)                           |
+| Canonical contract     | riot-proxy's OpenAPI document, served at `/openapi.json` and printed by `riot-proxy spec` (`README.md:52-54`)                           |
 | Committed copy         | `openapi/riot-proxy.json`, `info.version` `2.7.0`, 70 paths                                                                             |
-| sha256 of the copy     | `aafca9012b7c5bfe2db24f23d7397cd5a46987e4ba88809397ece91aa64088b8` (matches production's `/openapi.json` on 2026-10-19, `README.md:66`) |
+| sha256 of the copy     | `aafca9012b7c5bfe2db24f23d7397cd5a46987e4ba88809397ece91aa64088b8` (matches production's `/openapi.json` on 2026-10-19, `README.md:67`) |
 | riot-proxy source read | `../riot-proxy` at `48f32aa`, `Cargo.toml` version `2.7.0`                                                                              |
 | Generated types        | `src/lib/api/schema.d.ts` from `just gen`; `just check` fails on drift (`justfile:16-22`)                                               |
 
-The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a new riot-proxy release, refresh the spec from the release binary and regenerate the types (`README.md:55-64`).
+The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a new riot-proxy release, refresh the spec from the release binary and regenerate the types (`README.md:56-65`).
 
 > **TODO (unverified):** a human-readable contract page on riot-proxy's side for this document to link to. riot-proxy's `docs/` has no consumer guide at `48f32aa` (`docs/contract/` holds the v1 contract, which is not the current spec). Link it here once riot-proxy's documentation set adds `docs/integration/contract.md`.
 
@@ -67,7 +67,7 @@ The generated types cover every field; this is the subset the site's behaviour d
 
 Semantics the site relies on:
 
-- Without `tier`, analytics rows are summed over every tier with `tier: null`, and a summed row carries the body's own `tier` (`docs/DECISIONS.md:415,575`). The site keeps only rows whose `tier` equals the body's (`src/lib/domain/champion-stats.ts:223-230`).
+- Without `tier`, analytics rows are summed over every tier with `tier: null`, and a summed row carries the body's own `tier` (`docs/DECISIONS.md:415,577`). The site keeps only rows whose `tier` equals the body's (`src/lib/domain/champion-stats.ts:223-230`).
 - Without `role`, set builds name the champion's most-played role (`docs/DECISIONS.md:441`).
 - `refreshAvailableIn` is seconds until another refresh is allowed (`riot-proxy:src/routes/players/refresh.rs:22-28`).
 - A match id's platform prefix must match `region`, or riot-proxy answers `BAD_REGION`; the site checks first (`src/lib/server/match.ts:38`, `riot-proxy:src/routes/lol.rs:53-64`).
@@ -103,9 +103,9 @@ Statuses from `riot-proxy:src/http/error.rs:13-25,55-67`. Full detail in [../api
 
 ## What the site does not use
 
-WebSockets (`/v1/ws`), admin routes, `riot` account routes, live game and mastery routes, `side` filters, `winRateLow` (VS-04 dropped), `/ddragon/…` images and `?token=` authentication (`docs/DECISIONS.md:225,538,595`; inventory section 5).
+WebSockets (`/v1/ws`), admin routes, `riot` account routes, live game and mastery routes, `side` filters, `winRateLow` (VS-04 dropped), `/ddragon/…` images and `?token=` authentication (`docs/DECISIONS.md:225,540,597`; inventory section 5).
 
 ---
 
-**Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L14-L153`, `src/lib/server/errors.ts:L16-L74`, `src/lib/server/profile.ts:L76-L146`, `src/lib/server/match.ts:L38-L44`, `src/lib/server/patch.ts:L14-L74`, `src/lib/server/static-data.ts:L40-L49`, `src/lib/server/champions.ts:L38-L41`, `src/lib/server/champion-page.ts:L91-L186`, `src/lib/domain/champion-stats.ts:L34-L63,L178-L245`, `src/lib/domain/champion-page.ts:L37-L215`, `src/lib/domain/matches.ts:L49-L85,L160-L163`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/riot.ts:L11-L35`, `README.md:L51-L66`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L538,L575,L595`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
+**Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L14-L153`, `src/lib/server/errors.ts:L16-L74`, `src/lib/server/profile.ts:L76-L146`, `src/lib/server/match.ts:L38-L44`, `src/lib/server/patch.ts:L14-L74`, `src/lib/server/static-data.ts:L40-L49`, `src/lib/server/champions.ts:L38-L41`, `src/lib/server/champion-page.ts:L91-L186`, `src/lib/domain/champion-stats.ts:L34-L63,L178-L245`, `src/lib/domain/champion-page.ts:L37-L215`, `src/lib/domain/matches.ts:L49-L85,L160-L163`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/riot.ts:L11-L35`, `README.md:L52-L67`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L540,L577,L597`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
 **Last verified:** 2026-11-03 against commit `03faa33`

@@ -9,7 +9,7 @@ adapter-node 6 takes the origin from `paths.origin` in the build config, or else
 ## Decision
 
 - `vite.config.ts:16-19` sets `paths.origin` from `ORIGIN` when it is set at build time.
-- Production builds with `env ORIGIN=https://ninjagoldfinch.lol pnpm build` (`README.md:109-113`).
+- Production builds with `env ORIGIN=https://ninjagoldfinch.lol pnpm build` (`README.md:110-114`).
 - The Docker build takes `ORIGIN` as a build argument (`Dockerfile:9-11`).
 - Playwright runs the real `node build` with `ORIGIN` set, not `vite preview` (`playwright.config.ts:15-31`).
 
@@ -29,5 +29,5 @@ ADR-014, `tests/e2e/routes.test.ts` refresh tests.
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L171-L183`, `vite.config.ts:L16-L19`, `README.md:L109-L113`, `Dockerfile:L9-L11`, `playwright.config.ts:L15-L31`
+**Sources:** `docs/DECISIONS.md:L171-L183`, `vite.config.ts:L16-L19`, `README.md:L110-L114`, `Dockerfile:L9-L11`, `playwright.config.ts:L15-L31`
 **Last verified:** 2026-10-19 against commit `85d9cf8`
