@@ -21,7 +21,7 @@ The Data Dragon `item.json` alone is about 700 kB, which is why the reduced look
 
 The site times every request itself. `handle` runs each request inside `timeLoad`, and the `timeCalls` middleware records each riot-proxy call the request makes by its spec path template. A request slower than `SLOW_LOAD_MS` (100 ms), render included, logs one `slow load` line with its route id, its total and each call's time (`src/hooks.server.ts:9-11`, `src/lib/server/timing.ts:11,32-86`, ADR-046). The log is the only output: there is no `Server-Timing` header and no metrics endpoint. To read them on production, see [observability.md](./observability.md#finding-slow-pages).
 
-Warm loads usually finish under the threshold and are not logged, so they are measured on the host with `curl -w '%{time_total}'` against the site's own port, as ADR-039 did. Cold and warm timings for each page type (profile, match, champions, champion, search) are to be recorded in ADR-046 once this logging is deployed; until then the numbers below are the latest.
+Warm loads usually finish under the threshold and are not logged, so they are measured on the host with `curl -w '%{time_total}'` against the site's own port, as ADR-039 did. Cold and warm timings for each page type, measured on production on 2026-11-03, are in ADR-046: cold 256 ms (profile), 176 ms (match), 39 ms (champions), 42 ms (champion), 7 ms (search); warm 20–62 ms.
 
 ## Measured numbers
 
@@ -82,4 +82,4 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 ---
 
 **Sources:** `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L76`, `src/lib/server/champions.ts:L37-L57`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L9-L11`, `src/lib/server/timing.ts:L10-L86`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L647`; local measurements 2026-10-20
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Last verified:** 2026-11-03 against commit `5fede17`
