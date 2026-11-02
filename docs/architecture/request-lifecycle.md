@@ -18,7 +18,7 @@ Failed riot-proxy responses are logged as `proxy <status> <method> <path> reques
 
 ## Profile page
 
-`GET /summoner/{GameName-TAG}`, loaded by `loadProfile` (`src/lib/server/profile.ts:70-147`).
+`GET /summoner/{GameName-TAG}`, loaded by `loadProfile` (`src/lib/server/profile.ts:71-155`).
 
 ```mermaid
 sequenceDiagram
@@ -33,23 +33,23 @@ sequenceDiagram
     Cloudflare-->>Browser: 200 HTML from edge cache
   else miss or stale
     Cloudflare->>Site: GET via Tunnel
-    Site->>Proxy: GET /v1/players/by-riot-id/Name/TAG/profile (Bearer, 30 s)
-    alt parts cached in riot-proxy
-      Proxy-->>Site: 200 profile, X-Cache HIT
-    else a part is missing or expired
-      Proxy->>Riot: account, region, summoner, league, mastery
-      Riot-->>Proxy: DTOs
-      Proxy-->>Site: 200 profile, X-Cache MISS
-    end
-    par match page (optional)
+    par profile (essential), then match page (optional)
+      Site->>Proxy: GET /v1/players/by-riot-id/Name/TAG/profile (Bearer, 30 s)
+      alt parts cached in riot-proxy
+        Proxy-->>Site: 200 profile, X-Cache HIT
+      else a part is missing or expired
+        Proxy->>Riot: account, region, summoner, league, mastery
+        Riot-->>Proxy: DTOs
+        Proxy-->>Site: 200 profile, X-Cache MISS
+      end
       Site->>Proxy: GET /v1/players/puuid/matches?platform=oc1&count=10
       Proxy-->>Site: 200 page of matches
-    and current patch (held 5 min)
+    and current patch (held 5 min), then its lookups (optional)
       Site->>Proxy: GET /v1/static/versions
       Proxy-->>Site: 200 versions
+      Site->>Proxy: GET /v1/static/champion, item, summoner, runesReforged, queues (once per patch)
+      Proxy-->>Site: 200 Data Dragon JSON
     end
-    Site->>Proxy: GET /v1/static/champion, item, summoner, runesReforged, queues (once per patch)
-    Proxy-->>Site: 200 Data Dragon JSON
     Site-->>Cloudflare: 200 HTML, s-maxage=60, swr=300
     Cloudflare-->>Browser: 200 HTML
   end
@@ -57,11 +57,11 @@ sequenceDiagram
 
 Notes, each from the code:
 
-- The profile call names no platform; riot-proxy finds the player's platform and returns it. The site maps it to one of its 15 regions; a platform it does not know is a 503 (`src/lib/server/profile.ts:76-85`, ADR-037).
-- The match page call needs the profile's `puuid`, so a cold profile is two round trips (`src/lib/server/profile.ts:54-55`).
-- The match page is optional. If it fails or throws, the page still renders the header and rank, shows a notice, and is sent with `no-store` so the gap is not kept at the edge (`src/lib/server/profile.ts:87-119`, `src/routes/summoner/[riotId]/+page.server.ts:25-26`).
-- Data Dragon names are optional too; on failure the page uses fallbacks such as `Item 1234` (`src/lib/server/profile.ts:106`, `src/lib/server/static-data.ts:64-78`).
-- Custom games are removed before rendering (`src/lib/server/profile.ts:114`).
+- The profile call names no platform; riot-proxy finds the player's platform and returns it. The site maps it to one of its 15 regions; a platform it does not know is a 503 (`src/lib/server/profile.ts:85-95`, ADR-037).
+- The match page call needs the profile's `puuid`, so a cold profile is two round trips (`src/lib/server/profile.ts:54-56`). The current patch and its Data Dragon lookups do not depend on the player, so they start before the profile call, alongside it, rather than after it (SPD-08, `src/lib/server/profile.ts:76-83`). They are wrapped in `early()`, so a profile that fails first leaves no unhandled rejection behind (`src/lib/server/errors.ts:60-68`). A failed current patch still fails the page.
+- The match page is optional. If it fails or throws, the page still renders the header and rank, shows a notice, and is sent with `no-store` so the gap is not kept at the edge (`src/lib/server/profile.ts:97-127`, `src/routes/summoner/[riotId]/+page.server.ts:25-26`).
+- Data Dragon names are optional too; on failure the page uses fallbacks such as `Item 1234` (`src/lib/server/profile.ts:78-83`, `src/lib/server/static-data.ts:64-78`).
+- Custom games are removed before rendering (`src/lib/server/profile.ts:122`).
 - riot-proxy may wait for its Riot rate limiter: up to 2 s for an interactive request (`riot-proxy:src/config.rs:716`). If the wait budget runs out it serves a cached copy as `STALE` when it has one, else `RATE_LIMITED` (`riot-proxy:src/fetcher.rs:455-466`). Its Riot client allows 25 s per request and retries a 5xx twice after 250 ms and 750 ms (`riot-proxy:src/riot/client.rs:19-24`, `riot-proxy:src/fetcher.rs:26-27`). The site's 30 s budget is sized for that.
 
 ### Refresh
@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## Match page
 
-`GET /match/{matchId}`, loaded by `loadMatch` (`src/lib/server/match.ts:33-78`).
+`GET /match/{matchId}`, loaded by `loadMatch` (`src/lib/server/match.ts:34-85`).
 
 ```mermaid
 sequenceDiagram
@@ -127,20 +127,26 @@ sequenceDiagram
     and timeline (optional)
       Site->>Proxy: GET .../timeline
       Proxy-->>Site: 200 or error
-    and patch versions (held 5 min)
+    and patch versions (held 5 min), then lookups and stat shards
       Site->>Proxy: GET /v1/static/versions
       Proxy-->>Site: 200
+      par Data Dragon lookups (once per patch, optional)
+        Site->>Proxy: GET /v1/static/champion, item, summoner, runesReforged, queues
+        Proxy-->>Site: 200 Data Dragon JSON
+      and stat shards (once per patch, optional)
+        Site->>CDragon: GET perks.json
+        CDragon-->>Site: 200
+      end
     end
-    Site->>CDragon: GET perks.json (once per patch, optional)
-    CDragon-->>Site: 200
     Site-->>Cloudflare: 200 HTML, s-maxage=86400 if every part loaded, else no-store
     Cloudflare-->>Browser: 200 HTML
   end
 ```
 
 - The region comes from the match id's prefix (`OC1_…` → Oceania, route `sea`); an id with no known prefix is a 404 without calling riot-proxy (`src/routes/match/[matchId]/+page.server.ts:9-11`, `src/lib/domain/regions.ts:46-50`).
-- A custom game is a 404 (`src/lib/server/match.ts:53`).
-- A page without its timeline, Data Dragon lookups or stat shards is sent with `no-store`, so the gap is not cached for a day. `loadMatch` returns `complete` for this (`src/lib/server/match.ts:60-77`, `src/routes/match/[matchId]/+page.server.ts:17-19`, ADR-045).
+- The patch versions, and then the Data Dragon lookups and stat shards for the current patch, do not depend on the match, so they load alongside the match and timeline rather than after them (SPD-08, `src/lib/server/match.ts:42-61`). A failed version list still fails the page; failed lookups fall back to plain names and failed stat shards to none.
+- A custom game is a 404 (`src/lib/server/match.ts:69`).
+- A page without its timeline, Data Dragon lookups or stat shards is sent with `no-store`, so the gap is not cached for a day. `loadMatch` returns `complete` for this (`src/lib/server/match.ts:76-84`, `src/routes/match/[matchId]/+page.server.ts:17-19`, ADR-045).
 - riot-proxy treats match and timeline as immutable and serves them from its archive once fetched (`riot-proxy:src/riot/endpoints.rs:185-204`, `riot-proxy:src/fetcher.rs:305-317`).
 
 ## Champion page
@@ -201,5 +207,5 @@ With JavaScript, SvelteKit fetches a page's `__data.json` instead of its HTML on
 
 ---
 
-**Sources:** `src/hooks.server.ts:L8-L29`, `src/lib/server/cache.ts:L5-L34`, `src/lib/server/proxy.ts:L12-L154`, `src/lib/server/timing.ts:L1-L86`, `src/lib/server/profile.ts:L54-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/summoner/[riotId]/+page.server.ts:L14-L38`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/domain/regions.ts:L46-L50`, `vite.config.ts:L16-L19`, `docs/DECISIONS.md:L153-L157,L523-L529,L579,L617-L630`, `docs/PROGRESS.md:L55`, `riot-proxy:src/routes/players/refresh.rs:L1-L71`, `riot-proxy:src/fetcher.rs:L9-L44,L305-L317,L455-L466`, `riot-proxy:src/riot/client.rs:L19-L24`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/riot/endpoints.rs:L185-L204`, `riot-proxy:src/routes/analytics.rs:L3`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/hooks.server.ts:L8-L29`, `src/lib/server/cache.ts:L5-L34`, `src/lib/server/proxy.ts:L12-L154`, `src/lib/server/timing.ts:L1-L86`, `src/lib/server/profile.ts:L54-L155`, `src/lib/server/match.ts:L34-L85`, `src/lib/server/errors.ts:L60-L68`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/summoner/[riotId]/+page.server.ts:L14-L38`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/domain/regions.ts:L46-L50`, `vite.config.ts:L16-L19`, `docs/DECISIONS.md:L153-L157,L523-L529,L579,L617-L630`, `docs/PROGRESS.md:L55`, `riot-proxy:src/routes/players/refresh.rs:L1-L71`, `riot-proxy:src/fetcher.rs:L9-L44,L305-L317,L455-L466`, `riot-proxy:src/riot/client.rs:L19-L24`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/riot/endpoints.rs:L185-L204`, `riot-proxy:src/routes/analytics.rs:L3`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
+**Last verified:** 2026-11-03 against commit `5fede17`

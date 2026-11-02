@@ -16,13 +16,13 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Match ID.** `<PLATFORM>_<number>`, e.g. `OC1_712351051`. Its prefix names the platform, so the match URL needs no region; an ID that does not match `^[A-Za-z0-9]+_[0-9]+$` with a known prefix is a 404 before any riot-proxy call (`src/lib/domain/regions.ts:46-50`).
 
-**Timeline.** Riot's per-minute frames and events for one match. The site uses it for the gold chart, objectives, and each player's item and skill order. It is optional: without it the match page still shows the scoreboard (`src/lib/server/match.ts:24-32`).
+**Timeline.** Riot's per-minute frames and events for one match. The site uses it for the gold chart, objectives, and each player's item and skill order. It is optional: without it the match page still shows the scoreboard (`src/lib/server/match.ts:24-33`).
 
 **Queue ID.** Riot's number for a game mode, e.g. 420 Ranked Solo/Duo. Queue 0, or none, is a custom game, which the site never shows (Riot policy; `src/lib/domain/matches.ts:156-158`, `CLAUDE.md:24`).
 
 **Patch.** A game version's `major.minor`, e.g. `16.20`. Champion statistics are filtered by patch ([api/pagination-filtering-and-versioning.md](../api/pagination-filtering-and-versioning.md)).
 
-**Data Dragon version.** A full Data Dragon version, e.g. `16.20.1`, the "current patch" the site builds image URLs and loads names for. Held for 5 minutes (`src/lib/server/patch.ts:45-66`). A match from an older patch uses that patch's Data Dragon version for its icons (`src/lib/server/patch.ts:34-41`, `src/lib/server/match.ts:73`).
+**Data Dragon version.** A full Data Dragon version, e.g. `16.20.1`, the "current patch" the site builds image URLs and loads names for. Held for 5 minutes (`src/lib/server/patch.ts:45-66`). A match from an older patch uses that patch's Data Dragon version for its icons (`src/lib/server/patch.ts:34-41`, `src/lib/server/match.ts:80`).
 
 **Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:9-64`, `src/lib/server/cdragon.ts:11-39`).
 
@@ -44,7 +44,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Refresh.** The profile's POST form action that asks riot-proxy to re-read the player from Riot; riot-proxy allows it once a minute per player and part (ADR-012, [integration/contract.md](../integration/contract.md)).
 
-**Fetched age.** riot-proxy's seconds since it last read each part of a profile from Riot (`fetchedAgeSeconds`); the profile shows "Updated N minutes ago" from the oldest part (`src/lib/server/profile.ts:129-130`, ADR-019).
+**Fetched age.** riot-proxy's seconds since it last read each part of a profile from Riot (`fetchedAgeSeconds`); the profile shows "Updated N minutes ago" from the oldest part (`src/lib/server/profile.ts:137-138`, ADR-019).
 
 **Essential call, optional call.** A riot-proxy call whose failure fails the page, versus one whose failure only degrades a section, wrapped in `optional()` (`src/lib/server/errors.ts:41-58`, ADR-040).
 
@@ -68,5 +68,5 @@ Definitions of the terms used across these docs and the code, with where each on
 
 ---
 
-**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L32,L73`, `src/lib/server/patch.ts:L34-L66`, `src/lib/server/profile.ts:L129-L130`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L33,L80`, `src/lib/server/patch.ts:L34-L66`, `src/lib/server/profile.ts:L137-L138`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
+**Last verified:** 2026-11-03 against commit `5fede17`

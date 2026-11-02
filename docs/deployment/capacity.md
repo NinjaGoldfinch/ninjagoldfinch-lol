@@ -48,7 +48,7 @@ Cached pages never reach the host: the edge serves them for `s-maxage` and `stal
 
 ## The real throughput limit: riot-proxy and the Riot key
 
-An uncached profile page or Refresh can make riot-proxy call Riot. The production Riot key is a personal key with 100 requests per 2 minutes (`riot-proxy:docs/DECISIONS.md:1509`). riot-proxy caches Riot responses and reserves a share of each rate-limit bucket for interactive requests ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md)); when it cannot answer in time it returns `RATE_LIMITED` and the site shows 429. The site's own consumer quota defaults to 600 requests a minute (`riot-proxy:src/consumers.rs:14`), and one profile view costs two riot-proxy calls (profile and match list), plus the patch and Data Dragon lookups when they are not already held in memory (`src/lib/server/profile.ts:76-106`). Match and champion pages cost no Riot calls once riot-proxy has the match archived or the analytics computed.
+An uncached profile page or Refresh can make riot-proxy call Riot. The production Riot key is a personal key with 100 requests per 2 minutes (`riot-proxy:docs/DECISIONS.md:1509`). riot-proxy caches Riot responses and reserves a share of each rate-limit bucket for interactive requests ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md)); when it cannot answer in time it returns `RATE_LIMITED` and the site shows 429. The site's own consumer quota defaults to 600 requests a minute (`riot-proxy:src/consumers.rs:14`), and one profile view costs two riot-proxy calls (profile and match list), plus the patch and Data Dragon lookups when they are not already held in memory (`src/lib/server/profile.ts:76-114`). Match and champion pages cost no Riot calls once riot-proxy has the match archived or the analytics computed.
 
 **Estimate:** the site can render hundreds of pages a second; the platform can serve far fewer previously unseen players than that, bounded by the Riot key. Upgrading the Riot key, not the VPS, is the lever for more new-player traffic.
 
@@ -99,4 +99,4 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 ---
 
 **Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Last verified:** 2026-11-03 against commit `5fede17`

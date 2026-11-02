@@ -9,7 +9,7 @@ import {
 import { isCustomGame, toMatchRows, type MatchRow } from '#lib/domain/matches.ts';
 import { regionForPlatform } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
-import { classifyProxyError, optional, toHttpError } from './errors.ts';
+import { classifyProxyError, early, optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
 import { proxy, type ProxyClient } from './proxy.ts';
 import { namesOrFallback } from './static-data.ts';
@@ -51,8 +51,9 @@ export interface ProfileData {
 }
 
 /**
- * One profile call by Riot ID, then the page of matches and the patch.
- * Two round trips: the match page needs the puuid from the profile.
+ * One profile call by Riot ID, then the page of matches, with the patch and
+ * its lookups alongside. Two round trips: the match page needs the puuid from
+ * the profile.
  *
  * The profile is asked for without a platform: riot-proxy finds the one the
  * player plays on from their account and names it, and the match page is
@@ -72,6 +73,15 @@ export async function loadProfile(
 	client: ProxyClient = proxy,
 	{ refresh = false, filter = NO_FILTER }: { refresh?: boolean; filter?: MatchFilter } = {}
 ): Promise<ProfileData> {
+	// The patch and its lookups don't depend on the player, so they start
+	// alongside the profile rather than after it (SPD-08).
+	const lookups = early(
+		currentPatch(client).then(async (patch) => ({
+			patch,
+			names: (await namesOrFallback(patch, client)).names
+		}))
+	);
+
 	const refreshQuery = refresh ? { refresh: true } : {};
 	const profile = await client.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
 		params: { path: id, query: refreshQuery }
@@ -84,7 +94,7 @@ export async function loadProfile(
 		error(503, 'Temporarily unavailable');
 	}
 
-	const [page, patch] = await Promise.all([
+	const [page, { patch, names }] = await Promise.all([
 		optional(
 			client.GET('/v1/players/{puuid}/matches', {
 				params: {
@@ -100,10 +110,8 @@ export async function loadProfile(
 				}
 			})
 		),
-		currentPatch(client)
+		lookups
 	]);
-
-	const { names } = await namesOrFallback(patch, client);
 
 	const label = `${region.slug}/${id.gameName}#${id.tagLine}`;
 	const matches = page.response.ok && page.data ? page.data : null;

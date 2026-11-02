@@ -94,7 +94,7 @@ sudo journalctl -u riot-proxy | grep '<request-id from the site line>'
 
 ## 6. "Too many requests"
 
-**Cause.** riot-proxy answered `QUOTA_EXCEEDED` (this site's consumer quota, 600/min by default, shared by all visitors) or `RATE_LIMITED` (Riot's budget, sent by riot-proxy as HTTP 503), or any 429. The page shows the `retryAfter` seconds from the body or `Retry-After` header (`src/lib/server/errors.ts:24-30,66-74`).
+**Cause.** riot-proxy answered `QUOTA_EXCEEDED` (this site's consumer quota, 600/min by default, shared by all visitors) or `RATE_LIMITED` (Riot's budget, sent by riot-proxy as HTTP 503), or any 429. The page shows the `retryAfter` seconds from the body or `Retry-After` header (`src/lib/server/errors.ts:24-30,76-84`).
 
 **Confirm.** `grep -E 'proxy (429|503)'` in the journal, then the request id in riot-proxy's log to see which code.
 
@@ -114,7 +114,7 @@ sudo journalctl -u riot-proxy | grep '<request-id from the site line>'
 
 - The URL segment is split on the **last** hyphen: `/summoner/Game-Name-TAG` is `Game-Name` `#` `TAG` (`src/lib/domain/riot-id.ts:14-19,39-44`). A missing tag gives 404 without calling riot-proxy.
 - riot-proxy answered `NOT_FOUND` or `VALIDATION` (`src/lib/server/errors.ts:19-22`).
-- riot-proxy named a platform the site has no region for: that is a 503, logged as `profile <Name>#<TAG>: unknown platform <p>` (`src/lib/server/profile.ts:81-85`).
+- riot-proxy named a platform the site has no region for: that is a 503, logged as `profile <Name>#<TAG>: unknown platform <p>` (`src/lib/server/profile.ts:91-95`).
 
 Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`), so a fix can take a minute to show.
 
@@ -122,7 +122,7 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 9. Profile loads, match list unavailable
 
-**Cause.** The match-list call is optional: if it fails or times out, the profile header and rank still render (`src/lib/server/profile.ts:87-102`, `src/lib/server/errors.ts:54-58`). riot-proxy's partial-profile warnings are logged as `profile <slug>/<Name>#<TAG> warnings: …` (`src/lib/server/profile.ts:109-111`).
+**Cause.** The match-list call is optional: if it fails or times out, the profile header and rank still render (`src/lib/server/profile.ts:97-112`, `src/lib/server/errors.ts:54-58`). riot-proxy's partial-profile warnings are logged as `profile <slug>/<Name>#<TAG> warnings: …` (`src/lib/server/profile.ts:117-119`).
 
 **Confirm.** `grep -E 'proxy .* /v1/players/.*/matches|warnings:'` in the journal.
 
@@ -130,13 +130,13 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 10. Match page without gold chart, item or skill order
 
-**Cause.** The timeline call is optional; when it fails the scoreboard renders with no gold, objectives or build timeline, and the page is sent `no-store` instead of being cached for a day (`src/lib/server/match.ts:43,55-58`, `src/routes/match/[matchId]/+page.server.ts:17-19`). An unparseable timeline logs `match <id>: unexpected timeline payload`. A match page whose Data Dragon lookups or stat shards failed is not cached either (ADR-045).
+**Cause.** The timeline call is optional; when it fails the scoreboard renders with no gold, objectives or build timeline, and the page is sent `no-store` instead of being cached for a day (`src/lib/server/match.ts:59,71-74`, `src/routes/match/[matchId]/+page.server.ts:17-19`). An unparseable timeline logs `match <id>: unexpected timeline payload`. A match page whose Data Dragon lookups or stat shards failed is not cached either (ADR-045).
 
 **Fix.** Reload later; since the page was not cached, the next request tries again.
 
 ## 11. Runes without stat shards
 
-**Cause.** CommunityDragon's `perks.json` could not be fetched; the page leaves the shards out and logs `CommunityDragon stat shards unavailable:` (`src/lib/server/match.ts:63-67`). The fetch has its own 5 s deadline, body included, so a hung CommunityDragon delays a match page by at most 5 s (`CDRAGON_BUDGET_MS`, `src/lib/server/cdragon.ts:11-32`).
+**Cause.** CommunityDragon's `perks.json` could not be fetched; the page leaves the shards out and logs `CommunityDragon stat shards unavailable:` (`src/lib/server/match.ts:47-53`). The fetch has its own 5 s deadline, body included, so a hung CommunityDragon delays a match page by at most 5 s (`CDRAGON_BUDGET_MS`, `src/lib/server/cdragon.ts:11-32`).
 
 **Confirm.** `curl -sI https://raw.communitydragon.org/<major.minor>/plugins/rcp-be-lol-game-data/global/default/v1/perks.json` from the host.
 
@@ -196,5 +196,5 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ---
 
-**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L12-L135`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L8-L29`, `src/lib/server/timing.ts:L58-L86`, `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L67`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L44`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L12-L135`, `src/lib/server/errors.ts:L16-L84`, `src/hooks.server.ts:L8-L29`, `src/lib/server/timing.ts:L58-L86`, `src/lib/server/profile.ts:L75-L119`, `src/lib/server/match.ts:L41-L74`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L44`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
+**Last verified:** 2026-11-03 against commit `5fede17`

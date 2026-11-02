@@ -4,16 +4,16 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 
 ## Layout
 
-| Path                                         | What                                                                                                  | Run by              |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------- |
-| `tests/unit/*.test.ts`                       | 40 Vitest files: domain modules, loaders, proxy client, load timing, env rules, hooks, mock, fixtures | `just check`        |
-| `tests/unit/fixtures.ts`                     | Helpers: `fixtureBody(path)`, recorded paths, `recordedNames()`                                       | imported by tests   |
-| `tests/e2e/*.test.ts`                        | 5 Playwright files: `routes`, `match`, `champion-page`, `champions`, `layout`                         | `just e2e`          |
-| `tests/mock-proxy/`                          | `mock.ts` (fixture loader and HTTP server), `server.ts` (CLI, default port 8787)                      | Playwright, by hand |
-| `tests/fixtures/*.json`                      | 50 fixtures: recorded or synthetic riot-proxy responses, and one CommunityDragon file                 | mock and unit tests |
-| `tests/fixtures/builds/`                     | riot-proxy's golden build fixtures, copied unchanged; not served by the mock                          | unit tests          |
-| `tests/record-fixture.ts`, `tests/redact.ts` | Fixture recorder and its redaction                                                                    | `just fixture`      |
-| `deploy/proxmox/test.sh`                     | Tests the preview VM scripts                                                                          | `just check`        |
+| Path                                         | What                                                                                                                        | Run by              |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `tests/unit/*.test.ts`                       | 41 Vitest files: domain modules, loaders, cold-path call order, proxy client, load timing, env rules, hooks, mock, fixtures | `just check`        |
+| `tests/unit/fixtures.ts`                     | Helpers: `fixtureBody(path)`, recorded paths, `recordedNames()`                                                             | imported by tests   |
+| `tests/e2e/*.test.ts`                        | 5 Playwright files: `routes`, `match`, `champion-page`, `champions`, `layout`                                               | `just e2e`          |
+| `tests/mock-proxy/`                          | `mock.ts` (fixture loader and HTTP server), `server.ts` (CLI, default port 8787)                                            | Playwright, by hand |
+| `tests/fixtures/*.json`                      | 50 fixtures: recorded or synthetic riot-proxy responses, and one CommunityDragon file                                       | mock and unit tests |
+| `tests/fixtures/builds/`                     | riot-proxy's golden build fixtures, copied unchanged; not served by the mock                                                | unit tests          |
+| `tests/record-fixture.ts`, `tests/redact.ts` | Fixture recorder and its redaction                                                                                          | `just fixture`      |
+| `deploy/proxmox/test.sh`                     | Tests the preview VM scripts                                                                                                | `just check`        |
 
 ## Commands
 
@@ -37,6 +37,7 @@ What is covered:
 
 - **Domain modules.** Every module in `src/lib/domain/` (15) is imported by at least one test file, as `CLAUDE.md:35` requires.
 - **Loaders.** `profile`, `match-loader`, `champions-loader` and `champion-page-loader` tests build a real client with `createProxyClient(base, key, fetch)` whose `fetch` answers from fixtures, override single paths to simulate failures, and record which paths were asked (`tests/unit/match-loader.test.ts:24-37`). They call `clearStaticNames()` and `clearPatchVersions()` in `beforeEach` because those holds live in module memory (`tests/unit/match-loader.test.ts:39-42`).
+- **Cold-path call order.** `cold-path.test.ts` delays one path by 30 ms in a fixture-answering client and records when each call starts and ends. It checks that the current patch and Data Dragon lookups start before the profile, match or champion table answers, that the stat shards start before the match answers, that the match page still waits for the profile, and that a profile which 404s before a failing patch call leaves no unhandled rejection (SPD-08, `tests/unit/cold-path.test.ts:18-117`).
 - **Proxy client.** Bearer header on and off, dot-segment refusal, failure and slow-call logging, deadlines (`tests/unit/proxy.test.ts`). The deadline test uses fake timers, so it does not depend on wall-clock time (`tests/unit/proxy.test.ts:135-150`).
 - **Load timing.** `timing.test.ts` runs `timeLoad` with a threshold of -1 (every load is over it) around a real client and checks the `slow load` line: route id, each call by spec path in order, a status for a non-2xx and `failed` for no answer, `(data)`, `(no route)`, `no riot-proxy calls`, no player name and no `x-cache`, nothing under the threshold, a load that throws still logged, and two concurrent loads kept apart (`tests/unit/timing.test.ts`). `hooks.test.ts` checks that `handle` logs a slow request under its route id (ADR-046).
 - **Error mapping, cache policy, hooks, env rules.** `errors.test.ts`, `cache.test.ts`, `hooks.test.ts`, `env.test.ts`.
@@ -113,5 +114,5 @@ There is no coverage tool or threshold: no coverage provider in `package.json` a
 
 ---
 
-**Sources:** `justfile:L19-L36`, `package.json:L10-L20,L45-L47`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/unit/fixtures-redacted.test.ts:L1-L52`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `tests/unit/timing.test.ts`, `tests/unit/hooks.test.ts:L64-L83`, `tests/unit/env-example.test.ts:L1-L19`, `src/lib/server/proxy.ts:L82-L135`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `justfile:L19-L36`, `package.json:L10-L20,L45-L47`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/unit/fixtures-redacted.test.ts:L1-L52`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `tests/unit/timing.test.ts`, `tests/unit/cold-path.test.ts:L18-L117`, `tests/unit/hooks.test.ts:L64-L83`, `tests/unit/env-example.test.ts:L1-L19`, `src/lib/server/proxy.ts:L82-L135`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
+**Last verified:** 2026-11-03 against commit `5fede17`

@@ -18,7 +18,7 @@ How the site's URLs carry pages and filters, why every view has exactly one cano
 | `queue`    | 420, 440, 400, 490, 480, 450, 1700      | `queue`                         |
 | `champion` | champion ID 1–10000                     | `champion`                      |
 
-Sources: `src/lib/domain/match-filters.ts:5-37`, `src/lib/server/profile.ts:89-99`.
+Sources: `src/lib/domain/match-filters.ts:5-37`, `src/lib/server/profile.ts:99-109`.
 
 - The "Older" link appears when riot-proxy's `hasMore` is true and the page is below 1001; "Newer" from page 2 (`src/lib/components/Pagination.svelte:9-17`). riot-proxy sets `hasMore` when a full page came back, exactly when filtering by champion (`riot-proxy:src/routes/players.rs:697,866`).
 - Custom games are removed after the page is fetched, so a page may show fewer than ten rows, with a note (ADR-017).
@@ -69,5 +69,5 @@ riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by commi
 
 ---
 
-**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L89-L99`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L12-L17`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L99-L109`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L12-L17`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
+**Last verified:** 2026-11-03 against commit `5fede17`

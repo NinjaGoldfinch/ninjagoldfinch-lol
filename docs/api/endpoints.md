@@ -70,7 +70,7 @@ location: /summoner/NinjaGoldfinch-OCENZ
 
 A player's header (icon, level, Riot ID, "Updated N minutes ago", Refresh), ranks, ten matches and a champion summary.
 
-- Handler: `src/routes/summoner/[riotId]/+page.server.ts:14-28`; loader `loadProfile`, `src/lib/server/profile.ts:70-147`
+- Handler: `src/routes/summoner/[riotId]/+page.server.ts:14-28`; loader `loadProfile`, `src/lib/server/profile.ts:71-155`
 - `{riotId}`: `GameName-TAG`, URL-encoded, split on the last hyphen (`src/lib/domain/riot-id.ts:12-18`). Unparseable, a part of `.` or `..`, a game name over 16 characters or a tag over 5 → `404` (RV-02).
 
 | Query      | Values                             | Default | Source                                    |
@@ -89,7 +89,7 @@ Anything not offered is ignored. If the query is not in canonical form (for exam
 | `429`    | riot-proxy `QUOTA_EXCEEDED` or `RATE_LIMITED` on the profile call | `no-store`                                                                                |
 | `503`    | Anything else, including an unknown platform and a timeout        | `no-store`                                                                                |
 
-riot-proxy calls: `GET /v1/players/by-riot-id/{gameName}/{tagLine}/profile` (essential), then `GET /v1/players/{puuid}/matches?platform=…&count=10[&start][&queue][&champion]` (optional) and `GET /v1/static/versions` (held 5 min), then the Data Dragon files on the first view of a patch. Custom games are left out (ADR-017).
+riot-proxy calls, two chains in parallel: `GET /v1/players/by-riot-id/{gameName}/{tagLine}/profile` (essential), then `GET /v1/players/{puuid}/matches?platform=…&count=10[&start][&queue][&champion]` (optional); and `GET /v1/static/versions` (held 5 min), then the Data Dragon files on the first view of a patch (optional). Custom games are left out (ADR-017).
 
 ```text
 $ curl -sI http://127.0.0.1:3000/summoner/NinjaGoldfinch-OCENZ
@@ -118,7 +118,7 @@ Old profile URL. `308` to `/summoner/{riotId}`, keeping the query, with `no-stor
 
 Both teams' scoreboards, each player's build (in a popup), and a Timeline tab with the gold difference and objectives.
 
-- Handler: `src/routes/match/[matchId]/+page.server.ts:8-21`; loader `loadMatch`, `src/lib/server/match.ts:33-78`
+- Handler: `src/routes/match/[matchId]/+page.server.ts:8-21`; loader `loadMatch`, `src/lib/server/match.ts:34-85`
 - `{matchId}`: Riot's id, e.g. `OC1_712351051`. The prefix picks the region; an unknown prefix is `404` without calling riot-proxy (`src/lib/domain/regions.ts:46-50`). A lower-case id (`oc1_…`) is a `308` to the upper-case one, keeping the query, with `no-store` (RV-05).
 
 | Query    | Meaning                                     | Read by                                                 |
@@ -135,7 +135,7 @@ These do not change the server's data, but each URL is its own edge cache entry.
 | `404`        | Unknown prefix, riot-proxy `NOT_FOUND`, or a custom game   | `public, s-maxage=60`                                                                                                         |
 | `429`, `503` | As for profiles; also an unparseable match payload (`503`) | `no-store`                                                                                                                    |
 
-riot-proxy calls, in parallel: `GET /v1/lol/matches/{region}/{matchId}` (essential), `GET …/timeline` (optional), `GET /v1/static/versions`; then Data Dragon names and CommunityDragon's `perks.json` once per patch.
+riot-proxy calls, in parallel: `GET /v1/lol/matches/{region}/{matchId}` (essential), `GET …/timeline` (optional), and `GET /v1/static/versions` followed by Data Dragon names and CommunityDragon's `perks.json` once per patch (both optional).
 
 ```text
 $ curl -sI http://127.0.0.1:3000/match/OC1_712351051
@@ -164,10 +164,10 @@ Sources: `src/lib/domain/champion-stats.ts:34-195`. Unknown values fall back to 
 
 The champion table: win, pick and ban rate per champion.
 
-- Handler: `src/routes/champions/+page.server.ts:7-20`; loader `loadChampions`, `src/lib/server/champions.ts:33-58`
+- Handler: `src/routes/champions/+page.server.ts:7-20`; loader `loadChampions`, `src/lib/server/champions.ts:33-62`
 - Extra query: `sort` = `pick` (default), `win` or `ban`. Read without re-running the load, so with JavaScript sorting needs no request.
 - Responses: `200` with `public, s-maxage=600, stale-while-revalidate=600`, or `no-store` if the patch list or Data Dragon lookups failed; `307` to the canonical query; `429`/`503` as above.
-- riot-proxy calls: `GET /v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=…[&role][&tier|&minTier]&minGames=0&limit=500` (essential), `GET /v1/lol/analytics/patches?queue=RANKED_SOLO_5x5` (optional), current patch and Data Dragon names.
+- riot-proxy calls: `GET /v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=…[&role][&tier|&minTier]&minGames=0&limit=500` (essential), `GET /v1/lol/analytics/patches?queue=RANKED_SOLO_5x5` (optional), and the current patch followed by Data Dragon names (optional), all three in parallel.
 
 ```text
 $ curl -sI 'http://127.0.0.1:3000/champions?patch=all'
@@ -210,5 +210,5 @@ Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=6
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L70-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champions.ts:L33-L58`, `src/lib/server/champion-page.ts:L82-L186`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L13-L195`, `src/lib/domain/champion-page.ts:L212-L305`, `src/hooks.server.ts:L8-L19`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L617-L630`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L71-L155`, `src/lib/server/match.ts:L34-L85`, `src/lib/server/champions.ts:L33-L62`, `src/lib/server/champion-page.ts:L82-L186`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L13-L195`, `src/lib/domain/champion-page.ts:L212-L305`, `src/hooks.server.ts:L8-L19`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L617-L630`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
+**Last verified:** 2026-11-03 against commit `5fede17`

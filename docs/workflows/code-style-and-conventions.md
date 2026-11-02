@@ -57,7 +57,7 @@ Logging is `console.error` and `console.warn` to stdout/stderr, which systemd se
 
 - Start with the subsystem: `proxy …`, `match <id>: …`, `error GET /path:`.
 - Include riot-proxy's `X-Request-Id` for any failed proxy response, so the line can be found in riot-proxy's logs (`src/lib/server/proxy.ts:7-20`, ADR-007).
-- No line logs the proxy key or a payload body (every `console.*` call under `src/` was read on 2026-10-20). Failed-call lines do log the request path, which for `/v1/players/{puuid}/matches` contains a PUUID, and profile lines name the Riot ID (`src/lib/server/proxy.ts:16-18,127-128`, `src/lib/server/profile.ts:83,111`); the journal is therefore not public data.
+- No line logs the proxy key or a payload body (every `console.*` call under `src/` was read on 2026-10-20). Failed-call lines do log the request path, which for `/v1/players/{puuid}/matches` contains a PUUID, and profile lines name the Riot ID (`src/lib/server/proxy.ts:16-18,127-128`, `src/lib/server/profile.ts:93,119`); the journal is therefore not public data.
 
 The complete list of log lines is in [integration/monitoring-hooks.md](../integration/monitoring-hooks.md).
 
@@ -80,5 +80,5 @@ A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). 
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L43`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L45-L50`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L7-L20`, `src/hooks.server.ts:L5-L29`, `src/lib/server/profile.ts:L83,L111`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L43`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L45-L50`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L7-L20`, `src/hooks.server.ts:L5-L29`, `src/lib/server/profile.ts:L93,L119`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
+**Last verified:** 2026-11-03 against commit `5fede17`

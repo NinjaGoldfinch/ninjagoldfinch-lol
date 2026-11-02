@@ -57,6 +57,16 @@ export function optional<T extends { response: Response }>(
 	return call.catch(() => ({ response: new Response(null, { status: 503 }) }));
 }
 
+/**
+ * For a call started before it is awaited (SPD-08): its failure is marked
+ * handled now, so a load that fails first and never awaits it leaves no
+ * unhandled rejection. Awaiting it still throws.
+ */
+export function early<T>(call: Promise<T>): Promise<T> {
+	call.catch(() => {});
+	return call;
+}
+
 function isErrorResponse(body: unknown): body is ErrorResponse {
 	if (typeof body !== 'object' || body === null || !('error' in body)) return false;
 	const inner = body.error;
