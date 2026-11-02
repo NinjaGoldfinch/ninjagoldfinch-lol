@@ -16,7 +16,7 @@ riot-proxy authenticates every caller with a consumer key (`Authorization: Beare
 ## Consequences
 
 - Imports use `#lib/...` with file extensions, kit config lives in `vite.config.ts`, and env vars are declared in `src/env.ts` (`docs/DECISIONS.md:13-17`).
-- Node 22.18 or later is required (`package.json:6-8`).
+- Node 22.18 or later is required (`package.json:7-9`).
 - Interactive features that would need data in the Browser reuse a page's own load through `preloadData` rather than calling riot-proxy (ADR-030, `docs/DECISIONS.md:372`).
 
 ## Status
@@ -25,9 +25,9 @@ Accepted, in force.
 
 ## Evidence
 
-`package.json:23-24,45-47`, `vite.config.ts:1-37`, `src/lib/server/proxy.ts:1-153`, ADR-001.
+`package.json:24-25,45-47`, `vite.config.ts:1-37`, `src/lib/server/proxy.ts:1-153`, ADR-001.
 
 ---
 
-**Sources:** `docs/IMPLEMENTATION.md:L49`, `docs/DECISIONS.md:L5-L19,L372`, `CLAUDE.md:L15-L17,L57-L59`, `package.json:L6-L8,L23-L24,L45-L47`, `vite.config.ts:L1-L37`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `docs/IMPLEMENTATION.md:L49`, `docs/DECISIONS.md:L5-L19,L372`, `CLAUDE.md:L15-L17,L57-L59`, `package.json:L7-L9,L24-L25,L45-L47`, `vite.config.ts:L1-L37`
+**Last verified:** 2026-11-03 against commit `6d46c74`

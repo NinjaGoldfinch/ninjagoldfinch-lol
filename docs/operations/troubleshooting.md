@@ -188,11 +188,11 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 19. `pnpm install` refuses to run
 
-**Causes.** Node older than 22.18 with `engine-strict=true` (`package.json:6-8`, `.npmrc:1`); or Ubuntu's `node-corepack` 0.24, which cannot load pnpm 12 (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-804`).
+**Causes.** Node older than 22.18 with `engine-strict=true` (`package.json:7-9`, `.npmrc:1`); or Ubuntu's `node-corepack` 0.24, which cannot load pnpm 12 (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-804`).
 
 **Fix.** `node --version`; install pnpm with `sudo npm install -g pnpm@12.10.1` ([deployment/install.md](../deployment/install.md#2-pnpm)).
 
 ---
 
-**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L11-L134`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L6-L25`, `src/lib/server/profile.ts:L76-L116`, `src/lib/server/match.ts:L42-L73`, `src/lib/server/champion-page.ts:L88-L101`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L40`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L6-L8`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L515-L563`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
-**Last verified:** 2026-11-03 against commit `c092968`
+**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L11-L134`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L6-L25`, `src/lib/server/profile.ts:L76-L116`, `src/lib/server/match.ts:L42-L73`, `src/lib/server/champion-page.ts:L88-L101`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L40`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L515-L563`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
+**Last verified:** 2026-11-03 against commit `6d46c74`

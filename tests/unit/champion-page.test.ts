@@ -207,9 +207,8 @@ describe('toSetBuilds against a lane opponent', () => {
 		names
 	);
 
-	it("names the opponent and riot-proxy's lane", () => {
-		expect(against).toMatchObject({ role: 'MIDDLE', opponentId: 134, totalGames: 71 });
-		expect(toSetBuilds(builds, names).opponentId).toBeNull();
+	it("keeps riot-proxy's lane and games against the opponent", () => {
+		expect(against).toMatchObject({ role: 'MIDDLE', totalGames: 71 });
 	});
 
 	it('keeps the 3rd item and leaves out the empty 4th and 5th, starter and skills', () => {

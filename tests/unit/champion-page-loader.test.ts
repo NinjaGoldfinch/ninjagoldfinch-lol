@@ -167,7 +167,7 @@ describe('loadChampionPage', () => {
 		);
 		expect(asked.filter((path) => path.includes('opponentId='))).toHaveLength(1);
 		expect(page.vs).toEqual(SYNDRA);
-		expect(page.setBuilds).toMatchObject({ role: 'MIDDLE', opponentId: 134 });
+		expect(page.setBuilds).toMatchObject({ role: 'MIDDLE' });
 		// The matchups follow the lane riot-proxy chose against the opponent.
 		expect(page.matchupRole).toBe('MIDDLE');
 		expect(page.vsChoices[0]).toMatchObject({ name: 'Sylas', games: 129 });
@@ -195,7 +195,7 @@ describe('loadChampionPage', () => {
 			name: 'Yuumi',
 			lane: null
 		});
-		expect(page.setBuilds).toEqual({ role: null, opponentId: 350, totalGames: 0, builds: [] });
+		expect(page.setBuilds).toEqual({ role: null, totalGames: 0, builds: [] });
 		expect(page.vsChoices.at(-1)).toEqual({
 			opponentId: 350,
 			slug: 'yuumi',

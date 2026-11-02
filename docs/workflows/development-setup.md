@@ -6,14 +6,14 @@ From a clean machine to passing tests and a local ninjagoldfinch.lol rendering p
 
 | Tool                  | Version                                  | Why                                     | Source                                           |
 | --------------------- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------ |
-| Node                  | 22.18 or later (`engines.node >=22.18`)  | Runs Vite, the tests and `node build`   | `package.json:6-8`, `.npmrc:1` (`engine-strict`) |
-| pnpm                  | 12.10.1 exactly (`packageManager`)       | Installs from `pnpm-lock.yaml`          | `package.json:5`                                 |
+| Node                  | 22.18 or later (`engines.node >=22.18`)  | Runs Vite, the tests and `node build`   | `package.json:7-9`, `.npmrc:1` (`engine-strict`) |
+| pnpm                  | 12.10.1 exactly (`packageManager`)       | Installs from `pnpm-lock.yaml`          | `package.json:6`                                 |
 | just                  | any recent (1.58.0 used here)            | Task runner for every command           | `justfile`                                       |
 | git                   | any                                      | `just setup` sets `core.hooksPath`      | `justfile:6-9`                                   |
 | Playwright's Chromium | the one `@playwright/test` asks for      | `just e2e` only                         | `README.md:16-17`                                |
 | riot-proxy            | optional; release `v2.7.0` matches specs | Only to see live data instead of mocked | `openapi/riot-proxy.json`, `README.md:55-66`     |
 
-`README.md:12` says "Node 22.17 or later"; `package.json:7` says `>=22.18`, and `.npmrc` sets `engine-strict=true`, so `package.json` wins.
+`README.md:12` says "Node 22.17 or later"; `package.json:8` says `>=22.18`, and `.npmrc` sets `engine-strict=true`, so `package.json` wins.
 
 **pnpm.** `corepack enable` provides the pinned pnpm on most systems (`README.md:13`). On Ubuntu 26.04 the packaged `node-corepack` (0.24) cannot load pnpm 12, so install it directly instead: `npm install -g pnpm@12.10.1` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-806`).
 
@@ -200,5 +200,5 @@ $ riot-proxy v2.7.0 (placeholder key, AUTH_DISABLED) + just dev
 
 ---
 
-**Sources:** `package.json:L5-L8`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L66`, `.env.example:L1-L21`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/errors.ts:L36-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L16-L19`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L295`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L80-L83,L158-L159`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `package.json:L6-L9`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L66`, `.env.example:L1-L21`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/errors.ts:L36-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L16-L19`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L295`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L80-L83,L158-L159`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
+**Last verified:** 2026-11-03 against commit `6d46c74`

@@ -1,8 +1,8 @@
 // The only place image URLs are built. Images come from Riot's Data Dragon
-// CDN, keyed by patch version; riot-proxy mirrors Data Dragon's JSON but not
-// its images. CommunityDragon fills what Data Dragon lacks (lane icons, stat
-// shards). A CDN or path change is an edit to this file only. ADR-009,
-// ADR-015, ADR-026.
+// CDN, keyed by patch version. riot-proxy also mirrors Data Dragon's images,
+// but only inside the host, so the browser can't reach them (ADR-018).
+// CommunityDragon fills what Data Dragon lacks (lane icons, stat shards). A
+// CDN or path change is an edit to this file only. ADR-009, ADR-015, ADR-026.
 
 const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn';
 const CDRAGON = 'https://raw.communitydragon.org';
@@ -34,7 +34,7 @@ export function runeIconUrl(icon: string): string {
 
 /**
  * A stat shard's icon from CommunityDragon. `icon` is the path inside its
- * game data, as `statShards` reduces perks.json's `iconPath`.
+ * game data, as `parseStatShards` reduces perks.json's `iconPath`.
  */
 export function statShardIconUrl(patch: string, icon: string): string {
 	return `${cdragonGameData(patch)}/${icon.split('/').map(segment).join('/')}`;

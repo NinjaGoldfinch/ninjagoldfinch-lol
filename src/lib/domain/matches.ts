@@ -7,15 +7,12 @@ type MatchSummary = components['schemas']['MatchSummary'];
 /** One row of a player's match history: only what the page renders. */
 export interface MatchRow {
 	matchId: string;
-	queueId: number | null;
 	/** Short queue name, e.g. `Ranked Solo`. */
 	queue: string;
 	/** When the game started, in words, as of when the page was built. */
 	playedAgo: string | null;
 	/** Seconds. */
 	duration: number | null;
-	/** `major.minor` of the game build, e.g. `16.20`. */
-	patch: string | null;
 	/** The Data Dragon version for this game's patch, for its icons; null if riot-proxy lacks it. */
 	ddragonVersion: string | null;
 	result: 'win' | 'loss' | 'remake';
@@ -58,11 +55,9 @@ export function toMatchRows(
 		return [
 			{
 				matchId: m.matchId,
-				queueId,
 				queue: queueId === null ? 'Unknown queue' : (names.queues[queueId] ?? `Queue ${queueId}`),
 				playedAgo: m.gameCreation == null ? null : formatAge((now - m.gameCreation) / 1000),
 				duration: m.gameDuration ?? null,
-				patch: patchOf(m.gameVersion),
 				ddragonVersion: m.ddragonVersion ?? null,
 				result: p.gameEndedInEarlySurrender ? 'remake' : p.win ? 'win' : 'loss',
 				champion: {

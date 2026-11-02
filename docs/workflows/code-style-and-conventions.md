@@ -18,7 +18,7 @@ Prettier also formats Markdown, including everything under `docs/`. Excluded: lo
 
 ## Lint and type checks
 
-- **ESLint** (`pnpm eslint .`, `justfile:23`): `@eslint/js` recommended, `typescript-eslint` recommended, `eslint-plugin-svelte` recommended, then `eslint-config-prettier` so style rules never fight Prettier. It ignores whatever `.gitignore` ignores and `schema.d.ts`; `no-undef` is off as typescript-eslint advises (`eslint.config.js:11-42`).
+- **ESLint** (`pnpm eslint .`, `justfile:23`): `@eslint/js` recommended, `typescript-eslint` recommended, `eslint-plugin-svelte` recommended, then `eslint-config-prettier` so style rules never fight Prettier. It ignores whatever `.gitignore` ignores and `schema.d.ts`; `no-undef` is off as typescript-eslint advises, and `@typescript-eslint/no-non-null-assertion` is an error, enforcing CLAUDE.md's rule against `!` (`eslint.config.js:11-43`, RV-09).
 - **TypeScript** is strict (`tsconfig.json:4`) and `svelte-check` runs over `src`, `tests` and the configs (`justfile:25`, `tsconfig.json:7`).
 - **No `any`, and no non-null `!` on proxy data** (`CLAUDE.md:60`). Proxy data is either a generated type or passes a hand-written parser that returns `undefined` when it cannot read it (`src/lib/api/match.ts:1-4`).
 
@@ -40,7 +40,7 @@ Prettier also formats Markdown, including everything under `docs/`. Excluded: lo
 | Unit tests            | `tests/unit/`         | `<module>.test.ts`; loaders `<page>-loader.test.ts` | `riot-id.test.ts`, `match-loader.test.ts` |
 | Fixtures              | `tests/fixtures/`     | kebab-case; `synthetic-` prefix if hand-written     | `match-oc1-712351051.json`                |
 
-Imports use the `#lib/*` subpath alias with the `.ts` extension, for example `import { proxy } from '#lib/server/proxy.ts'` (`package.json:46-49`). Never import `src/lib/server/` from client code, and never put a secret in a `PUBLIC_` variable (`CLAUDE.md:15-17`). Validated settings are read from `$app/env/private`, and only under `src/lib/server/` (ADR-004, `docs/DECISIONS.md:41-55`; `src/lib/server/proxy.ts:3`).
+Imports use the `#lib/*` subpath alias with the `.ts` extension, for example `import { proxy } from '#lib/server/proxy.ts'` (`package.json:45-47`). Never import `src/lib/server/` from client code, and never put a secret in a `PUBLIC_` variable (`CLAUDE.md:15-17`). Validated settings are read from `$app/env/private`, and only under `src/lib/server/` (ADR-004, `docs/DECISIONS.md:41-55`; `src/lib/server/proxy.ts:3`).
 
 ## Error handling
 
@@ -76,9 +76,9 @@ Types used in history: `feat`, `fix`, `docs`, `chore`, `style`, `perf`, `test`, 
 
 ## Dependencies
 
-A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). The only runtime dependency today is `openapi-fetch` (`package.json:50-52`); see [reference/dependencies.md](../reference/dependencies.md).
+A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). The only runtime dependency today is `openapi-fetch` (`package.json:48-50`); see [reference/dependencies.md](../reference/dependencies.md).
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L42`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L46-L52`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L6-L19`, `src/hooks.server.ts:L4-L25`, `src/lib/server/profile.ts:L85,L116`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L43`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L45-L50`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L6-L19`, `src/hooks.server.ts:L4-L25`, `src/lib/server/profile.ts:L85,L116`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
+**Last verified:** 2026-11-03 against commit `6d46c74`

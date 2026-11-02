@@ -62,7 +62,7 @@ describe('loadProfile', () => {
 		const solo = await loadProfile(me, mock.client, {
 			filter: { queue: 420, champion: null, page: 1 }
 		});
-		expect(solo.matches?.every((m) => m.queueId === 420)).toBe(true);
+		expect(solo.matches?.every((m) => m.queue === 'Ranked Solo')).toBe(true);
 		expect(solo.queueOptions[0]).toEqual({ id: 420, name: 'Ranked Solo' });
 	});
 

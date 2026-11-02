@@ -30,7 +30,6 @@ describe('toMatchDetail', () => {
 		expect(detail).toMatchObject({
 			matchId: 'OC1_712351051',
 			region: { slug: 'oce', label: 'Oceania' },
-			queueId: 420,
 			queue: 'Ranked Solo',
 			startedAt: match.gameCreation,
 			duration: 1952,

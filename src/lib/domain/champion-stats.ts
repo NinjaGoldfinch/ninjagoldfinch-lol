@@ -106,7 +106,7 @@ export function parseChampionFilter(params: URLSearchParams): ChampionFilter {
  * Nothing is above Challenger, so `challenger+` is Challenger. Anything else
  * is every tier.
  */
-export function parseRank(value: string | null): RankFilter | null {
+function parseRank(value: string | null): RankFilter | null {
 	const match = RANK.exec(value ?? '');
 	const tier = TIERS.find((t) => t.slug === match?.[1])?.slug;
 	if (!match || !tier) return null;
@@ -207,9 +207,7 @@ export interface ChampionRow {
 export interface ChampionTable {
 	/** The patch the rows are for: `all` or a `major.minor`. */
 	patch: string | null;
-	totalGames: number;
-	computedAt: string | null;
-	/** Most played first, as riot-proxy returns them. */
+	/** In riot-proxy's order; the page sorts them itself. */
 	rows: ChampionRow[];
 }
 
@@ -222,8 +220,6 @@ export interface ChampionTable {
 export function toChampionTable(body: ChampionStatsResponse, names: StaticNames): ChampionTable {
 	return {
 		patch: body.patch,
-		totalGames: body.totalGames,
-		computedAt: body.computedAt,
 		rows: body.champions
 			.filter((c) => c.tier === body.tier)
 			.map((c) => ({
@@ -243,7 +239,7 @@ export function patchOptions(body: AnalyticsPatchesResponse | undefined): string
 	return (body?.patches ?? []).map((p) => p.patch).filter((p) => PATCH.test(p));
 }
 
-export const SORTS = ['pick', 'win', 'ban'] as const;
+const SORTS = ['pick', 'win', 'ban'] as const;
 export type ChampionSort = (typeof SORTS)[number];
 export const DEFAULT_SORT: ChampionSort = 'pick';
 

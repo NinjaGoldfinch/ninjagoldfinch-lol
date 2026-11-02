@@ -30,8 +30,6 @@ export const REGIONS: readonly Region[] = [
 	{ slug: 'vn', label: 'Vietnam', platform: 'vn2', route: 'sea' }
 ];
 
-export const DEFAULT_REGION = 'oce';
-
 export function findRegion(slug: string): Region | undefined {
 	const wanted = slug.toLowerCase();
 	return REGIONS.find((region) => region.slug === wanted);

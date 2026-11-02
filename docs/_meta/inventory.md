@@ -9,19 +9,19 @@ Commit inspected: `e7c395c` on branch `docs/VS-exit-check` (clean tree), 2026-10
 | Item                    | Value                                                                                             | Source                                                          |
 | ----------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Language                | TypeScript (strict), Svelte 5 components                                                          | `tsconfig.json:4`, `vite.config.ts:10-13`                       |
-| Runtime                 | Node, `engines.node` `>=22.18`                                                                    | `package.json:6-8`                                              |
+| Runtime                 | Node, `engines.node` `>=22.18`                                                                    | `package.json:7-9`                                              |
 | Node on this box        | v22.23.3                                                                                          | `node --version`                                                |
-| Package manager         | pnpm 12.10.1, pinned through `packageManager` (corepack)                                          | `package.json:5`, `pnpm --version`                              |
+| Package manager         | pnpm 12.10.1, pinned through `packageManager` (corepack)                                          | `package.json:6`, `pnpm --version`                              |
 | Lockfile                | `pnpm-lock.yaml` (pnpm's own version kept out of it)                                              | `pnpm-workspace.yaml:3-8`, `docs/DECISIONS.md:57-65`            |
-| Framework               | SvelteKit 3.0.1 (installed), `@sveltejs/adapter-node` 6.0.0                                       | `node_modules/@sveltejs/kit/package.json`, `package.json:23-24` |
+| Framework               | SvelteKit 3.0.1 (installed), `@sveltejs/adapter-node` 6.0.0                                       | `node_modules/@sveltejs/kit/package.json`, `package.json:24-25` |
 | UI                      | Svelte 5.57.2, Tailwind CSS 4.3.3                                                                 | `node_modules/*/package.json`                                   |
 | Build                   | Vite 8.3.3                                                                                        | `node_modules/vite/package.json`                                |
-| Only runtime dependency | `openapi-fetch` 0.17.0                                                                            | `package.json:50-52`                                            |
-| Type generation         | `openapi-typescript` ^7.13.0 (dev)                                                                | `package.json:32`, `justfile:16-17`                             |
-| Tests                   | Vitest 4.1.11 (unit), Playwright 1.64.0 (e2e)                                                     | `package.json:20-21`                                            |
+| Only runtime dependency | `openapi-fetch` 0.17.0                                                                            | `package.json:48-50`                                            |
+| Type generation         | `openapi-typescript` ^7.13.0 (dev)                                                                | `package.json:33`, `justfile:16-17`                             |
+| Tests                   | Vitest 4.1.11 (unit), Playwright 1.64.0 (e2e)                                                     | `package.json:18-19`                                            |
 | Lint and format         | ESLint 10 + typescript-eslint + eslint-plugin-svelte; Prettier 3 with svelte and tailwind plugins | `eslint.config.js`, `prettier.config.js`                        |
 | Task runner             | just 1.58.0 on this box                                                                           | `justfile`, `just --version`                                    |
-| Docs note               | README says Node 22.17 or later; `package.json` says `>=22.18`; ADR-038 says 22.18                | `README.md:12`, `package.json:7`, `docs/DECISIONS.md:513`       |
+| Docs note               | README says Node 22.17 or later; `package.json` says `>=22.18`; ADR-038 says 22.18                | `README.md:12`, `package.json:8`, `docs/DECISIONS.md:513`       |
 
 ## 2. Directory tree (tracked files, depth 3)
 
@@ -55,7 +55,7 @@ Untracked build artefacts present on disk: `build/`, `.svelte-kit/`, `node_modul
 | Entry point                              | What it is                                        | Source                                      |
 | ---------------------------------------- | ------------------------------------------------- | ------------------------------------------- |
 | `node build`                             | Production server (adapter-node output)           | `Dockerfile:23`, `README.md:92`             |
-| `pnpm dev` / `just dev`                  | Vite dev server                                   | `package.json:10`, `justfile:12-13`         |
+| `pnpm dev` / `just dev`                  | Vite dev server                                   | `package.json:11`, `justfile:12-13`         |
 | `node tests/mock-proxy/server.ts [port]` | Mock riot-proxy, default port 8787                | `tests/mock-proxy/server.ts:1-12`           |
 | `node tests/record-fixture.ts`           | Fixture recorder (`just fixture`)                 | `tests/record-fixture.ts`, `justfile:35-36` |
 | `deploy/proxmox/create-vm.sh`            | Creates the preview VM on a Proxmox host          | `deploy/proxmox/create-vm.sh`               |

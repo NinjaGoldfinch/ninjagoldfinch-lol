@@ -23,11 +23,9 @@ describe('toMatchRows', () => {
 		expect(rows).toHaveLength(10);
 		expect(rows[0]).toEqual({
 			matchId: 'OC1_712351051',
-			queueId: 420,
 			queue: 'Ranked Solo',
 			playedAgo: '2 hours ago',
 			duration: 1952,
-			patch: '16.20',
 			ddragonVersion: '16.20.1',
 			result: 'win',
 			champion: { id: 103, key: 'Ahri', name: 'Ahri', level: 16 },
