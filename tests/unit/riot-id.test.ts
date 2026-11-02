@@ -30,6 +30,28 @@ describe('parseRiotId', () => {
 	it('rejects a segment without a hyphen', () => {
 		expect(parseRiotId('Hideonbush')).toBeUndefined();
 	});
+
+	// Dots are not encoded in a riot-proxy path: `..` would reach another route.
+	it('rejects a name or tag of . or ..', () => {
+		expect(parseRiotId('..-x')).toBeUndefined();
+		expect(parseRiotId('.-x')).toBeUndefined();
+		expect(parseRiotId('x-..')).toBeUndefined();
+		expect(parseRiotIdInput('.. #x')).toBeUndefined();
+		expect(parseRiotId('...-x')).toEqual({ gameName: '...', tagLine: 'x' });
+	});
+
+	it("holds the parts to the spec's lengths, in characters", () => {
+		expect(parseRiotId(`${'a'.repeat(16)}-12345`)).toEqual({
+			gameName: 'a'.repeat(16),
+			tagLine: '12345'
+		});
+		expect(parseRiotId(`${'a'.repeat(17)}-OCE`)).toBeUndefined();
+		expect(parseRiotId('Name-123456')).toBeUndefined();
+		expect(parseRiotId(`${'ñ'.repeat(16)}-OCE`)).toEqual({
+			gameName: 'ñ'.repeat(16),
+			tagLine: 'OCE'
+		});
+	});
 });
 
 describe('profilePath', () => {

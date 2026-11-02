@@ -30,7 +30,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	if (query.includes('#')) {
 		const id = parseRiotIdInput(query);
 		if (id) redirect(303, profilePath(id));
-		return page('A Riot ID is Game name#TAG.');
+		return page('A Riot ID is Game name#TAG: up to 16 characters before the #, up to 5 after.');
 	}
 
 	const names = await currentPatch()

@@ -36,6 +36,27 @@ describe('createProxyClient', () => {
 		expect(requests[0].headers.has('authorization')).toBe(false);
 	});
 
+	// openapi-fetch encodes `/` but not dots: `..` would reach another route.
+	it('refuses a path parameter of . or .. and sends nothing', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { fetch, requests } = stubFetch();
+		const client = createProxyClient(BASE, undefined, fetch);
+		for (const gameName of ['..', '.']) {
+			const failure = await client
+				.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
+					params: { path: { gameName, tagLine: 'x' } }
+				})
+				.catch((e: unknown) => e);
+			expect(failure).toBeInstanceOf(Error);
+		}
+		expect(requests).toEqual([]);
+
+		await client.GET('/v1/players/by-riot-id/{gameName}/{tagLine}/profile', {
+			params: { path: { gameName: '...', tagLine: 'x' } }
+		});
+		expect(requests[0].url).toBe(`${BASE}/v1/players/by-riot-id/.../x/profile`);
+	});
+
 	it("logs a failed call with riot-proxy's request id", async () => {
 		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
 		const { fetch } = stubFetch(404, { 'x-request-id': '01TESTREQUESTID' });
