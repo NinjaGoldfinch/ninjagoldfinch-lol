@@ -4,7 +4,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 ## League of Legends and Riot terms
 
-**Riot ID.** A player's public name, `GameName#TAG`. The site writes it `GameName-TAG` in URLs and splits on the last hyphen, since a tag line has none (`src/lib/domain/riot-id.ts:14-40`). Used in profile URLs ([api/endpoints.md](../api/endpoints.md)).
+**Riot ID.** A player's public name, `GameName#TAG`. The site writes it `GameName-TAG` in URLs and splits on the last hyphen, since a tag line has none, and holds the parts to riot-proxy's 1–16 and 1–5 characters (`src/lib/domain/riot-id.ts:14-60`). Used in profile URLs ([api/endpoints.md](../api/endpoints.md)).
 
 **PUUID.** Riot's permanent player id. riot-proxy returns it with a profile; the site uses it server-side to request the match list and to find a player in a timeline, and never sends it to the browser (`src/lib/api/match.ts:8-9`; checked 2026-10-20, [deployment/security.md](../deployment/security.md)). Fixtures replace it with `fixture-puuid-<hash>` (`tests/redact.ts:1-38`).
 
@@ -69,4 +69,4 @@ Definitions of the terms used across these docs and the code, with where each on
 ---
 
 **Sources:** `src/lib/domain/riot-id.ts:L14-L40`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L155-L157`, `src/lib/domain/champion-stats.ts:L22,L30`, `src/lib/api/match.ts:L8-L9`, `src/lib/server/match.ts:L20-L28,L69`, `src/lib/server/patch.ts:L36-L68`, `src/lib/server/profile.ts:L134-L135`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L55-L87`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L28`, `src/lib/assets.ts:L7-L71`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `b17c9f8`

@@ -20,6 +20,21 @@ export const logFailures: Middleware = {
 	}
 };
 
+/**
+ * Refuses a path parameter of `.` or `..`. openapi-fetch encodes `/` but not
+ * dots, and the URL would then resolve to another riot-proxy route. Callers
+ * check their input first (`parseRiotId`), so reaching this is a bug.
+ */
+export const refuseDotSegments: Middleware = {
+	onRequest({ schemaPath, params }) {
+		for (const [name, value] of Object.entries(params.path ?? {})) {
+			if (value === '.' || value === '..' || value === '') {
+				throw new Error(`proxy path parameter ${name} of ${schemaPath} is '${String(value)}'`);
+			}
+		}
+	}
+};
+
 /** An analytics call slower than this is logged. riot-proxy answers from memory in about 1 ms. */
 export const SLOW_ANALYTICS_MS = 250;
 
@@ -98,7 +113,7 @@ export function createProxyClient(
 		fetch: withTimeout(fetch, budget),
 		headers: key ? { Authorization: `Bearer ${key}` } : {}
 	});
-	client.use(logFailures, logSlowAnalytics);
+	client.use(refuseDotSegments, logFailures, logSlowAnalytics);
 	return client;
 }
 

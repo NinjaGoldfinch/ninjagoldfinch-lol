@@ -125,7 +125,9 @@ test.describe('without JavaScript', () => {
 	test('a malformed Riot ID says how to write one', async ({ page }) => {
 		await page.goto('/');
 		await search(page, 'NinjaGoldfinch#');
-		await expect(page.getByRole('main')).toContainText('A Riot ID is Game name#TAG.');
+		await expect(page.getByRole('main')).toContainText(
+			'A Riot ID is Game name#TAG: up to 16 characters before the #, up to 5 after.'
+		);
 	});
 });
 
@@ -141,6 +143,11 @@ test('an unknown player shows not found', async ({ page }) => {
 	const response = await page.goto('/summoner/NoSuchPlayer000-XXXX');
 	expect(response?.status()).toBe(404);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
+});
+
+test('a Riot ID of .. is not found, not another riot-proxy route', async ({ request }) => {
+	expect((await request.get('/summoner/..-x')).status()).toBe(404);
+	expect((await request.get(`/summoner/${'a'.repeat(17)}-OCE`)).status()).toBe(404);
 });
 
 test('an unknown region shows not found', async ({ page }) => {

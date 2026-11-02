@@ -48,14 +48,14 @@ The header search form submits here with `GET` (ADR-008, ADR-034).
 | `q`       | query | A Riot ID (`Name#TAG`) or a champion name      |
 | `riotId`  | query | Old name of the field; read when `q` is absent |
 
-| Input                             | Result                                                                           | riot-proxy calls                                     |
-| --------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| empty                             | `200` empty form                                                                 | none                                                 |
-| contains `#` and parses           | `303` to `/summoner/{riotId}`                                                    | none                                                 |
-| contains `#` but does not parse   | `200` with "A Riot ID is Game name#TAG."                                         | none                                                 |
-| a champion name with one match    | `303` to `/champions/{key}#builds`                                               | current patch and Data Dragon names (held in memory) |
-| a name with several or no matches | `200` with a hint, such as "'sy' matches Sylas, Syndra. Keep typing."            | same                                                 |
-| names unavailable                 | `200` with "Champion search is unavailable right now. A Riot ID needs its #TAG." | same                                                 |
+| Input                             | Result                                                                                    | riot-proxy calls                                     |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| empty                             | `200` empty form                                                                          | none                                                 |
+| contains `#` and parses           | `303` to `/summoner/{riotId}`                                                             | none                                                 |
+| contains `#` but does not parse   | `200` with "A Riot ID is Game name#TAG: up to 16 characters before the #, up to 5 after." | none                                                 |
+| a champion name with one match    | `303` to `/champions/{key}#builds`                                                        | current patch and Data Dragon names (held in memory) |
+| a name with several or no matches | `200` with a hint, such as "'sy' matches Sylas, Syndra. Keep typing."                     | same                                                 |
+| names unavailable                 | `200` with "Champion search is unavailable right now. A Riot ID needs its #TAG."          | same                                                 |
 
 ```text
 $ curl -sI 'http://127.0.0.1:3000/search?q=NinjaGoldfinch%23OCENZ'
@@ -71,7 +71,7 @@ location: /summoner/NinjaGoldfinch-OCENZ
 A player's header (icon, level, Riot ID, "Updated N minutes ago", Refresh), ranks, ten matches and a champion summary.
 
 - Handler: `src/routes/summoner/[riotId]/+page.server.ts:14-28`; loader `loadProfile`, `src/lib/server/profile.ts:72-152`
-- `{riotId}`: `GameName-TAG`, URL-encoded, split on the last hyphen (`src/lib/domain/riot-id.ts:12-18`). Unparseable → `404`.
+- `{riotId}`: `GameName-TAG`, URL-encoded, split on the last hyphen (`src/lib/domain/riot-id.ts:12-18`). Unparseable, a part of `.` or `..`, a game name over 16 characters or a tag over 5 → `404` (RV-02).
 
 | Query      | Values                             | Default | Source                                    |
 | ---------- | ---------------------------------- | ------- | ----------------------------------------- |
@@ -204,4 +204,4 @@ Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=6
 ---
 
 **Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/about/+page.ts:L1-L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L19`, `src/routes/champions/[key]/+page.server.ts:L9-L28`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L183`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L5-L10`, `src/lib/legal.ts:L3-L4`; probes of `node build` against the mock proxy, 2026-10-19
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `b17c9f8`
