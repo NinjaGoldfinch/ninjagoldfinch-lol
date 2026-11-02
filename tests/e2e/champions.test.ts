@@ -97,6 +97,7 @@ test.describe('without JavaScript', () => {
 		);
 		// riot-proxy's minTier=EMERALD table (synthetic: its 40 most played champions).
 		await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(40);
+		await expect(page.getByRole('main')).toContainText('Each rate counts Emerald+.');
 		await expect(page.getByRole('link', { name: 'Mid' })).toHaveAttribute(
 			'href',
 			'/champions?role=mid&rank=emerald+'

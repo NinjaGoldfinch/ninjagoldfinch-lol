@@ -183,11 +183,11 @@ One champion: header rates, set builds in tabs, lane matchups and rates by tier.
 - Handler: `src/routes/champions/[key]/+page.server.ts:9-32`; loaders `findChampionPage` and `loadChampionPage`, `src/lib/server/champion-page.ts:84-177`
 - `{key}`: Data Dragon's id lower-cased (`ahri`, `monkeyking`). Any spelling of the id or display name (`Ahri`, `wukong`) gets `308` to it, keeping the canonical query. No match → `404`.
 
-| Extra query | Meaning                                                                             | Source                                    |
-| ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
-| `vs`        | Lane opponent for the set builds, as its key (`syndra`); unknown values are dropped | `src/lib/domain/champion-page.ts:222-247` |
-| `lane`      | Lane against the opponent; ignored when `role` is set                               | same                                      |
-| `build`     | 1-based build tab, read by the page only                                            | `src/lib/domain/champion-page.ts:312-316` |
+| Extra query | Meaning                                                                                                                           | Source                                    |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `vs`        | Lane opponent for the set builds, as its key (`syndra`), in any case (`Syndra` redirects to `syndra`); unknown values are dropped | `src/lib/domain/champion-page.ts:222-250` |
+| `lane`      | Lane against the opponent; ignored when `role` is set                                                                             | same                                      |
+| `build`     | 1-based build tab, read by the page only                                                                                          | `src/lib/domain/champion-page.ts:312-316` |
 
 - Responses: `200` analytics policy, or `no-store` if the set builds, matchups or patch list failed; `308` to the canonical name; `307` to the canonical query when only the query needs tidying (it can change with a default or a champion the lookups do not know yet); `404`; `429`/`503`. Without the Data Dragon names the key cannot be resolved: `503`.
 - riot-proxy calls, in parallel: `GET /v1/lol/analytics/champions/{id}?…&limit=10` (essential), `…/{id}/builds?…[&opponentId]` (optional), `…/{id}/matchups?…&limit=200` (optional), `GET /v1/lol/analytics/patches?queue=RANKED_SOLO_5x5&championId={id}` (optional).
@@ -211,4 +211,4 @@ Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=6
 ---
 
 **Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champions.ts:L35-L64`, `src/lib/server/champion-page.ts:L84-L188`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L6-L15`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L615-L628`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
-**Last verified:** 2026-11-03 against commit `c092968`
+**Last verified:** 2026-11-03 against commit `5c2c64c`

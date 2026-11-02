@@ -275,3 +275,9 @@ test('with JavaScript, a build tab asks the server for nothing', async ({ page }
 	).toBeVisible();
 	expect(loads).toEqual([]);
 });
+
+test('an opponent named in another case is the same pick', async ({ request }) => {
+	const response = await request.get('/champions/ahri?vs=Syndra', { maxRedirects: 0 });
+	expect(response.status()).toBe(307);
+	expect(response.headers()['location']).toBe('/champions/ahri?vs=syndra');
+});

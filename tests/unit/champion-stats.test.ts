@@ -12,6 +12,7 @@ import {
 	filterFields,
 	RANK_OPTIONS,
 	rankLabel,
+	rateScope,
 	patchLabel,
 	patchOptions,
 	pickerPatches,
@@ -82,6 +83,14 @@ describe('parseChampionFilter', () => {
 		for (const query of ['', 'rank=', 'rank=DIAMOND', 'rank=unknown', 'rank=diamond++', 'rank=+']) {
 			expect(parseChampionFilter(params(query)).rank).toBeNull();
 		}
+	});
+});
+
+describe('rateScope', () => {
+	it('is every tier, or the tier picked', () => {
+		expect(rateScope(null)).toBe('every tier');
+		expect(rateScope({ tier: 'diamond', andAbove: true })).toBe('Diamond+');
+		expect(rateScope({ tier: 'gold', andAbove: false })).toBe('Gold');
 	});
 });
 

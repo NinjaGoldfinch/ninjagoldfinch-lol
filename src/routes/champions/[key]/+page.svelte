@@ -15,6 +15,7 @@
 		isLowSample,
 		patchLabel,
 		rankLabel,
+		rateScope,
 		rankScope
 	} from '#lib/domain/champion-stats.ts';
 	import type { PageProps } from './$types';
@@ -241,8 +242,6 @@
 </div>
 
 <p class="mt-6 text-xs text-muted">
-	From archived ranked games. Each rate counts {data.filter.rank
-		? rankLabel(data.filter.rank)
-		: 'every tier'} unless its row names one. Low sample: fewer than {LOW_SAMPLE_GAMES} games, so its
-	rates can swing widely.
+	From archived ranked games. Each rate counts {rateScope(data.filter.rank)} unless its row names one.
+	Low sample: fewer than {LOW_SAMPLE_GAMES} games, so its rates can swing widely.
 </p>
