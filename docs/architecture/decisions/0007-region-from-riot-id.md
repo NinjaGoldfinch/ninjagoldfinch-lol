@@ -8,7 +8,7 @@ A League account plays on one platform. riot-proxy 2.x (SITE-09) made `platform`
 
 ## Decision
 
-- Profiles at `/summoner/{GameName-TAG}`; the load maps riot-proxy's platform to a site region with `regionForPlatform`, and an unknown platform is a 503 (`src/lib/server/profile.ts:78-87`).
+- Profiles at `/summoner/{GameName-TAG}`; the load maps riot-proxy's platform to a site region with `regionForPlatform`, and an unknown platform is a 503 (`src/lib/server/profile.ts:76-85`).
 - Matches at `/match/{matchId}`; the region is the id's prefix (`regionForMatchId`, `src/lib/domain/regions.ts:46-50`).
 - Old URLs `/summoner/{region}/{GameName-TAG}` and `/match/{region}/{matchId}` redirect with 308, keeping the query (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, `src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 - Search has no region picker.
@@ -29,5 +29,5 @@ Accepted (P4-04, PR #59).
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L483-L498`, `src/lib/server/profile.ts:L78-L87`, `src/lib/domain/regions.ts:L40-L50`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `docs/DECISIONS.md:L483-L498`, `src/lib/server/profile.ts:L76-L85`, `src/lib/domain/regions.ts:L40-L50`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`
+**Last verified:** 2026-11-03 against commit `03faa33`

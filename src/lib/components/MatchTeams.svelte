@@ -1,5 +1,10 @@
 <script lang="ts">
-	import type { TeamScoreboard } from '#lib/domain/match-detail.ts';
+	import {
+		RESULTS,
+		formatNumber,
+		mostDamage,
+		type TeamScoreboard
+	} from '#lib/domain/match-detail.ts';
 	import { profilePath, sameRiotId, type RiotId } from '#lib/domain/riot-id.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 	import ItemList from './ItemList.svelte';
@@ -19,20 +24,14 @@
 		highlight: RiotId;
 	} = $props();
 
-	const RESULT = {
-		win: { label: 'Victory', text: 'text-win' },
-		loss: { label: 'Defeat', text: 'text-loss' },
-		remake: { label: 'Remake', text: 'text-muted' }
-	} as const;
-	const maxDamage = $derived(Math.max(0, ...teams.flatMap((t) => t.players.map((p) => p.damage))));
-	const number = (n: number) => n.toLocaleString('en-GB');
+	const maxDamage = $derived(mostDamage(teams));
 </script>
 
 <!-- One table, so both teams' columns line up. Wide lines scroll inside it on narrow screens. -->
 <div class="overflow-x-auto">
 	<table class="w-full text-xs">
 		{#each teams as team, t (team.teamId)}
-			{@const result = RESULT[team.result]}
+			{@const result = RESULTS[team.result]}
 			<tbody aria-label="{result.label} · {team.name}">
 				<tr>
 					<th scope="rowgroup" colspan="4" class="pb-1 text-left font-normal {t > 0 ? 'pt-3' : ''}">
@@ -75,8 +74,8 @@
 						<td class="px-2 py-0.5 whitespace-nowrap">
 							{player.kills} / <span class="text-loss">{player.deaths}</span> / {player.assists}
 						</td>
-						<td class="px-2 py-0.5" title="{number(player.damage)} damage to champions">
-							<span class="sr-only">{number(player.damage)} damage</span>
+						<td class="px-2 py-0.5" title="{formatNumber(player.damage)} damage to champions">
+							<span class="sr-only">{formatNumber(player.damage)} damage</span>
 							<div class="h-1 w-14 rounded-full bg-bg" aria-hidden="true">
 								<div
 									class="h-1 rounded-full bg-muted"

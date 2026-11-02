@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProxyClient } from '#lib/server/proxy.ts';
-import { clearStaticNames, staticNames } from '#lib/server/static-data.ts';
+import {
+	NO_NAMES,
+	clearStaticNames,
+	namesOrFallback,
+	staticNames
+} from '#lib/server/static-data.ts';
 import { findFixture, loadFixtures } from '../mock-proxy/mock.ts';
 
 const fixtures = loadFixtures();
@@ -45,5 +50,26 @@ describe('staticNames', () => {
 		const working = countingClient();
 		await expect(staticNames('16.20.1', working.client)).resolves.toBeTruthy();
 		expect(working.requests()).toBe(5);
+	});
+});
+
+describe('namesOrFallback', () => {
+	it('returns the lookups when they load', async () => {
+		const { client } = countingClient();
+		const { names, fellBack } = await namesOrFallback('16.20.1', client);
+
+		expect(fellBack).toBe(false);
+		expect(names.champions[103].id).toBe('Ahri');
+	});
+
+	it('falls back to NO_NAMES and logs when they fail', async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { client } = countingClient(503);
+
+		expect(await namesOrFallback('16.20.1', client)).toEqual({ names: NO_NAMES, fellBack: true });
+		expect(log).toHaveBeenCalledWith(
+			'Data Dragon lookups unavailable; using fallbacks:',
+			expect.anything()
+		);
 	});
 });

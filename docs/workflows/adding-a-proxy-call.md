@@ -57,7 +57,7 @@ const [matchResponse, timelineResponse, versions] = await Promise.all([
 if (!matchResponse.response.ok) toHttpError(matchResponse.response, matchResponse.error);
 ```
 
-(`src/lib/server/match.ts:42-48`.) Take the client as an injectable parameter defaulting to `proxy`, so tests can pass their own (`src/lib/server/match.ts:35-39`).
+(`src/lib/server/match.ts:40-46`.) Take the client as an injectable parameter defaulting to `proxy`, so tests can pass their own (`src/lib/server/match.ts:33-37`).
 
 What the client already does for you, so do not repeat it:
 
@@ -73,7 +73,7 @@ If the new route sits under a new path prefix and should have the short budget, 
 ## 3. Type the response
 
 - **Typed in the spec:** use the generated type from `components['schemas']`, as `src/lib/api/riot.ts` does for `AccountDto`, `SummonerDTO` and `LeagueEntryDTO` (ADR-018).
-- **`unknown` in the spec:** riot-proxy passes some Riot payloads through without a schema; match-v5 matches and timelines are `unknown`. Write a parser in `src/lib/api/` that types only the fields the site reads and checks them, returning `undefined` on a payload it cannot read (`src/lib/api/match.ts:1-4`, ADR-006, ADR-023). A loader treats an unreadable essential payload as 503 and logs it (`src/lib/server/match.ts:50-54`).
+- **`unknown` in the spec:** riot-proxy passes some Riot payloads through without a schema; match-v5 matches and timelines are `unknown`. Write a parser in `src/lib/api/` that types only the fields the site reads and checks them, returning `undefined` on a payload it cannot read (`src/lib/api/match.ts:1-4`, ADR-006, ADR-023). A loader treats an unreadable essential payload as 503 and logs it (`src/lib/server/match.ts:48-52`).
 
 No `any` and no non-null `!` on proxy data (`CLAUDE.md:60`).
 
@@ -104,5 +104,5 @@ Every path the code requests needs a fixture, or the mock proxy answers 500 (`te
 
 ---
 
-**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L55-L78`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/match.ts:L35-L54`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023)
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L55-L78`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/match.ts:L33-L52`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023)
+**Last verified:** 2026-11-03 against commit `03faa33`

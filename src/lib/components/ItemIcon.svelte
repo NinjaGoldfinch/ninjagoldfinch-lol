@@ -1,23 +1,28 @@
 <script lang="ts">
 	import { itemIconUrl } from '#lib/assets.ts';
 
-	/** An item's icon, named; repeats show their count on the corner. */
+	/**
+	 * An item's icon, named; repeats show their count on the corner.
+	 * `bare` leaves out the backdrop and the no-shrink, as the build panel has it.
+	 */
 	let {
 		version,
 		item,
 		count = 1,
-		size = 28
+		size = 28,
+		bare = false
 	}: {
 		version: string;
 		item: { id: number; name: string };
 		count?: number;
 		size?: number;
+		bare?: boolean;
 	} = $props();
 
 	const name = $derived(`${count > 1 ? `${count} × ` : ''}${item.name}`);
 </script>
 
-<span class="relative block shrink-0">
+<span class={bare ? 'relative block' : 'relative block shrink-0'}>
 	<img
 		src={itemIconUrl(version, item.id)}
 		alt={name}
@@ -25,7 +30,7 @@
 		width={size}
 		height={size}
 		loading="lazy"
-		class="rounded-sm bg-bg"
+		class={bare ? 'rounded-sm' : 'rounded-sm bg-bg'}
 	/>
 	{#if count > 1}
 		<span

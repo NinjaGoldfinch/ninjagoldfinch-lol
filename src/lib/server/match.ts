@@ -6,10 +6,8 @@ import type { Region } from '#lib/domain/regions.ts';
 import { statShards } from './cdragon.ts';
 import { optional, toHttpError } from './errors.ts';
 import { ddragonVersionFor, patchVersions } from './patch.ts';
-import { proxy } from './proxy.ts';
-import { NO_NAMES, staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
+import { proxy, type ProxyClient } from './proxy.ts';
+import { namesOrFallback } from './static-data.ts';
 
 interface Sources {
 	client?: ProxyClient;
@@ -60,18 +58,15 @@ export async function loadMatch(
 	}
 
 	let complete = timeline !== undefined;
-	const [names, shards] = await Promise.all([
-		staticNames(versions.current, client).catch((e: unknown) => {
-			console.error('Data Dragon lookups unavailable; using fallbacks:', e);
-			complete = false;
-			return NO_NAMES;
-		}),
+	const [{ names, fellBack }, shards] = await Promise.all([
+		namesOrFallback(versions.current, client),
 		cdragon(versions.current).catch((e: unknown) => {
 			console.error('CommunityDragon stat shards unavailable:', e);
 			complete = false;
 			return {};
 		})
 	]);
+	if (fellBack) complete = false;
 
 	const detail = toMatchDetail(match, names, {
 		region,

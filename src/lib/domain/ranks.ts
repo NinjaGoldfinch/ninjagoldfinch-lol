@@ -38,6 +38,7 @@ export function describeRanks(entries: LeagueEntry[]): RankView[] {
 		});
 }
 
-function titleCase(word: string): string {
+/** `EMERALD` → `Emerald`. */
+export function titleCase(word: string): string {
 	return word.charAt(0) + word.slice(1).toLowerCase();
 }

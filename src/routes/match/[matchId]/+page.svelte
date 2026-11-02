@@ -8,6 +8,7 @@
 		formatMatchDate,
 		matchPath,
 		matchTab,
+		mostDamage,
 		openBuildId,
 		selectBuild,
 		type MatchTab
@@ -118,9 +119,7 @@
 		if (event.target === dialog) dialog?.close();
 	}
 
-	const maxDamage = $derived(
-		Math.max(0, ...data.teams.flatMap((t) => t.players.map((p) => p.damage)))
-	);
+	const maxDamage = $derived(mostDamage(data.teams));
 </script>
 
 <svelte:head>

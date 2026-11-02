@@ -7,9 +7,7 @@ import {
 	type StaticNames
 } from '#lib/api/ddragon.ts';
 import { toHttpError } from './errors.ts';
-import { proxy } from './proxy.ts';
-
-type ProxyClient = typeof proxy;
+import { proxy, type ProxyClient } from './proxy.ts';
 
 /** Plain fallbacks for when the lookups are unavailable: ids and names from the match. */
 export const NO_NAMES: StaticNames = {
@@ -61,6 +59,22 @@ async function fetchNames(patch: string, client: ProxyClient): Promise<StaticNam
 		runes: parseRunes(runes.data),
 		itemCatalog: parseItemCatalog(items.data)
 	};
+}
+
+/**
+ * The lookups for a patch, or NO_NAMES if they are unavailable.
+ * `fellBack` says which, for a page's `complete` flag.
+ */
+export async function namesOrFallback(
+	patch: string,
+	client: ProxyClient = proxy
+): Promise<{ names: StaticNames; fellBack: boolean }> {
+	try {
+		return { names: await staticNames(patch, client), fellBack: false };
+	} catch (e) {
+		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
+		return { names: NO_NAMES, fellBack: true };
+	}
 }
 
 /** For tests: forget the held patch. */

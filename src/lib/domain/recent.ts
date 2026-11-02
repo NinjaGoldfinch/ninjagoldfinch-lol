@@ -1,4 +1,4 @@
-import type { RiotId } from './riot-id.ts';
+import { riotIdKey, type RiotId } from './riot-id.ts';
 
 /** A profile the visitor opened, kept in their browser only. */
 export type RecentSearch = RiotId;
@@ -7,8 +7,7 @@ export const MAX_RECENT = 8;
 
 /** Puts `entry` first, drops an earlier copy of it (ignoring case), keeps the newest few. */
 export function addRecent(list: RecentSearch[], entry: RecentSearch): RecentSearch[] {
-	const key = (r: RecentSearch) => `${r.gameName}#${r.tagLine}`.toLowerCase();
-	return [entry, ...list.filter((r) => key(r) !== key(entry))].slice(0, MAX_RECENT);
+	return [entry, ...list.filter((r) => riotIdKey(r) !== riotIdKey(entry))].slice(0, MAX_RECENT);
 }
 
 /**

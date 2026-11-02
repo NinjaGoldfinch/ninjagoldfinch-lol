@@ -1,6 +1,8 @@
 // Data Dragon's static JSON, as riot-proxy mirrors it at /v1/static/{file}
 // and /v1/static/queues. Reduced to the lookups the site renders with.
 
+import { record } from './json.ts';
+
 export interface Named {
 	/** Data Dragon id, used in image URLs: `Ahri`, `SummonerFlash`. */
 	id: string;
@@ -48,7 +50,7 @@ export interface Rune {
 export function parseKeyedNames(body: unknown): Record<number, Named> {
 	const out: Record<number, Named> = {};
 	for (const [id, entry] of dataEntries(body)) {
-		const { key, name } = entry as Record<string, unknown>;
+		const { key, name } = record(entry) ?? {};
 		if (typeof key === 'string' && typeof name === 'string') out[Number(key)] = { id, name };
 	}
 	return out;
@@ -58,7 +60,7 @@ export function parseKeyedNames(body: unknown): Record<number, Named> {
 export function parseItemNames(body: unknown): Record<number, string> {
 	const out: Record<number, string> = {};
 	for (const [id, entry] of dataEntries(body)) {
-		const { name } = entry as Record<string, unknown>;
+		const { name } = record(entry) ?? {};
 		if (typeof name === 'string') out[Number(id)] = name;
 	}
 	return out;
@@ -69,10 +71,10 @@ export function parseItemCatalog(body: unknown): ItemCatalog {
 	const out: ItemCatalog = {};
 	for (const [id, entry] of dataEntries(body)) {
 		if (!/^\d+$/.test(id)) continue;
-		const { tags, gold, into, from } = entry as Record<string, unknown>;
+		const { tags, gold, into, from } = record(entry) ?? {};
 		const tagList = Array.isArray(tags) ? tags : [];
 		const tagged = (tag: string) => tagList.includes(tag);
-		const { purchasable, total } = (gold ?? {}) as Record<string, unknown>;
+		const { purchasable, total } = record(gold) ?? {};
 		out[Number(id)] = {
 			finished:
 				purchasable === true &&
@@ -100,7 +102,7 @@ export function parseQueueNames(body: unknown): Record<number, string> {
 	const out: Record<number, string> = {};
 	if (!Array.isArray(body)) return out;
 	for (const queue of body) {
-		const { queueId, description, map } = (queue ?? {}) as Record<string, unknown>;
+		const { queueId, description, map } = record(queue) ?? {};
 		const text = typeof description === 'string' ? description : map;
 		if (typeof queueId === 'number' && typeof text === 'string') {
 			out[queueId] = text.replace(/^\d+v\d+\s+/, '').replace(/\s+games$/i, '');
@@ -113,7 +115,7 @@ export function parseQueueNames(body: unknown): Record<number, string> {
 export function parseRunes(body: unknown): Record<number, Rune> {
 	const out: Record<number, Rune> = {};
 	const add = (value: unknown) => {
-		const { id, name, icon } = (value ?? {}) as Record<string, unknown>;
+		const { id, name, icon } = record(value) ?? {};
 		if (typeof id === 'number' && typeof name === 'string' && typeof icon === 'string') {
 			out[id] = { name, icon };
 		}
@@ -121,9 +123,9 @@ export function parseRunes(body: unknown): Record<number, Rune> {
 	if (!Array.isArray(body)) return out;
 	for (const style of body) {
 		add(style);
-		const slots = (style as { slots?: unknown })?.slots;
+		const slots = record(style)?.slots;
 		for (const slot of Array.isArray(slots) ? slots : []) {
-			const runes = (slot as { runes?: unknown })?.runes;
+			const runes = record(slot)?.runes;
 			for (const rune of Array.isArray(runes) ? runes : []) add(rune);
 		}
 	}

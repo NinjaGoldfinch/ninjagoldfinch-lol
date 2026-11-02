@@ -27,7 +27,7 @@ Rules:
 
 - The `handle` hook overrides whatever a load set: non-GET/HEAD responses are `none`, 404 is `notFound`, any other status of 400 or above is `none` (`src/lib/server/cache.ts:24-34`, `src/hooks.server.ts:6-15`). A rate-limit page is therefore never served to the next visitor.
 - After those rules, a response with no `Cache-Control` gets `none` (`src/hooks.server.ts:8-13`, ADR-045). That covers redirects thrown before a load set a policy: the profile's and `/champions`' query tidying (307), a champion's name (308) and query (307), and the old region URLs (308). `/search` sets `none` itself before its 303s (`src/routes/search/+page.server.ts:19`).
-- A page with a part missing gets `none`, so the gap is not kept at the edge: a profile without its match history; a match without its timeline, Data Dragon lookups or stat shards; `/champions` without its patch list or lookups; a champion page without its set builds, matchups or patch list. The loads return `complete` for this (`src/lib/server/match.ts:62-82`, `src/lib/server/champions.ts:50-53`, `src/lib/server/champion-page.ts:175`, ADR-045).
+- A page with a part missing gets `none`, so the gap is not kept at the edge: a profile without its match history; a match without its timeline, Data Dragon lookups or stat shards; `/champions` without its patch list or lookups; a champion page without its set builds, matchups or patch list. The loads return `complete` for this (`src/lib/server/match.ts:60-77`, `src/lib/server/champions.ts:48-49`, `src/lib/server/champion-page.ts:173`, ADR-045).
 - `s-maxage` applies to shared caches only, so browsers revalidate pages themselves.
 - Each URL, query included, is its own entry; Cloudflare's cache key includes the query string (checked from outside, `docs/DECISIONS.md:577`). Canonical-URL redirects keep one entry per view (see [../api/pagination-filtering-and-versioning.md](../api/pagination-filtering-and-versioning.md)).
 - Match pages' `player`, `tab` and `build` parameters create separate entries for the same data (ADR-024).
@@ -49,11 +49,11 @@ The site caches no Riot player data and no analytics (`docs/DECISIONS.md:165,560
 
 | Lookup          | Code                                  | Contents                                                                       | Key   | Lifetime and invalidation       |
 | --------------- | ------------------------------------- | ------------------------------------------------------------------------------ | ----- | ------------------------------- |
-| `patchVersions` | `src/lib/server/patch.ts:47-68`       | Current Data Dragon version and Riot's version list from `/v1/static/versions` | —     | `PATCH_TTL_MS` 5 min            |
-| `staticNames`   | `src/lib/server/static-data.ts:24-39` | Champion, item, spell, queue and rune names; item catalogue                    | patch | Replaced when the patch changes |
+| `patchVersions` | `src/lib/server/patch.ts:45-66`       | Current Data Dragon version and Riot's version list from `/v1/static/versions` | —     | `PATCH_TTL_MS` 5 min            |
+| `staticNames`   | `src/lib/server/static-data.ts:22-37` | Champion, item, spell, queue and rune names; item catalogue                    | patch | Replaced when the patch changes |
 | `statShards`    | `src/lib/server/cdragon.ts:9-39`      | CommunityDragon stat shard names and icons (ids 5001–5013)                     | patch | Replaced when the patch changes |
 
-- One patch is held at a time; the previous one is dropped (`src/lib/server/static-data.ts:26`).
+- One patch is held at a time; the previous one is dropped (`src/lib/server/static-data.ts:24`).
 - Concurrent requests share one in-flight fetch; a failed fetch is forgotten so the next request retries.
 - There is no size limit setting. The inputs are about 700 kB (`item.json`) and 160 kB (`champion.json`) before reduction (`docs/DECISIONS.md:163`) and about 100 kB for `perks.json` (`docs/DECISIONS.md:319`); the held lookups are smaller.
 - **Cold start:** after a restart the first page view fetches all three. Measured in ADR-013: 831 ms for the first profile view, 56 ms after (`docs/DECISIONS.md:165`).
@@ -79,5 +79,5 @@ A profile's "Updated N minutes ago" comes from riot-proxy's `fetchedAgeSeconds`,
 
 ---
 
-**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L19`, `src/lib/server/match.ts:L62-L82`, `src/lib/server/champions.ts:L50-L53`, `src/lib/server/champion-page.ts:L175`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/server/patch.ts:L47-L73`, `src/lib/server/static-data.ts:L24-L69`, `src/lib/server/cdragon.ts:L9-L44`, `src/lib/recent-storage.ts:L6`, `docs/DECISIONS.md:L163-L165,L233,L319,L527,L560-L562,L577,L615-L628`, `docs/IMPLEMENTATION.md:L386`, `docs/PROGRESS.md:L55`, `riot-proxy:src/riot/endpoints.rs:L14-L496`, `riot-proxy:src/config.rs:L713-L715,L726`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`, `riot-proxy:src/routes/statics.rs:L161-L167`, `riot-proxy:src/routes/players/refresh.rs:L17-L18`; headers observed on `node build` 2026-10-19
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L19`, `src/lib/server/match.ts:L60-L77`, `src/lib/server/champions.ts:L48-L49`, `src/lib/server/champion-page.ts:L173`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/server/patch.ts:L45-L71`, `src/lib/server/static-data.ts:L22-L83`, `src/lib/server/cdragon.ts:L9-L44`, `src/lib/recent-storage.ts:L6`, `docs/DECISIONS.md:L163-L165,L233,L319,L527,L560-L562,L577,L615-L628`, `docs/IMPLEMENTATION.md:L386`, `docs/PROGRESS.md:L55`, `riot-proxy:src/riot/endpoints.rs:L14-L496`, `riot-proxy:src/config.rs:L713-L715,L726`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`, `riot-proxy:src/routes/statics.rs:L161-L167`, `riot-proxy:src/routes/players/refresh.rs:L17-L18`; headers observed on `node build` 2026-10-19
+**Last verified:** 2026-11-03 against commit `03faa33`

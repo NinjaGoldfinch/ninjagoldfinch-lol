@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Objective } from '#lib/api/match.ts';
-	import type { TeamScoreboard } from '#lib/domain/match-detail.ts';
+	import { formatNumber, type TeamScoreboard } from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
 	import {
 		canChart,
@@ -70,12 +70,11 @@
 	);
 
 	const SIDES = ['blue', 'red'] as const;
-	const number = (n: number) => n.toLocaleString('en-GB');
 	const x = (at: number) => (duration > 0 ? (Math.min(at, duration) / duration) * 100 : 0);
 	const y = (lead: number) => (1 - (lead + axis.limit) / (2 * axis.limit)) * 100;
 	const teamName = (teamId: number) => teams.find((t) => t.teamId === teamId)?.name ?? 'A team';
 	const leadText = (lead: number) =>
-		lead === 0 ? 'Even' : `${teams[lead > 0 ? 0 : 1].name} +${number(Math.abs(lead))}`;
+		lead === 0 ? 'Even' : `${teams[lead > 0 ? 0 : 1].name} +${formatNumber(Math.abs(lead))}`;
 
 	const GLYPHS: Record<Objective, string> = {
 		tower: 'T',
@@ -178,7 +177,7 @@
 					<span class="mr-4 inline-block">
 						{teams[i].name}'s largest lead:
 						{#if lead}
-							<span class="font-semibold">+{number(Math.abs(lead.lead))}</span>
+							<span class="font-semibold">+{formatNumber(Math.abs(lead.lead))}</span>
 							<span class="text-muted">at {formatDuration(lead.at)}</span>
 						{:else}
 							<span class="text-muted">none</span>

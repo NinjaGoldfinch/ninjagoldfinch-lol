@@ -1,6 +1,7 @@
 import type { Named, Rune, StaticNames } from '#lib/api/ddragon.ts';
 import type { components } from '#lib/api/schema.d.ts';
 import { formatAge } from './age.ts';
+import { championName, itemName, queueName } from './names.ts';
 
 type MatchSummary = components['schemas']['MatchSummary'];
 
@@ -55,7 +56,7 @@ export function toMatchRows(
 		return [
 			{
 				matchId: m.matchId,
-				queue: queueId === null ? 'Unknown queue' : (names.queues[queueId] ?? `Queue ${queueId}`),
+				queue: queueName(names, queueId),
 				playedAgo: m.gameCreation == null ? null : formatAge((now - m.gameCreation) / 1000),
 				duration: m.gameDuration ?? null,
 				ddragonVersion: m.ddragonVersion ?? null,
@@ -63,7 +64,7 @@ export function toMatchRows(
 				champion: {
 					id: p.championId,
 					key: names.champions[p.championId]?.id ?? null,
-					name: names.champions[p.championId]?.name ?? p.championName,
+					name: championName(names, p.championId, p.championName),
 					level: p.champLevel ?? null
 				},
 				kills: p.kills ?? 0,
@@ -98,7 +99,7 @@ export function loadoutOf(
 	p: LoadoutFields,
 	names: StaticNames
 ): Pick<MatchRow, 'items' | 'roleBoundItem' | 'spells' | 'runes'> {
-	const item = (id: number) => ({ id, name: names.items[id] ?? `Item ${id}` });
+	const item = (id: number) => ({ id, name: itemName(names, id) });
 	return {
 		items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((id) =>
 			id ? item(id) : null

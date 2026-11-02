@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { components } from '#lib/api/schema.d.ts';
 import {
-	formatSkillOrder,
 	openBuild,
 	roleLabel,
 	toChampionStats,
@@ -176,7 +175,7 @@ describe('toMatchups', () => {
 	});
 });
 
-describe('openBuild, roleLabel and formatSkillOrder', () => {
+describe('openBuild and roleLabel', () => {
 	it('reads the open build, 1-based, defaulting to the first', () => {
 		expect(openBuild('2', 3)).toBe(1);
 		expect(openBuild('4', 3)).toBe(0);
@@ -188,14 +187,6 @@ describe('openBuild, roleLabel and formatSkillOrder', () => {
 		expect(roleLabel('MIDDLE')).toBe('Mid');
 		expect(roleLabel('UTILITY')).toBe('Support');
 		expect(roleLabel('NONE')).toBe('None');
-	});
-
-	it('writes a skill order with arrows', () => {
-		expect(formatSkillOrder('QEW')).toBe('Q › E › W');
-	});
-
-	it("writes Udyr's four-skill order", () => {
-		expect(formatSkillOrder('RWEQ')).toBe('R › W › E › Q');
 	});
 });
 

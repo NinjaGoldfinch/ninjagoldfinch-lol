@@ -32,7 +32,7 @@ Yes, since RV-01: `deploy/proxmox/test.sh` unsets the location variables git exp
 It is a project rule (`CLAUDE.md:59`): pages are rendered on the server and enhanced on top, and the e2e tests check each page with JavaScript off ([workflows/testing.md](../workflows/testing.md#browser-tests)).
 
 **Why are custom games missing from profiles?**
-Riot policy: no custom-queue match history (`CLAUDE.md:24`); queue 0 or none counts as custom (`src/lib/domain/matches.ts:155-157`).
+Riot policy: no custom-queue match history (`CLAUDE.md:24`); queue 0 or none counts as custom (`src/lib/domain/matches.ts:156-158`).
 
 **Can the site show MMR or ELO estimates?**
 No; Riot policy (`CLAUDE.md:24`).
@@ -73,5 +73,5 @@ The committed spec is riot-proxy 2.7.0; riot-proxy facts were read from its repo
 
 ---
 
-**Sources:** `CLAUDE.md:L11-L24,L59`, `README.md:L44`, `justfile:L15-L22`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `vite.config.ts:L16-L19`, `src/lib/server/cache.ts:L6-L7`, `src/lib/domain/matches.ts:L155-L157`, `deploy/proxmox/README.md:L55`, `docs/IMPLEMENTATION.md:L187`, and the linked pages
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `CLAUDE.md:L11-L24,L59`, `README.md:L44`, `justfile:L15-L22`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `vite.config.ts:L16-L19`, `src/lib/server/cache.ts:L6-L7`, `src/lib/domain/matches.ts:L156-L158`, `deploy/proxmox/README.md:L55`, `docs/IMPLEMENTATION.md:L187`, and the linked pages
+**Last verified:** 2026-11-03 against commit `03faa33`

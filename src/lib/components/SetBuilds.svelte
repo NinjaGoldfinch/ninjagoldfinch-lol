@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { runeIconUrl, summonerSpellIconUrl } from '#lib/assets.ts';
+	import { formatSkillOrder } from '#lib/domain/builds.ts';
 	import {
-		formatSkillOrder,
 		roleLabel,
 		type PopularChoices,
 		type RuneChoice,

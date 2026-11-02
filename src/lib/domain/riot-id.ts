@@ -25,10 +25,14 @@ export function profilePath(id: RiotId): string {
 	return `/summoner/${encodeURIComponent(`${id.gameName}-${id.tagLine}`)}`;
 }
 
+/** `name#tag` in lower case: the same for every casing of one Riot ID. */
+export function riotIdKey(id: RiotId): string {
+	return `${id.gameName}#${id.tagLine}`.toLowerCase();
+}
+
 /** Riot IDs compare without regard to case, as Riot looks them up. */
 export function sameRiotId(a: RiotId, b: RiotId): boolean {
-	const key = (id: RiotId) => `${id.gameName}#${id.tagLine}`.toLowerCase();
-	return key(a) === key(b);
+	return riotIdKey(a) === riotIdKey(b);
 }
 
 /** The spec's lengths: a game name of 1–16 characters, a tag line of 1–5. */

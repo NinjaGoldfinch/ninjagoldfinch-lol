@@ -115,5 +115,5 @@ None belong to ninjagoldfinch.lol. All are riot-proxy's.
 
 ---
 
-**Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L12-L57`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L68-L77`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L68-L77`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`
+**Last verified:** 2026-11-03 against commit `03faa33`

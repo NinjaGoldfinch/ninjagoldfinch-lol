@@ -25,10 +25,8 @@ import {
 } from '#lib/domain/champion-stats.ts';
 import { optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
-import { proxy } from './proxy.ts';
+import { proxy, type ProxyClient } from './proxy.ts';
 import { staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
 
 export interface ChampionPage {
 	championId: number;

@@ -151,3 +151,5 @@ export function createProxyClient(
 
 /** The one riot-proxy client. Server only. */
 export const proxy = createProxyClient(PROXY_URL, PROXY_KEY);
+
+export type ProxyClient = typeof proxy;

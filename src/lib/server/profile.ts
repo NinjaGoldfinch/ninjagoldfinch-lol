@@ -11,10 +11,8 @@ import { regionForPlatform } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
 import { classifyProxyError, optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
-import { proxy } from './proxy.ts';
-import { NO_NAMES, staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
+import { proxy, type ProxyClient } from './proxy.ts';
+import { namesOrFallback } from './static-data.ts';
 
 /** Everything the profile page renders, and nothing more: it is embedded in the HTML. */
 export interface ProfileData {
@@ -105,10 +103,7 @@ export async function loadProfile(
 		currentPatch(client)
 	]);
 
-	const names = await staticNames(patch, client).catch((e: unknown) => {
-		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
-		return NO_NAMES;
-	});
+	const { names } = await namesOrFallback(patch, client);
 
 	const label = `${region.slug}/${id.gameName}#${id.tagLine}`;
 	const matches = page.response.ok && page.data ? page.data : null;

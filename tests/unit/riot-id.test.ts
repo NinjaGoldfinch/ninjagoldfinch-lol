@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseRiotId, parseRiotIdInput, profilePath, sameRiotId } from '#lib/domain/riot-id.ts';
+import {
+	parseRiotId,
+	parseRiotIdInput,
+	profilePath,
+	riotIdKey,
+	sameRiotId
+} from '#lib/domain/riot-id.ts';
 
 describe('parseRiotIdInput', () => {
 	it('splits Name#TAG and trims both parts', () => {
@@ -74,5 +80,13 @@ describe('sameRiotId', () => {
 		expect(sameRiotId(me, { gameName: 'ninjagoldfinch', tagLine: 'ocenz' })).toBe(true);
 		expect(sameRiotId(me, { gameName: 'NinjaGoldfinch', tagLine: 'OCE' })).toBe(false);
 		expect(sameRiotId(me, { gameName: 'Ninja', tagLine: 'GoldfinchOCENZ' })).toBe(false);
+	});
+});
+
+describe('riotIdKey', () => {
+	it('is name#tag in lower case', () => {
+		expect(riotIdKey({ gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' })).toBe(
+			'ninjagoldfinch#ocenz'
+		);
 	});
 });
