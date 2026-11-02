@@ -27,5 +27,5 @@ Measurements in ADR-039; `tests/unit/proxy.test.ts`, `tests/unit/timing.test.ts`
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L517-L540,L632-L647`, `src/lib/server/proxy.ts:L37-L67`, `src/lib/server/timing.ts:L58-L86`
+**Sources:** `docs/DECISIONS.md:L517-L540,L632-L661`, `src/lib/server/proxy.ts:L37-L67`, `src/lib/server/timing.ts:L58-L86`
 **Last verified:** 2026-11-03 against commit `2658c48`
