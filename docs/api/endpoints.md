@@ -2,9 +2,9 @@
 
 Every route ninjagoldfinch.lol serves, grouped by resource: what it does, its parameters, responses, cache policy and the riot-proxy calls behind it. The machine-readable version is [openapi.yaml](./openapi.yaml).
 
-No route needs authentication. Responses are HTML unless stated. Every page also answers at `<path>/__data.json` with the same load and `Cache-Control`, which SvelteKit uses for client-side navigation. Header values below were observed on 2026-10-19 by running `node build` against the mock proxy.
+No route needs authentication. Responses are HTML unless stated. Every page also answers at `<path>/__data.json` with the same load, which SvelteKit uses for client-side navigation. It carries the page's `Cache-Control` once the load has called `setHeaders`; otherwise SvelteKit's `private, no-store`, which is what a redirect or an error in the load gets (both come back as a 200 with a redirect or error node). Header values below were observed by running `node build` against the mock proxy on 2026-10-19, and for redirects and `__data.json` again on 2026-11-03.
 
-Error responses are the same for every page and are described in [errors.md](./errors.md): 404 `public, s-maxage=60`; 429 and 503 `no-store`.
+Error responses are the same for every page and are described in [errors.md](./errors.md): 404 `public, s-maxage=60`; 429 and 503 `no-store`. Every redirect is `no-store`: the `handle` hook gives `no-store` to any response no load set a policy for (`src/hooks.server.ts:8-13`, ADR-045).
 
 ## Health
 
@@ -26,11 +26,11 @@ content-type: application/json
 
 ## Static pages
 
-| Route             | Handler                         | Notes                                                                                      |
-| ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
-| `GET /`           | `src/routes/+page.svelte`       | Search form and recent searches from `localStorage`. No load, so no `Cache-Control` header |
-| `GET /about`      | `src/routes/about/+page.ts:1-2` | Prerendered at build time, served as a static file                                         |
-| `GET /robots.txt` | `static/robots.txt`             | Static                                                                                     |
+| Route             | Handler                       | Notes                                                                                                   |
+| ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /`           | `src/routes/+page.ts:3`       | Search form and recent searches from `localStorage`. Prerendered at build time, served as a static file |
+| `GET /about`      | `src/routes/about/+page.ts:2` | Prerendered at build time, served as a static file                                                      |
+| `GET /robots.txt` | `static/robots.txt`           | Static                                                                                                  |
 
 Every page's layout carries the header search form and Riot's legal notice (`src/routes/+layout.svelte`, `src/lib/legal.ts:3-4`).
 
@@ -84,7 +84,7 @@ Anything not offered is ignored. If the query is not in canonical form (for exam
 | Response | When                                                              | Cache-Control                                                                             |
 | -------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `200`    | Profile loaded                                                    | `public, s-maxage=60, stale-while-revalidate=300`; `no-store` if the match history failed |
-| `307`    | Non-canonical query                                               | none                                                                                      |
+| `307`    | Non-canonical query                                               | `no-store`                                                                                |
 | `404`    | Bad Riot ID, or riot-proxy `NOT_FOUND`/`VALIDATION`               | `public, s-maxage=60`                                                                     |
 | `429`    | riot-proxy `QUOTA_EXCEEDED` or `RATE_LIMITED` on the profile call | `no-store`                                                                                |
 | `503`    | Anything else, including an unknown platform and a timeout        | `no-store`                                                                                |
@@ -110,7 +110,7 @@ The Refresh button: a form action (ADR-012).
 
 ### `GET /summoner/{region}/{riotId}`
 
-Old profile URL. `308` to `/summoner/{riotId}`, keeping the query; `404` if the region slug is not one of the 15 the site knows (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, ADR-037).
+Old profile URL. `308` to `/summoner/{riotId}`, keeping the query, with `no-store`; `404` if the region slug is not one of the 15 the site knows (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, ADR-037).
 
 ## Matches
 
@@ -118,7 +118,7 @@ Old profile URL. `308` to `/summoner/{riotId}`, keeping the query; `404` if the 
 
 Both teams' scoreboards, each player's build (in a popup), and a Timeline tab with the gold difference and objectives.
 
-- Handler: `src/routes/match/[matchId]/+page.server.ts:7-17`; loader `loadMatch`, `src/lib/server/match.ts:29-73`
+- Handler: `src/routes/match/[matchId]/+page.server.ts:7-17`; loader `loadMatch`, `src/lib/server/match.ts:35-83`
 - `{matchId}`: Riot's id, e.g. `OC1_712351051`. The prefix picks the region; an unknown prefix is `404` without calling riot-proxy (`src/lib/domain/regions.ts:46-50`).
 
 | Query    | Meaning                                     | Read by                                                 |
@@ -129,11 +129,11 @@ Both teams' scoreboards, each player's build (in a popup), and a Timeline tab wi
 
 These do not change the server's data, but each URL is its own edge cache entry.
 
-| Response     | When                                                       | Cache-Control                                                                             |
-| ------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `200`        | Match loaded                                               | `public, s-maxage=86400, stale-while-revalidate=86400`; `no-store` if the timeline failed |
-| `404`        | Unknown prefix, riot-proxy `NOT_FOUND`, or a custom game   | `public, s-maxage=60`                                                                     |
-| `429`, `503` | As for profiles; also an unparseable match payload (`503`) | `no-store`                                                                                |
+| Response     | When                                                       | Cache-Control                                                                                                                 |
+| ------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `200`        | Match loaded                                               | `public, s-maxage=86400, stale-while-revalidate=86400`; `no-store` if the timeline, Data Dragon lookups or stat shards failed |
+| `404`        | Unknown prefix, riot-proxy `NOT_FOUND`, or a custom game   | `public, s-maxage=60`                                                                                                         |
+| `429`, `503` | As for profiles; also an unparseable match payload (`503`) | `no-store`                                                                                                                    |
 
 riot-proxy calls, in parallel: `GET /v1/lol/matches/{region}/{matchId}` (essential), `GET …/timeline` (optional), `GET /v1/static/versions`; then Data Dragon names and CommunityDragon's `perks.json` once per patch.
 
@@ -146,7 +146,7 @@ content-type: text/html
 
 ### `GET /match/{region}/{matchId}`
 
-Old match URL. `308` to `/match/{matchId}`, keeping the query; `404` for an unknown region slug. The region in the old URL is otherwise ignored (`src/routes/match/[region]/[matchId]/+server.ts:8-11`).
+Old match URL. `308` to `/match/{matchId}`, keeping the query, with `no-store`; `404` for an unknown region slug. The region in the old URL is otherwise ignored (`src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 
 ## Champions
 
@@ -164,14 +164,15 @@ Sources: `src/lib/domain/champion-stats.ts:33-189`. Unknown values fall back to 
 
 The champion table: win, pick and ban rate per champion.
 
-- Handler: `src/routes/champions/+page.server.ts:7-19`; loader `loadChampions`, `src/lib/server/champions.ts:33-59`
+- Handler: `src/routes/champions/+page.server.ts:7-20`; loader `loadChampions`, `src/lib/server/champions.ts:35-64`
 - Extra query: `sort` = `pick` (default), `win` or `ban`. Read without re-running the load, so with JavaScript sorting needs no request.
-- Responses: `200` with `public, s-maxage=600, stale-while-revalidate=600`; `307` to the canonical query; `429`/`503` as above.
+- Responses: `200` with `public, s-maxage=600, stale-while-revalidate=600`, or `no-store` if the patch list or Data Dragon lookups failed; `307` to the canonical query; `429`/`503` as above.
 - riot-proxy calls: `GET /v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=…[&role][&tier|&minTier]&minGames=0&limit=500` (essential), `GET /v1/lol/analytics/patches?queue=RANKED_SOLO_5x5` (optional), current patch and Data Dragon names.
 
 ```text
 $ curl -sI 'http://127.0.0.1:3000/champions?patch=all'
 HTTP/1.1 307 Temporary Redirect
+cache-control: no-store
 location: /champions
 ```
 
@@ -179,8 +180,8 @@ location: /champions
 
 One champion: header rates, set builds in tabs, lane matchups and rates by tier.
 
-- Handler: `src/routes/champions/[key]/+page.server.ts:9-28`; loaders `findChampionPage` and `loadChampionPage`, `src/lib/server/champion-page.ts:82-174`
-- `{key}`: Data Dragon's id lower-cased (`ahri`, `monkeyking`). Any spelling of the id or display name (`Ahri`, `wukong`) gets `308` to it. No match → `404`.
+- Handler: `src/routes/champions/[key]/+page.server.ts:9-32`; loaders `findChampionPage` and `loadChampionPage`, `src/lib/server/champion-page.ts:84-177`
+- `{key}`: Data Dragon's id lower-cased (`ahri`, `monkeyking`). Any spelling of the id or display name (`Ahri`, `wukong`) gets `308` to it, keeping the canonical query. No match → `404`.
 
 | Extra query | Meaning                                                                             | Source                                    |
 | ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
@@ -188,20 +189,26 @@ One champion: header rates, set builds in tabs, lane matchups and rates by tier.
 | `lane`      | Lane against the opponent; ignored when `role` is set                               | same                                      |
 | `build`     | 1-based build tab, read by the page only                                            | `src/lib/domain/champion-page.ts:312-316` |
 
-- Responses: `200` analytics policy; `308` canonical; `404`; `429`/`503`. Without the Data Dragon names the key cannot be resolved: `503`.
+- Responses: `200` analytics policy, or `no-store` if the set builds, matchups or patch list failed; `308` to the canonical name; `307` to the canonical query when only the query needs tidying (it can change with a default or a champion the lookups do not know yet); `404`; `429`/`503`. Without the Data Dragon names the key cannot be resolved: `503`.
 - riot-proxy calls, in parallel: `GET /v1/lol/analytics/champions/{id}?…&limit=10` (essential), `…/{id}/builds?…[&opponentId]` (optional), `…/{id}/matchups?…&limit=200` (optional), `GET /v1/lol/analytics/patches?queue=RANKED_SOLO_5x5&championId={id}` (optional).
 
 ```text
 $ curl -sI http://127.0.0.1:3000/champions/Ahri
 HTTP/1.1 308 Permanent Redirect
+cache-control: no-store
 location: /champions/ahri
+
+$ curl -sI 'http://127.0.0.1:3000/champions/ahri?rank=emerald%2B'
+HTTP/1.1 307 Temporary Redirect
+cache-control: no-store
+location: /champions/ahri?rank=emerald+
 ```
 
 ## Unknown paths
 
-Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=60` (set by `src/hooks.server.ts:5-10`).
+Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=60` (set by `src/hooks.server.ts:6-15`).
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/about/+page.ts:L1-L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L19`, `src/routes/champions/[key]/+page.server.ts:L9-L28`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L185`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L5-L10`, `src/lib/legal.ts:L3-L4`; probes of `node build` against the mock proxy, 2026-10-19
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champions.ts:L35-L64`, `src/lib/server/champion-page.ts:L84-L188`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L6-L15`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L615-L628`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
+**Last verified:** 2026-11-03 against commit `99cb82c`

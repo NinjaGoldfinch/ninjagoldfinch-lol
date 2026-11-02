@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	if (!region) error(404, 'Not found');
 
 	const match = await loadMatch(region, params.matchId);
-	// A finished match never changes, but a page whose timeline failed is not
-	// kept at the edge for a day.
-	setHeaders(cacheControl(match.gold ? 'match' : 'none'));
+	// A finished match never changes, but a page with a part missing (the
+	// timeline, the names or the stat shards) is not kept at the edge.
+	setHeaders(cacheControl(match.complete ? 'match' : 'none'));
 	return match;
 };

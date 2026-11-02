@@ -7,12 +7,12 @@ What happens between a visitor's request and the HTML coming back, for the three
 Every request passes the same steps before and after its page-specific work:
 
 1. Cloudflare answers from its cache if it holds a fresh copy for that exact URL, query string included (`docs/DECISIONS.md:577`, ADR-042). Otherwise the request goes through the Tunnel to `127.0.0.1:3000`.
-2. SvelteKit matches the route and runs `handle` in `src/hooks.server.ts:5-10`, which resolves the request first and adjusts the response afterwards.
-3. The route's load parses the URL. If the query is not in its canonical form it redirects (307 or 308) before calling riot-proxy (`src/routes/summoner/[riotId]/+page.server.ts:18-22`, `src/routes/champions/+page.server.ts:10-14`, `src/routes/champions/[key]/+page.server.ts:15-23`).
+2. SvelteKit matches the route and runs `handle` in `src/hooks.server.ts:6-15`, which resolves the request first and adjusts the response afterwards.
+3. The route's load parses the URL. If the query is not in its canonical form it redirects with 307 before calling riot-proxy; a champion name that is not the canonical slug gets 308 (`src/routes/summoner/[riotId]/+page.server.ts:18-22`, `src/routes/champions/+page.server.ts:10-14`, `src/routes/champions/[key]/+page.server.ts:15-26`).
 4. The loader calls riot-proxy through the proxy client. Each call has a deadline: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else (`src/lib/server/proxy.ts:73-77`). A call past its deadline, or one that cannot reach riot-proxy, becomes a 503 (`src/lib/server/proxy.ts:124-128`).
 5. The load sets `Cache-Control` from `src/lib/server/cache.ts:5-16`.
-6. Back in `handle`, any non-GET/HEAD response is forced to `no-store`, a 404 to `public, s-maxage=60`, and any other status of 400 or above to `no-store` (`src/lib/server/cache.ts:29-34`).
-7. Unexpected exceptions are logged and shown as "Temporarily unavailable" (`src/hooks.server.ts:15-20`).
+6. Back in `handle`, any non-GET/HEAD response is forced to `no-store`, a 404 to `public, s-maxage=60`, and any other status of 400 or above to `no-store` (`src/lib/server/cache.ts:29-34`). A response that still has no `Cache-Control`, such as a redirect from step 3, gets `no-store` (`src/hooks.server.ts:8-13`, ADR-045).
+7. Unexpected exceptions are logged and shown as "Temporarily unavailable" (`src/hooks.server.ts:20-25`).
 
 Failed riot-proxy responses are logged as `proxy <status> <method> <path> request-id=<id>`, and analytics calls slower than 250 ms as `proxy slow … x-cache=… <ms>ms` (`src/lib/server/proxy.ts:11-66`). A call that got no response is logged as `proxy timeout … after <ms> ms` or `proxy unreachable …` (`src/lib/server/proxy.ts:126-127`).
 
@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## Match page
 
-`GET /match/{matchId}`, loaded by `loadMatch` (`src/lib/server/match.ts:29-73`).
+`GET /match/{matchId}`, loaded by `loadMatch` (`src/lib/server/match.ts:35-83`).
 
 ```mermaid
 sequenceDiagram
@@ -133,19 +133,19 @@ sequenceDiagram
     end
     Site->>CDragon: GET perks.json (once per patch, optional)
     CDragon-->>Site: 200
-    Site-->>Cloudflare: 200 HTML, s-maxage=86400 if timeline present, else no-store
+    Site-->>Cloudflare: 200 HTML, s-maxage=86400 if every part loaded, else no-store
     Cloudflare-->>Browser: 200 HTML
   end
 ```
 
 - The region comes from the match id's prefix (`OC1_…` → Oceania, route `sea`); an id with no known prefix is a 404 without calling riot-proxy (`src/routes/match/[matchId]/+page.server.ts:8-10`, `src/lib/domain/regions.ts:46-50`).
-- A custom game is a 404 (`src/lib/server/match.ts:49`).
-- A page without its timeline is sent with `no-store`, so the gap is not cached for a day (`src/routes/match/[matchId]/+page.server.ts:13-15`).
+- A custom game is a 404 (`src/lib/server/match.ts:55`).
+- A page without its timeline, Data Dragon lookups or stat shards is sent with `no-store`, so the gap is not cached for a day. `loadMatch` returns `complete` for this (`src/lib/server/match.ts:62-82`, `src/routes/match/[matchId]/+page.server.ts:13-15`, ADR-045).
 - riot-proxy treats match and timeline as immutable and serves them from its archive once fetched (`riot-proxy:src/riot/endpoints.rs:185-204`, `riot-proxy:src/fetcher.rs:305-317`).
 
 ## Champion page
 
-`GET /champions/{key}`, loaded by `findChampionPage` then `loadChampionPage` (`src/lib/server/champion-page.ts:82-174`).
+`GET /champions/{key}`, loaded by `findChampionPage` then `loadChampionPage` (`src/lib/server/champion-page.ts:84-177`).
 
 ```mermaid
 sequenceDiagram
@@ -161,7 +161,7 @@ sequenceDiagram
     Cloudflare->>Site: GET via Tunnel
     Site->>Site: current patch and names from memory, resolve ahri to id 103
     alt URL not canonical
-      Site-->>Browser: 308 to canonical URL
+      Site-->>Browser: 308 to canonical name or 307 to canonical query, no-store
     else canonical
       par detail (essential, 5 s)
         Site->>Proxy: GET /v1/lol/analytics/champions/103?...&minTier=DIAMOND
@@ -176,7 +176,7 @@ sequenceDiagram
         Site->>Proxy: GET /v1/lol/analytics/patches?queue=RANKED_SOLO_5x5&championId=103
         Proxy-->>Site: 200
       end
-      Site-->>Cloudflare: 200 HTML, s-maxage=600, swr=600
+      Site-->>Cloudflare: 200 HTML, s-maxage=600 if every part loaded, else no-store
       Cloudflare-->>Browser: 200 HTML
     end
   end
@@ -184,20 +184,22 @@ sequenceDiagram
 
 - Analytics never reach Riot: riot-proxy answers from its own tables, with an in-memory copy until the next rebuild (`riot-proxy:src/routes/analytics.rs:3`, `riot-proxy:src/routes/analytics/cache.rs:1-19`).
 - Measured on production (ADR-039, `docs/DECISIONS.md:521-527`): 8–15 ms for a champion page when riot-proxy is warm; about 200 ms on a champion's first view after a rebuild; 55–69 ms for a Cloudflare `MISS` and 25–30 ms for a `HIT` from outside.
-- An unknown champion is a 404; without the Data Dragon names the URL cannot be resolved and the page is a 503, or a 429 if riot-proxy rate limited the lookups (`src/lib/server/champion-page.ts:92-100`).
+- An unknown champion is a 404; without the Data Dragon names the URL cannot be resolved and the page is a 503, or a 429 if riot-proxy rate limited the lookups (`src/lib/server/champion-page.ts:94-102`).
+- The name redirect is a 308, since a champion's slug does not change; the query redirect is a 307, since a default or a champion the lookups do not know yet can change (`src/routes/champions/[key]/+page.server.ts:21-26`, ADR-045).
+- A page without its set builds, matchups or patch list is sent with `no-store` (`src/lib/server/champion-page.ts:175`, `src/routes/champions/[key]/+page.server.ts:29-30`).
 
 ## Other routes
 
 - `/healthz` answers `{"ok":true}` without calling riot-proxy (`src/routes/healthz/+server.ts:5-6`).
 - `/search` either redirects (303) or re-renders the form; a Riot ID never reaches riot-proxy from here (`src/routes/search/+page.server.ts:14-47`).
-- `/about` is prerendered at build time (`src/routes/about/+page.ts:1-2`).
-- Old URLs with a region redirect with 308 (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, `src/routes/match/[region]/[matchId]/+server.ts:8-11`).
+- `/` and `/about` are prerendered at build time and served as static files from `build/prerendered`, without running `handle` (`src/routes/+page.ts:3`, `src/routes/about/+page.ts:2`).
+- Old URLs with a region redirect with 308, sent `no-store` by `handle` (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, `src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 
-With JavaScript, SvelteKit fetches a page's `__data.json` instead of its HTML on client-side navigation. It runs the same load and carries the same `Cache-Control` (observed on the profile). Whether Cloudflare caches `__data.json` is open task SPD-06 (`docs/PROGRESS.md:55`).
+With JavaScript, SvelteKit fetches a page's `__data.json` instead of its HTML on client-side navigation. It runs the same load. SvelteKit sends it with `private, no-store`, and a redirect or an error in the load comes back as a 200 with a redirect or error node (`node_modules/@sveltejs/kit/src/runtime/server/data/index.js:89-148`). A header the load set with `setHeaders` replaces that, so a load that reached `setHeaders` gives its data the page's policy (`node_modules/@sveltejs/kit/src/runtime/server/respond.js:212-237,513-516`; observed on the profile). Whether Cloudflare caches the `public` ones is open task SPD-06 (`docs/PROGRESS.md:55`).
 
-> **TODO (unverified):** whether Cloudflare caches `__data.json` responses (SPD-06). Needs a check from outside against production.
+> **TODO (unverified):** whether Cloudflare caches `__data.json` responses with a `public` policy (SPD-06). Needs a check from outside against production.
 
 ---
 
-**Sources:** `src/hooks.server.ts:L5-L20`, `src/lib/server/cache.ts:L5-L34`, `src/lib/server/proxy.ts:L11-L153`, `src/lib/server/profile.ts:L56-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champion-page.ts:L82-L174`, `src/routes/summoner/[riotId]/+page.server.ts:L14-L38`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/champions/+page.server.ts:L7-L19`, `src/routes/champions/[key]/+page.server.ts:L9-L28`, `src/routes/search/+page.server.ts:L14-L47`, `src/lib/domain/regions.ts:L46-L50`, `vite.config.ts:L16-L19`, `docs/DECISIONS.md:L153-L157,L521-L527,L577`, `docs/PROGRESS.md:L55`, `riot-proxy:src/routes/players/refresh.rs:L1-L71`, `riot-proxy:src/fetcher.rs:L9-L44,L305-L317,L455-L466`, `riot-proxy:src/riot/client.rs:L19-L24`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/riot/endpoints.rs:L185-L204`, `riot-proxy:src/routes/analytics.rs:L3`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `src/hooks.server.ts:L6-L25`, `src/lib/server/cache.ts:L5-L34`, `src/lib/server/proxy.ts:L11-L153`, `src/lib/server/profile.ts:L56-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champion-page.ts:L84-L177`, `src/routes/summoner/[riotId]/+page.server.ts:L14-L38`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/domain/regions.ts:L46-L50`, `vite.config.ts:L16-L19`, `docs/DECISIONS.md:L153-L157,L521-L527,L577,L615-L628`, `docs/PROGRESS.md:L55`, `riot-proxy:src/routes/players/refresh.rs:L1-L71`, `riot-proxy:src/fetcher.rs:L9-L44,L305-L317,L455-L466`, `riot-proxy:src/riot/client.rs:L19-L24`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/riot/endpoints.rs:L185-L204`, `riot-proxy:src/routes/analytics.rs:L3`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
+**Last verified:** 2026-11-03 against commit `99cb82c`

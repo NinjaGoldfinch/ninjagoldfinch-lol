@@ -46,8 +46,8 @@ Imports use the `#lib/*` subpath alias with the `.ts` extension, for example `im
 
 - A visitor sees one of three error states: 404 "Not found", 429 "Too many requests" (with `retryAfter` when known) and 503 "Temporarily unavailable". Raw riot-proxy messages are never passed through (`src/lib/server/errors.ts:6-33`).
 - Throw with SvelteKit's `error(status, …)`. For an essential riot-proxy call use `toHttpError(response, body)`; for an optional one wrap it in `optional(...)` and degrade the page (`src/lib/server/errors.ts:35-58`).
-- Anything unexpected (a bug, an unreachable riot-proxy) reaches `handleError`, which logs `error <METHOD> <path>:` with the detail and shows "Temporarily unavailable" (`src/hooks.server.ts:12-20`).
-- Errors and form posts are never cached at the edge; the hook enforces it whatever the load set (`src/hooks.server.ts:4-10`).
+- Anything unexpected (a bug, an unreachable riot-proxy) reaches `handleError`, which logs `error <METHOD> <path>:` with the detail and shows "Temporarily unavailable" (`src/hooks.server.ts:17-25`).
+- Errors and form posts are never cached at the edge; the hook enforces it whatever the load set. A response no load gave a policy, such as a redirect, gets `no-store` (`src/hooks.server.ts:4-15`).
 
 Full mapping: [api/errors.md](../api/errors.md).
 
@@ -80,5 +80,5 @@ A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). 
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L42`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L46-L52`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L6-L19`, `src/hooks.server.ts:L4-L20`, `src/lib/server/profile.ts:L85,L116`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L42`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L46-L52`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L6-L19`, `src/hooks.server.ts:L4-L25`, `src/lib/server/profile.ts:L85,L116`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
+**Last verified:** 2026-11-03 against commit `99cb82c`

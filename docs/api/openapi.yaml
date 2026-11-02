@@ -4,20 +4,25 @@ info:
   version: 0.0.1
   summary: The HTTP surface of the ninjagoldfinch.lol website.
   description: |
-    Hand-written from the route code at commit e7c395c (2026-10-19); see
+    Hand-written from the route code at commit e7c395c (2026-10-19), last
+    updated for RV-04 (2026-11-03); see
     docs/api/endpoints.md for the prose reference and source lines.
 
     The site serves HTML pages rendered on the server, not a JSON API. Every
     page also has a SvelteKit data endpoint, `<page path>/__data.json`, used
-    for client-side navigation; it runs the same load and carries the same
-    Cache-Control. Those endpoints are framework-generated and not listed
-    individually here.
+    for client-side navigation; it runs the same load. It carries the page's
+    Cache-Control once the load has set it, and SvelteKit's
+    `private, no-store` otherwise, including a redirect or an error in the
+    load, which come back as a 200 with a redirect or error node. Those
+    endpoints are framework-generated and not listed individually here.
 
     Error pages are HTML with one of three states: 404 Not found, 429 Too
     many requests, 503 Temporarily unavailable (docs/api/errors.md).
     Cache-Control on errors and form posts is set centrally: 404 is
     `public, s-maxage=60`, any other error and every non-GET/HEAD response
-    is `no-store`.
+    is `no-store`. Any other response without a Cache-Control header, such
+    as every redirect, gets `no-store` (ADR-045). A page whose optional
+    parts did not all load is `no-store` instead of its usual policy.
 
     For local development the same paths are served by `just dev` on
     http://localhost:5173.
@@ -40,8 +45,8 @@ paths:
     get:
       tags: [pages]
       operationId: getHome
-      summary: Home page with the search form and recent searches
-      description: No server load; sends no Cache-Control header.
+      summary: Home page with the search form, prerendered at build time
+      description: Recent searches are filled in by the browser.
       responses:
         '200':
           $ref: '#/components/responses/Html'
@@ -245,6 +250,8 @@ paths:
           headers:
             Location:
               $ref: '#/components/headers/Location'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
         '404':
           $ref: '#/components/responses/NotFound'
   /match/{matchId}:
@@ -282,7 +289,8 @@ paths:
         '200':
           description: |
             The match. Cache-Control is the match policy, or `no-store` when
-            the timeline could not be loaded.
+            the timeline, the Data Dragon lookups or the stat shards could not
+            be loaded.
           headers:
             Cache-Control:
               schema:
@@ -314,6 +322,8 @@ paths:
           headers:
             Location:
               $ref: '#/components/headers/Location'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
         '404':
           $ref: '#/components/responses/NotFound'
   /champions:
@@ -383,11 +393,15 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/AnalyticsHtml'
+        '307':
+          $ref: '#/components/responses/CanonicalRedirect'
         '308':
-          description: Redirect to the canonical key and query.
+          description: Redirect to the canonical key, with the canonical query.
           headers:
             Location:
               $ref: '#/components/headers/Location'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -474,12 +488,16 @@ components:
           schema:
             type: string
     AnalyticsHtml:
-      description: An analytics page.
+      description: |
+        An analytics page. Cache-Control is the analytics policy, or
+        `no-store` when an optional part could not be loaded (on `/champions`
+        the patch list or Data Dragon lookups; on a champion page the set
+        builds, matchups or patch list).
       headers:
         Cache-Control:
           schema:
             type: string
-            const: 'public, s-maxage=600, stale-while-revalidate=600'
+            enum: ['public, s-maxage=600, stale-while-revalidate=600', no-store]
       content:
         text/html:
           schema:
@@ -489,6 +507,8 @@ components:
       headers:
         Location:
           $ref: '#/components/headers/Location'
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
     NotFound:
       description: Not found error page.
       headers:

@@ -41,11 +41,11 @@ Order in the canonical query: `role`, `rank`, `patch`, `sort` (`src/lib/domain/c
 
 Rank encoding (ADR-042, `docs/DECISIONS.md:572`): `?rank=diamond+`, `?rank=diamond%2B` and `?rank=diamond%20` (a bare `+` decoded as a space) all mean Diamond and above, and the page redirects to the bare `+`. `challenger+` becomes `challenger`. An unknown rank means every tier, never an error.
 
-Champion page extras: `vs=<champion key>` and `lane=<role>` pick builds against a lane opponent; an unknown `vs` drops the pick, an unknown `lane` only the lane, and `lane` is dropped when `role` is set (`src/lib/domain/champion-page.ts:222-254`). `build=<n>` (1-based) picks a build tab and is kept in the canonical URL but not read by the load (`src/routes/champions/[key]/+page.server.ts:15-23`).
+Champion page extras: `vs=<champion key>` and `lane=<role>` pick builds against a lane opponent; an unknown `vs` drops the pick, an unknown `lane` only the lane, and `lane` is dropped when `role` is set (`src/lib/domain/champion-page.ts:222-254`). `build=<n>` (1-based) picks a build tab and is kept in the canonical URL but not read by the load (`src/routes/champions/[key]/+page.server.ts:15-26`).
 
-Redirect status: `/champions` uses `307` (`src/routes/champions/+page.server.ts:14`); `/champions/{key}` uses `308`, also for a non-canonical key such as `Ahri` or `wukong` (`src/routes/champions/[key]/+page.server.ts:21-23`).
+Redirect status: `/champions` uses `307` (`src/routes/champions/+page.server.ts:14`). `/champions/{key}` uses `308` for a non-canonical key such as `Ahri` or `wukong`, carrying the canonical query, and `307` when only the query needs tidying (`src/routes/champions/[key]/+page.server.ts:21-26`, ADR-045). The query redirect is temporary because a default or a champion the lookups do not know yet can change. Every redirect is sent `no-store` (`src/hooks.server.ts:8-13`).
 
-Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, the detail for `limit=10`, matchups for `limit=200` (`src/lib/domain/champion-stats.ts:185-188`, `src/lib/server/champion-page.ts:123,132`).
+Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, the detail for `limit=10`, matchups for `limit=200` (`src/lib/domain/champion-stats.ts:185-188`, `src/lib/server/champion-page.ts:125,134`).
 
 ## Match page parameters
 
@@ -69,5 +69,5 @@ riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by commi
 
 ---
 
-**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L45-L50,L91-L101`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L60-L188`, `src/lib/domain/champion-page.ts:L222-L254`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L23`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `docs/IMPLEMENTATION.md:L273`, `docs/DECISIONS.md:L423,L493,L572`, `README.md:L51-L66`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L45-L50,L91-L101`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L60-L188`, `src/lib/domain/champion-page.ts:L222-L254`, `src/lib/server/champion-page.ts:L125,L134`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L8-L13`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `docs/IMPLEMENTATION.md:L273`, `docs/DECISIONS.md:L423,L493,L572,L615-L628`, `README.md:L51-L66`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
+**Last verified:** 2026-11-03 against commit `99cb82c`

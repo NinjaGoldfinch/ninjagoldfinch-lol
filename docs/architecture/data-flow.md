@@ -63,7 +63,7 @@ Everything left of the site belongs to riot-proxy and is summarised here only so
 | Timeline parse      | match-v5 timeline (about 1.6 MB for a ranked game)             | Per-frame gold, item and skill events, objective kills                              | `src/lib/api/match.ts:212-…`, `docs/DECISIONS.md:272`                 |
 | Data Dragon reduce  | `champion`, `item`, `summoner`, `runesReforged`, `queues` JSON | `StaticNames`: names and ids for icons, item catalogue for builds                   | `src/lib/api/ddragon.ts:1-139`, `src/lib/server/static-data.ts:41-64` |
 | Stat shards         | CommunityDragon `perks.json`                                   | Shard names and icon paths, ids 5001–5013                                           | `src/lib/api/cdragon.ts:1-32`                                         |
-| Policy filters      | match list, match                                              | Custom games (queue 0 or none) dropped or 404                                       | `src/lib/domain/matches.ts:155-161`, `src/lib/server/match.ts:49`     |
+| Policy filters      | match list, match                                              | Custom games (queue 0 or none) dropped or 404                                       | `src/lib/domain/matches.ts:155-161`, `src/lib/server/match.ts:55`     |
 | Page shaping        | parsed data + names                                            | `ProfileData`, `MatchDetail`, `ChampionsPage`, `ChampionPage`                       | `src/lib/server/*.ts`, `src/lib/domain/*.ts`                          |
 | Render              | page data                                                      | HTML, with the page data embedded for hydration; `__data.json` on client navigation | SvelteKit                                                             |
 
@@ -93,4 +93,4 @@ A restart of the site loses only its in-memory lookups, which reload on the next
 ---
 
 **Sources:** `src/lib/server/proxy.ts:L41-L153`, `src/lib/api/riot.ts:L1-L35`, `src/lib/api/match.ts:L157-L215`, `src/lib/api/ddragon.ts:L1-L139`, `src/lib/api/cdragon.ts:L1-L32`, `src/lib/server/static-data.ts:L24-L64`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/profile.ts:L19,L91-L93`, `src/lib/server/errors.ts:L11-L33`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-detail.ts:L147`, `src/lib/domain/matches.ts:L155-L161`, `src/lib/recent-storage.ts:L6-L22`, `src/lib/assets.ts:L7-L71`, `docs/DECISIONS.md:L272,L402`, `riot-proxy:src/archive/pack.rs:L124-L133`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:src/riot/endpoints.rs:L93-L234`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Last verified:** 2026-11-03 against commit `99cb82c`

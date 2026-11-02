@@ -21,6 +21,8 @@ export interface ChampionsPage {
 	ddragonVersion: string;
 	/** For the header search's suggestions. */
 	championNames: string[];
+	/** false when the patch list or the Data Dragon lookups fell back. */
+	complete: boolean;
 }
 
 /**
@@ -45,8 +47,10 @@ export async function loadChampions(
 	if (!patches.response.ok)
 		console.error('analytics patches unavailable:', patches.response.status);
 
+	let complete = patches.response.ok;
 	const names = await staticNames(ddragonVersion, client).catch((e: unknown) => {
 		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
+		complete = false;
 		return NO_NAMES;
 	});
 
@@ -54,6 +58,7 @@ export async function loadChampions(
 		table: toChampionTable(champions.data, names),
 		patches: patchOptions(patches.response.ok ? patches.data : undefined),
 		ddragonVersion,
-		championNames: championNames(names.champions)
+		championNames: championNames(names.champions),
+		complete
 	};
 }
