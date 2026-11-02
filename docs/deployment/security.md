@@ -21,7 +21,7 @@ A brief threat model for ninjagoldfinch.lol: what it holds that is worth protect
 - Declared private in `src/env.ts:27-30` and read through `$app/env/private`, a server-only module; only `src/lib/server/proxy.ts` uses it (`src/lib/server/proxy.ts:3,136-153`). It is never put in a `PUBLIC_` variable, the only public one being `PUBLIC_SITE_NAME` (`src/env.ts:17-22`, `CLAUDE.md:15-17`).
 - Sent only to riot-proxy, as `Authorization: Bearer`, over loopback. The fixture recorder sends it to riot-proxy but never to a CommunityDragon URL (`tests/record-fixture.ts:45-48`).
 - Never logged: no `console.*` call prints it (all calls read 2026-10-20).
-- The pre-commit hook refuses staged lines matching `(rpx_|RGAPI-)[A-Za-z0-9_-]` (`.githooks/pre-commit:10-23`, ADR-002), and fixtures are redacted (`CLAUDE.md:13-14`).
+- The pre-commit hook refuses staged lines matching `(rpx_|RGAPI-)[A-Za-z0-9_-]` (`.githooks/pre-commit:10-23`, ADR-002), and fixtures are redacted (`CLAUDE.md:13-14`); `tests/unit/fixtures-redacted.test.ts` scans every fixture file for keys and raw player ids in `just check` (RV-13).
 - Rotation and revocation are riot-proxy commands; there is no rotate command, so rotation is create-new, deploy, revoke-old ([integration/authentication.md](../integration/authentication.md)).
 
 **Deploy key.** Generated per host, read-only, and never copied between hosts; the old host's key is revoked when a host is replaced (`riot-proxy:docs/design/12-object-storage-and-hosting.md:617-619`).
@@ -102,4 +102,4 @@ The site sets `Cache-Control` on every dynamic response and nothing else securit
 ---
 
 **Sources:** `src/env.ts:L17-L30`, `src/lib/server/env.ts:L47-L55`, `src/lib/server/proxy.ts:L3,L136-L153`, `src/lib/server/errors.ts:L6-L33`, `src/lib/server/cache.ts:L12-L13`, `src/hooks.server.ts:L17-L25`, `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L47-L50`, `src/lib/domain/match-detail.ts:L198-L201`, `src/routes/champions/+page.server.ts:L7-L14`, `vite.config.ts:L16-L19`, `tests/record-fixture.ts:L45-L48`, `tests/unit/mock-proxy.test.ts:L29-L30`, `.githooks/pre-commit:L10-L23`, `.gitignore:L16-L18`, `pnpm-workspace.yaml:L3-L7`, `package.json:L48-L50`, `CLAUDE.md:L13-L17`, `docs/DECISIONS.md:L57-L65,L509`, `build/server/adapter-node-handler.js:L489` (generated), `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/http/auth.rs:L43-L52`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:deploy/README.md:L26-L28`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L443,L617-L626,L710`, owner-supplied unit (inventory section 14)
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Last verified:** 2026-11-03 against commit `d7de28b`

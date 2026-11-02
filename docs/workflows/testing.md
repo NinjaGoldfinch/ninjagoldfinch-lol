@@ -84,7 +84,7 @@ The recorder (`tests/record-fixture.ts`):
 - replaces every `puuid`, every `summonerId` and match `metadata.participants` with `fixture-puuid-<hash>` or `fixture-summoner-<hash>`, in the body and in the recorded path, so separately recorded fixtures agree (`tests/redact.ts:1-38`, `tests/record-fixture.ts:63-64`);
 - with `--keep id,…`, trims Data Dragon files or lists to the entries other fixtures use (`tests/record-fixture.ts:52-61`).
 
-Fixtures must contain no `rpx_` or `RGAPI-` strings (`CLAUDE.md:13-14`); the pre-commit hook refuses staged lines that match `(rpx_|RGAPI-)[A-Za-z0-9_-]` (`.githooks/pre-commit:12-23`).
+Fixtures must contain no `rpx_` or `RGAPI-` strings (`CLAUDE.md:13-14`); the pre-commit hook refuses staged lines that match `(rpx_|RGAPI-)[A-Za-z0-9_-]` (`.githooks/pre-commit:12-23`). `fixtures-redacted.test.ts` checks every fixture file whole: no key, no 78-character raw PUUID, and every `puuid`, `summonerId` and `metadata.participants` entry a placeholder (`fixture-…` or `bld-fixture-…`) (RV-13).
 
 ## Browser tests
 
@@ -112,5 +112,5 @@ There is no coverage tool or threshold: no coverage provider in `package.json` a
 
 ---
 
-**Sources:** `justfile:L19-L36`, `package.json:L10-L20,L45-L47`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `tests/unit/env-example.test.ts:L1-L19`, `src/lib/server/proxy.ts:L81-L134`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
-**Last verified:** 2026-11-03 against commit `23a4f41`
+**Sources:** `justfile:L19-L36`, `package.json:L10-L20,L45-L47`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/unit/fixtures-redacted.test.ts:L1-L52`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `tests/unit/env-example.test.ts:L1-L19`, `src/lib/server/proxy.ts:L81-L134`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
+**Last verified:** 2026-11-03 against commit `d7de28b`
