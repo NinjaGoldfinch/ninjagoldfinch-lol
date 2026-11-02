@@ -6,6 +6,9 @@ const BASE = 'http://proxy.test';
 const PROFILE = '/v1/players/by-riot-id/{gameName}/{tagLine}/profile';
 const MATCHES = '/v1/players/{puuid}/matches';
 
+/** A threshold every load is over, however fast: totals are whole ms and can be 0. */
+const ALWAYS = -1;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** A riot-proxy answering each path after `delay` ms with `status`. */
@@ -46,7 +49,7 @@ describe('timeLoad', () => {
 				await profileLoad(client(5));
 				return 'page';
 			},
-			0
+			ALWAYS
 		);
 
 		expect(result).toBe('page');
@@ -58,7 +61,7 @@ describe('timeLoad', () => {
 
 	it('names no player and no x-cache', async () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-		await timeLoad('/summoner/[riotId]', false, () => profileLoad(client()), 0);
+		await timeLoad('/summoner/[riotId]', false, () => profileLoad(client()), ALWAYS);
 
 		const line = String(warn.mock.calls[0][0]);
 		expect(line).not.toMatch(/Hide|bush|KR1|fixture-puuid/);
@@ -87,7 +90,7 @@ describe('timeLoad', () => {
 				await profileLoad(proxy);
 				await unreachable.GET('/healthz').catch(() => undefined);
 			},
-			0
+			ALWAYS
 		);
 
 		const line = String(warn.mock.calls[0][0]);
@@ -98,7 +101,7 @@ describe('timeLoad', () => {
 
 	it('says so for a slow load without riot-proxy calls, or without a route', async () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-		await timeLoad(null, false, () => sleep(1), 0);
+		await timeLoad(null, false, () => sleep(1), ALWAYS);
 
 		expect(warn).toHaveBeenCalledWith(
 			expect.stringMatching(/^slow load \(no route\) \d+ms: no riot-proxy calls$/)
@@ -117,7 +120,7 @@ describe('timeLoad', () => {
 					await profileLoad(client());
 					throw failure;
 				},
-				0
+				ALWAYS
 			)
 		).rejects.toBe(failure);
 		expect(warn).toHaveBeenCalledOnce();
@@ -128,14 +131,14 @@ describe('timeLoad', () => {
 		const proxy = client(5);
 
 		await Promise.all([
-			timeLoad('/summoner/[riotId]', false, () => profileLoad(proxy), 0),
+			timeLoad('/summoner/[riotId]', false, () => profileLoad(proxy), ALWAYS),
 			timeLoad(
 				'/champions',
 				false,
 				async () => {
 					await proxy.GET('/v1/lol/analytics/champions', { params: { query: {} } });
 				},
-				0
+				ALWAYS
 			)
 		]);
 
