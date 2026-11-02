@@ -642,6 +642,20 @@ Date: 2026-11-03 · Task: SPD-07
 - **Per request.** The `timeCalls` middleware records each call in an `AsyncLocalStorage` store that `timeLoad` opens, so calls from concurrent requests are never mixed. A call made outside a request is not recorded.
 - **The total** is the whole request through `resolve`, render included.
 
-**Measurements.** Cold and warm timings for each page type (profile, match, champions, champion, search) are to be recorded here from production. Warm loads fall under the threshold, so they are measured on the host with `curl -w '%{time_total}'` against the site's own port, as ADR-039 did. Pending: the owner deploys this change first.
+**Measurements.** Production, `main` at 5fede17, 2026-11-03, on `ngf-prod-syd1`. `curl -w '%{time_total}'` against the site's own port straight after a restart (cold), then again at once (warm); the call times are from the `slow load` lines of the same run.
+
+```text
+page                            cold     warm   slow load line (cold)
+/summoner/NinjaGoldfinch-OCENZ  256 ms   43 ms  204–222 ms: profile 36–38, matches 38–40, versions 14–17, static files 21–44, queues 20
+/match/OC1_712351051            176 ms   62 ms  149–167 ms: match 14–18, timeline 45–46 (static data already held)
+/champions                       39 ms   20 ms  under the threshold
+/champions/ahri                  42 ms   20 ms  under the threshold (static data held from /champions)
+/search?q=ahri (303)              7 ms    2 ms  no riot-proxy calls
+```
+
+- A cold profile waits for the static lookups after the profile and match calls, not alongside them (SPD-08).
+- A cold match page spends about 100 ms outside riot-proxy: CommunityDragon's `perks.json`, which this line does not show, and the render (SPD-09).
+- Visitors' cold champion pages in the same minutes logged 110–276 ms, with riot-proxy's analytics calls at 100–265 ms each against about 10 ms warm: riot-proxy's own cold reads, as ADR-039 found.
+- The first champion page after a restart, before any other page, took 148 ms: `versions` 51 ms and the static files 20–60 ms.
 
 **Consequences.** A slow page names the riot-proxy calls it waited on. The four `/v1/static/{file}` calls share one template; their order matches `staticNames`' (champion, item, summoner, runesReforged). No new dependency (`node:async_hooks`).
