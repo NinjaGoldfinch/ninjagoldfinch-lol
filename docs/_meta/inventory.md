@@ -54,7 +54,7 @@ Untracked build artefacts present on disk: `build/`, `.svelte-kit/`, `node_modul
 
 | Entry point                              | What it is                                        | Source                                      |
 | ---------------------------------------- | ------------------------------------------------- | ------------------------------------------- |
-| `node build`                             | Production server (adapter-node output)           | `Dockerfile:23`, `README.md:93`             |
+| `node build`                             | Production server (adapter-node output)           | `Dockerfile:25`, `README.md:93`             |
 | `pnpm dev` / `just dev`                  | Vite dev server                                   | `package.json:11`, `justfile:12-13`         |
 | `node tests/mock-proxy/server.ts [port]` | Mock riot-proxy, default port 8787                | `tests/mock-proxy/server.ts:1-12`           |
 | `node tests/record-fixture.ts`           | Fixture recorder (`just fixture`)                 | `tests/record-fixture.ts`, `justfile:35-36` |
@@ -152,7 +152,7 @@ Files: `.env` (local, from `.env.example`), `deploy/.env` (preview VM, `deploy/c
 | Tool                                         | Location                   | Notes                                                                                                                     |
 | -------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `just setup/dev/gen/check/e2e/fixture/image` | `justfile:1-40`            | `check` runs prettier, schema drift check, eslint, svelte-kit sync, svelte-check, vitest, build, `deploy/proxmox/test.sh` |
-| `Dockerfile`                                 | `Dockerfile:1-23`          | Two-stage `node:22-alpine`; `HEALTHCHECK` on `/healthz`; used by the preview VM only                                      |
+| `Dockerfile`                                 | `Dockerfile:1-25`          | Two-stage `node:22-alpine`; `HEALTHCHECK` on `/healthz`; used by the preview VM only                                      |
 | `deploy/compose.yaml`                        | `deploy/compose.yaml:1-14` | One `web` service, port 3000                                                                                              |
 | Proxmox scripts                              | `deploy/proxmox/`          | Debian 13 VM, Docker, deploy key, `ninjagoldfinch-update`                                                                 |
 | systemd unit                                 | not in repo                | `ninjagoldfinch-lol.service` described in `README.md:98` and ADR-038                                                      |

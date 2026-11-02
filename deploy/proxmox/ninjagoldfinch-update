@@ -15,7 +15,7 @@ key=${NINJAGOLDFINCH_DEPLOY_KEY:-$HOME/.ssh/ninjagoldfinch-deploy}
 ref=${1:-main}
 
 # Read-only deploy key; GitHub's host keys are pinned in /etc/ssh/ssh_known_hosts.
-export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes"
+export GIT_SSH_COMMAND="ssh -i \"$key\" -o IdentitiesOnly=yes"
 
 cd "$dir"
 if [ ! -d .git ]; then

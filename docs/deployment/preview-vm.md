@@ -4,15 +4,15 @@ The LAN preview VM: a Debian 13 VM on a Proxmox host that built and ran ninjagol
 
 ## What it is
 
-| Fact               | Value                                                                                                                                  | Source                                                                                 |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Guest OS           | Debian 13 (trixie) generic cloud image, checked against Debian's `SHA512SUMS`                                                          | `deploy/proxmox/create-vm.sh:13-14`                                                    |
-| Defaults           | VM name `ninjagoldfinch-web`, 2 cores, 2048 MB, 16 GB disk, DHCP, login user `web`                                                     | `deploy/proxmox/create-vm.sh:22-38`, `--help`                                          |
-| Runs               | One Docker container `web` built from `Dockerfile`, published on port 3000                                                             | `deploy/compose.yaml:4-14`                                                             |
-| Image              | Two-stage `node:22-alpine`; runs `node build` as user `node` with `NODE_ENV=production`; Docker `HEALTHCHECK` on `/healthz` every 30 s | `Dockerfile:1-23`                                                                      |
-| Last known address | `http://192.168.68.47:3000`                                                                                                            | `docs/DECISIONS.md:175`, [integration/environments.md](../integration/environments.md) |
-| riot-proxy         | Whatever `PROXY_URL` in `deploy/.env` names; there is no LAN dev proxy any more (SPD-01)                                               | `deploy/proxmox/README.md:5`                                                           |
-| Decision           | ADR-010; production chose systemd instead (ADR-038)                                                                                    | `docs/DECISIONS.md:113-127,500-516`                                                    |
+| Fact               | Value                                                                                                                                                                               | Source                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Guest OS           | Debian 13 (trixie) generic cloud image, checked against Debian's `SHA512SUMS`                                                                                                       | `deploy/proxmox/create-vm.sh:13-14`                                                    |
+| Defaults           | VM name `ninjagoldfinch-web`, 2 cores, 2048 MB, 16 GB disk, DHCP, login user `web`                                                                                                  | `deploy/proxmox/create-vm.sh:22-38`, `--help`                                          |
+| Runs               | One Docker container `web` built from `Dockerfile`, published on port 3000                                                                                                          | `deploy/compose.yaml:4-14`                                                             |
+| Image              | Two-stage `node:22-alpine`; runs `node build` as user `node` with `NODE_ENV=production`; Docker `HEALTHCHECK` on `/healthz` every 30 s after a 10 s start period, on `PORT` or 3000 | `Dockerfile:1-25`                                                                      |
+| Last known address | `http://192.168.68.47:3000`                                                                                                                                                         | `docs/DECISIONS.md:175`, [integration/environments.md](../integration/environments.md) |
+| riot-proxy         | Whatever `PROXY_URL` in `deploy/.env` names; there is no LAN dev proxy any more (SPD-01)                                                                                            | `deploy/proxmox/README.md:5`                                                           |
+| Decision           | ADR-010; production chose systemd instead (ADR-038)                                                                                                                                 | `docs/DECISIONS.md:113-127,500-516`                                                    |
 
 A recreated VM needs `PROXY_URL` pointing at a riot-proxy it can reach, and since the image runs with `NODE_ENV=production`, a `PROXY_KEY` (any value if that riot-proxy runs with auth off) (`deploy/proxmox/README.md:55-57`).
 
@@ -78,5 +78,5 @@ Each run fetches with the deploy key, prunes and force-updates tags to match Git
 
 ---
 
-**Sources:** `deploy/proxmox/README.md:L1-L98`, `deploy/proxmox/create-vm.sh:L1-L38` and `--help`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `deploy/proxmox/test.sh:L1-L88`, `deploy/compose.yaml:L1-L14`, `Dockerfile:L1-L23`, `justfile:L28,L38-L40`, `docs/DECISIONS.md:L113-L127,L175,L500-L516`, `README.md:L104-L112`, owner answer 2026-10-19
-**Last verified:** 2026-11-03 against commit `fbba06d`
+**Sources:** `deploy/proxmox/README.md:L1-L98`, `deploy/proxmox/create-vm.sh:L1-L38` and `--help`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `deploy/proxmox/test.sh:L1-L88`, `deploy/compose.yaml:L1-L14`, `Dockerfile:L1-L25`, `justfile:L28,L38-L40`, `docs/DECISIONS.md:L113-L127,L175,L500-L516`, `README.md:L104-L112`, owner answer 2026-10-19
+**Last verified:** 2026-11-03 against commit `23a4f41`

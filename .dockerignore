@@ -6,3 +6,6 @@ build
 !.env.example
 .git
 tests
+docs
+test-results
+.vscode

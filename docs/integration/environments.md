@@ -36,7 +36,7 @@ The site needs a riot-proxy; there is no shared development instance (`.env.exam
 Differences from production:
 
 - `NODE_ENV` is unset, so `PROXY_KEY` is optional (`src/lib/server/env.ts:47-55`).
-- `ORIGIN` is not needed: without it SvelteKit derives the origin from the `Host` header (`vite.config.ts:16-19`, `.env.example:13-14`).
+- `ORIGIN` is not needed: without it SvelteKit derives the origin from the `Host` header (`vite.config.ts:16-19`, `.env.example:13-16`).
 - A fresh riot-proxy has no analytics until it has archived matches and run an aggregate rebuild, so champion pages are empty at first. Profiles and matches fetch from Riot on demand.
 - No object storage is needed: riot-proxy keeps every body in SQLite when `ARCHIVE_OBJECT_URL` is unset (`riot-proxy:src/config.rs:314-316`).
 - Every uncached call spends your development Riot key's rate limit.
@@ -64,5 +64,5 @@ VM 104 `ninjagoldfinch-web` at `192.168.68.47` built the site in Docker from a g
 
 ---
 
-**Sources:** `.env.example:L1-L21`, `README.md:L46,L100,L110`, `src/lib/server/env.ts:L10-L55`, `vite.config.ts:L16-L19`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `deploy/proxmox/README.md:L3`, `deploy/proxmox/create-vm.sh:L26-L28`, `docs/PROGRESS.md:L70-L72,L107,L126,L156,L193`, `docs/DECISIONS.md:L509,L538`, `riot-proxy:README.md:L7-L26,L60-L72`, `riot-proxy:src/config.rs:L314-L316,L658-L662,L695-L768`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L630`, `riot-proxy:docs/design/13-admin-dashboard.md:L64`, owner-supplied unit, env names and answers (2026-10-19); `pnpm dev` run 2026-10-19
-**Last verified:** 2026-11-03 against commit `fbba06d`
+**Sources:** `.env.example:L1-L25`, `README.md:L46,L100,L110`, `src/lib/server/env.ts:L10-L55`, `vite.config.ts:L16-L19`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `deploy/proxmox/README.md:L3`, `deploy/proxmox/create-vm.sh:L26-L28`, `docs/PROGRESS.md:L70-L72,L107,L126,L156,L193`, `docs/DECISIONS.md:L509,L538`, `riot-proxy:README.md:L7-L26,L60-L72`, `riot-proxy:src/config.rs:L314-L316,L658-L662,L695-L768`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L630`, `riot-proxy:docs/design/13-admin-dashboard.md:L64`, owner-supplied unit, env names and answers (2026-10-19); `pnpm dev` run 2026-10-19
+**Last verified:** 2026-11-03 against commit `23a4f41`

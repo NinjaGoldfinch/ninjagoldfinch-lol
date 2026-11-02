@@ -47,7 +47,7 @@ This was checked against a local riot-proxy v2.7.0 on 2026-10-20 ([runbook.md](.
 
 `GET /healthz` answers `{"ok":true}` with `Cache-Control: no-store` whenever the process is serving, without touching riot-proxy (`src/routes/healthz/+server.ts:5-6`). It is liveness only. There is no readiness endpoint that checks riot-proxy; requesting a data page such as `/champions` serves that purpose by hand ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
 
-Consumers today: operators with `curl`; the preview VM's Docker `HEALTHCHECK` every 30 s (`Dockerfile:22`); Playwright waits on it before running tests (`playwright.config.ts:20`). Whether ninja-monitor calls it is not known (gap in [\_meta/gaps.md](../_meta/gaps.md)).
+Consumers today: operators with `curl`; the preview VM's Docker `HEALTHCHECK` every 30 s after a 10 s start period, on `PORT` or 3000 (`Dockerfile:22-24`); Playwright waits on it before running tests (`playwright.config.ts:20`). Whether ninja-monitor calls it is not known (gap in [\_meta/gaps.md](../_meta/gaps.md)).
 
 ## Metrics
 
@@ -72,5 +72,5 @@ Watches the `ninjagoldfinch-lol` unit on the host: down after 30 s (repeated eve
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L11-L66`, `src/hooks.server.ts:L20-L24`, `src/lib/server/profile.ts:L83,L111`, `src/routes/healthz/+server.ts:L5-L6`, `Dockerfile:L22`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L101`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/server/proxy.ts:L11-L66`, `src/hooks.server.ts:L20-L24`, `src/lib/server/profile.ts:L83,L111`, `src/routes/healthz/+server.ts:L5-L6`, `Dockerfile:L22-L24`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L101`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
+**Last verified:** 2026-11-03 against commit `23a4f41`
