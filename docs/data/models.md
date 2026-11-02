@@ -54,19 +54,20 @@ One profile row, from a riot-proxy `MatchSummary` (`src/lib/domain/matches.ts:8-
 
 Defined in `src/lib/domain/match-detail.ts:52-71`, built by `toMatchDetail` (`:89-157`) from the hand-parsed Riot match and timeline (`src/lib/api/match.ts`).
 
-| Field              | Type                       | From                                                                                                |
-| ------------------ | -------------------------- | --------------------------------------------------------------------------------------------------- |
-| `matchId`          | `string`                   | Riot `metadata.matchId`                                                                             |
-| `region`           | `{ slug, label }`          | The match id's prefix                                                                               |
-| `queueId`, `queue` | `number \| null`, `string` | Riot `info.queueId`, named                                                                          |
-| `startedAt`        | epoch ms                   | Riot `info.gameCreation`                                                                            |
-| `duration`         | seconds                    | Riot `info.gameDuration`                                                                            |
-| `patch`            | `major.minor`              | Riot `info.gameVersion`                                                                             |
-| `ddragonVersion`   | `string`                   | Newest Data Dragon version with the same `major.minor`, else current (`src/lib/server/match.ts:69`) |
-| `teams`            | `TeamScoreboard[]`         | Riot `info.participants` grouped by `teamId`, `info.teams`                                          |
-| `gold`             | `GoldFrame[] \| null`      | Per timeline frame, each team's summed `totalGold`                                                  |
-| `objectives`       | `ObjectiveKill[] \| null`  | Timeline `ELITE_MONSTER_KILL` (to `killerTeamId`) and `BUILDING_KILL` (to the other team) (ADR-029) |
-| `builds`           | `Build[]`                  | Per participant: timeline build and rune page                                                       |
+| Field              | Type                       | From                                                                                                                                                           |
+| ------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `matchId`          | `string`                   | Riot `metadata.matchId`                                                                                                                                        |
+| `region`           | `{ slug, label }`          | The match id's prefix                                                                                                                                          |
+| `queueId`, `queue` | `number \| null`, `string` | Riot `info.queueId`, named                                                                                                                                     |
+| `startedAt`        | epoch ms                   | Riot `info.gameCreation`                                                                                                                                       |
+| `duration`         | seconds                    | Riot `info.gameDuration`                                                                                                                                       |
+| `patch`            | `major.minor`              | Riot `info.gameVersion`                                                                                                                                        |
+| `ddragonVersion`   | `string`                   | Newest Data Dragon version with the same `major.minor`, else current (`src/lib/server/match.ts:78`)                                                            |
+| `teams`            | `TeamScoreboard[]`         | Riot `info.participants` grouped by `teamId`, `info.teams`                                                                                                     |
+| `gold`             | `GoldFrame[] \| null`      | Per timeline frame, each team's summed `totalGold`                                                                                                             |
+| `objectives`       | `ObjectiveKill[] \| null`  | Timeline `ELITE_MONSTER_KILL` (to `killerTeamId`) and `BUILDING_KILL` (to the other team) (ADR-029)                                                            |
+| `builds`           | `Build[]`                  | Per participant: timeline build and rune page                                                                                                                  |
+| `complete`         | `boolean`                  | Added by `loadMatch`: false when the timeline, Data Dragon lookups or stat shards fell back; such a page is not cached (`src/lib/server/match.ts:20-24,62-82`) |
 
 `TeamScoreboard` (`:38-50`): `teamId`, `name`, `result`, summed `kills`/`deaths`/`assists`/`gold`, `objectives` (towers, inhibitors, dragons, barons, `riftHerald`, `horde` = voidgrubs, from Riot `teams[].objectives`), `bans`, `players`.
 
@@ -76,7 +77,7 @@ Defined in `src/lib/domain/match-detail.ts:52-71`, built by `toMatchDetail` (`:8
 
 ## `ChampionsPage` — `/champions`
 
-Defined in `src/lib/server/champions.ts:16-24`.
+Defined in `src/lib/server/champions.ts:16-26`.
 
 | Field            | From                                                                                                                                                                                                                                                                                 |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -84,12 +85,13 @@ Defined in `src/lib/server/champions.ts:16-24`.
 | `patches`        | analytics `patches[].patch`, newest first; empty if the call failed                                                                                                                                                                                                                  |
 | `ddragonVersion` | Current Data Dragon version                                                                                                                                                                                                                                                          |
 | `championNames`  | For the search box suggestions                                                                                                                                                                                                                                                       |
+| `complete`       | false when the patch list or Data Dragon lookups fell back; such a page is not cached                                                                                                                                                                                                |
 
 The page adds `filter` (`ChampionFilter`: `role`, `patch`, `rank`) from the URL.
 
 ## `ChampionPage` — `/champions/{key}`
 
-Defined in `src/lib/server/champion-page.ts:33-57`.
+Defined in `src/lib/server/champion-page.ts:33-59`.
 
 | Field                             | Type                                            | From                                                                                                                                                                                                |
 | --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -104,10 +106,11 @@ Defined in `src/lib/server/champion-page.ts:33-57`.
 | `matchupRole`                     | `string \| null`                                | The role asked for, else the set builds' role                                                                                                                                                       |
 | `patches`                         | `string[]`                                      | The champion's patch list                                                                                                                                                                           |
 | `ddragonVersion`, `championNames` |                                                 | As above                                                                                                                                                                                            |
+| `complete`                        | `boolean`                                       | false when the set builds, matchups or patch list failed; such a page is not cached                                                                                                                 |
 
 Against a lane opponent the 4th and 5th item steps are dropped and the card omits skills and starter, because riot-proxy returns them empty (ADR-043).
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L19-L151`, `src/lib/server/match.ts:L69`, `src/lib/server/patch.ts:L32-L43`, `src/lib/server/champions.ts:L16-L24`, `src/lib/server/champion-page.ts:L33-L57`, `src/lib/domain/matches.ts:L8-L84,L159-L166`, `src/lib/domain/match-detail.ts:L17-L157`, `src/lib/domain/builds.ts:L20-L208`, `src/lib/domain/champion-stats.ts:L33-L39,L191-L235`, `src/lib/domain/champion-page.ts:L15-L225`, `src/lib/assets.ts:L55-L62`, `src/lib/api/match.ts`, `docs/DECISIONS.md:L167`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `src/lib/server/profile.ts:L19-L151`, `src/lib/server/match.ts:L20-L24,L62-L82`, `src/lib/server/patch.ts:L32-L43`, `src/lib/server/champions.ts:L16-L26`, `src/lib/server/champion-page.ts:L33-L59`, `src/lib/domain/matches.ts:L8-L84,L159-L166`, `src/lib/domain/match-detail.ts:L17-L157`, `src/lib/domain/builds.ts:L20-L208`, `src/lib/domain/champion-stats.ts:L33-L39,L191-L235`, `src/lib/domain/champion-page.ts:L15-L225`, `src/lib/assets.ts:L55-L62`, `src/lib/api/match.ts`, `docs/DECISIONS.md:L167`
+**Last verified:** 2026-11-03 against commit `99cb82c`

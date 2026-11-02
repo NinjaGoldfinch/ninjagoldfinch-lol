@@ -85,9 +85,9 @@ Sources for the table: `riot-proxy:docs/DECISIONS.md:1512`, `docs/DECISIONS.md:5
 - It never calls the Riot API (`CLAUDE.md:18-20`). A missing riot-proxy feature is raised with riot-proxy, not worked around.
 - It has no database, no object storage, no background jobs and no client-side fetching of riot-proxy data (`CLAUDE.md:57-58`; inventory section 6).
 - It does not compute MMR or ELO, and it hides custom games (`CLAUDE.md:24-25`, `src/lib/domain/matches.ts`, ADR-017).
-- It does not send security headers or a Content Security Policy yet (P5-03 is open in `docs/IMPLEMENTATION.md:544`; `src/hooks.server.ts:5-10` sets only `cache-control`).
+- It does not send security headers or a Content Security Policy yet (P5-03 is open in `docs/IMPLEMENTATION.md:544`; `src/hooks.server.ts:6-15` sets only `cache-control`).
 
 ---
 
-**Sources:** `src/lib/assets.ts:L1-L8`, `src/hooks.server.ts:L5-L10`, `README.md:L90-L101`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L49,L544`, `docs/DECISIONS.md:L504,L536`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `src/lib/assets.ts:L1-L8`, `src/hooks.server.ts:L6-L15`, `README.md:L90-L101`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L49,L544`, `docs/DECISIONS.md:L504,L536`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
+**Last verified:** 2026-11-03 against commit `99cb82c`

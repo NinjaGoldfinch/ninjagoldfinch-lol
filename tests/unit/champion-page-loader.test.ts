@@ -223,6 +223,11 @@ describe('loadChampionPage', () => {
 		expect(page.matchups).toHaveLength(116);
 	});
 
+	it('is complete when every part loaded', async () => {
+		const { page } = await load();
+		expect(page.complete).toBe(true);
+	});
+
 	it('uses the role asked for', async () => {
 		const { page, asked } = await load(undefined, { role: 'mid', patch: 'all', rank: null });
 		expect(asked).toContain(
@@ -238,6 +243,7 @@ describe('loadChampionPage', () => {
 		expect(page.popular.items.length).toBeGreaterThan(0);
 		expect(page.matchupRole).toBeNull();
 		expect(page.matchups?.some((m) => m.role !== 'MIDDLE')).toBe(true);
+		expect(page.complete).toBe(false);
 	});
 
 	it('still loads when the matchups or the patch list fail', async () => {
@@ -248,6 +254,7 @@ describe('loadChampionPage', () => {
 		expect(page.matchups).toBeNull();
 		expect(page.patches).toEqual([]);
 		expect(page.setBuilds?.builds).toHaveLength(3);
+		expect(page.complete).toBe(false);
 	});
 
 	it('still loads when the builds, matchups and patch list calls throw', async () => {

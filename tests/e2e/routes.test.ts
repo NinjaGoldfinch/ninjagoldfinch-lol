@@ -323,3 +323,31 @@ test('error pages are not cached, except briefly for not found', async ({ reques
 	expect(broken.status()).toBe(503);
 	expect(broken.headers()['cache-control']).toBe('no-store');
 });
+
+test('redirects and failed data requests are never cached', async ({ request }) => {
+	const old = await request.get('/summoner/oce/NinjaGoldfinch-OCENZ', { maxRedirects: 0 });
+	expect(old.status()).toBe(308);
+	expect(old.headers()['cache-control']).toBe('no-store');
+
+	const messy = await request.get('/champions?junk=1', { maxRedirects: 0 });
+	expect(messy.status()).toBe(307);
+	expect(messy.headers()['cache-control']).toBe('no-store');
+
+	// SvelteKit answers a data request whose load threw 200, with the error
+	// inside, and marks it uncached itself.
+	const data = await request.get('/summoner/Somebody-KR1/__data.json');
+	expect(data.status()).toBe(200);
+	expect(await data.text()).toContain('"type":"error"');
+	expect(data.headers()['cache-control']).toBe('private, no-store');
+});
+
+test("a champion's name moves for good, its query only for now", async ({ request }) => {
+	const name = await request.get('/champions/Ahri?role=mid', { maxRedirects: 0 });
+	expect(name.status()).toBe(308);
+	expect(name.headers()['location']).toBe('/champions/ahri?role=mid');
+
+	const query = await request.get('/champions/ahri?role=mid&junk=1', { maxRedirects: 0 });
+	expect(query.status()).toBe(307);
+	expect(query.headers()['location']).toBe('/champions/ahri?role=mid');
+	expect(query.headers()['cache-control']).toBe('no-store');
+});

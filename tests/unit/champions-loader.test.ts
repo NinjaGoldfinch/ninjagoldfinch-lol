@@ -45,6 +45,7 @@ describe('loadChampions', () => {
 		expect(page.table.rows.length).toBeGreaterThan(100);
 		expect(page.patches[0]).toBe('16.20');
 		expect(page.ddragonVersion).toBe('16.20.1');
+		expect(page.complete).toBe(true);
 	});
 
 	it('sends a tier and above on the table only, not the patch list', async () => {
@@ -68,6 +69,7 @@ describe('loadChampions', () => {
 		const page = await loadChampions({ role: null, patch: 'all', rank: null }, { client: proxy });
 		expect(page.patches).toEqual([]);
 		expect(page.table.rows.length).toBeGreaterThan(100);
+		expect(page.complete).toBe(false);
 	});
 
 	it('still loads when the patch list call throws', async () => {

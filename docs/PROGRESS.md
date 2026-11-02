@@ -70,7 +70,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-01 The deploy test cannot touch the real repo: every `GIT_*` location variable unset — #73
 - [x] RV-02 Riot IDs checked before they reach riot-proxy: no `.` or `..`, the spec's lengths; the proxy client refuses a rewritten path — #74
 - [x] RV-03 Every outbound call has a deadline that fires; anything but the caller's abort is a 503; a deadline on CommunityDragon; a 429 kept as a 429 — #75 (ADR-044)
-- [ ] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query
+- [x] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query — #76 (ADR-045)
 - [ ] RV-05 Lower-case match ids redirect to upper case
 - [ ] RV-06 Match tabs keep the scroll; recent searches recorded on every profile
 - [ ] RV-07 Match and profile edge cases: skill order, a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait

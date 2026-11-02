@@ -103,7 +103,7 @@ sequenceDiagram
   end
 ```
 
-- Only the match page needs it, once per patch per process (`src/lib/server/cdragon.ts:14-39`, `src/lib/server/match.ts:61-64`).
+- Only the match page needs it, once per patch per process (`src/lib/server/cdragon.ts:14-39`, `src/lib/server/match.ts:69-73`).
 - `CDRAGON_URL` defaults to `https://raw.communitydragon.org` (`src/lib/server/env.ts:17-25`); production does not set it (owner-supplied env names).
 - The fetch has a 5 s deadline, `CDRAGON_BUDGET_MS`, which covers the body; the timer is cleared once the body is parsed (`src/lib/server/cdragon.ts:11-32`).
 - This is the one outbound call that does not go to riot-proxy; it is for data riot-proxy does not mirror (ADR-026, `docs/DECISIONS.md:319`).
@@ -122,5 +122,5 @@ A deploy pulls `main` over SSH with a read-only deploy key belonging to the `nin
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L61-L64`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L7-L71`, `README.md:L55-L64,L96-L111`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L388`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L69-L73`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L7-L71`, `README.md:L55-L64,L96-L111`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L388`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
+**Last verified:** 2026-11-03 against commit `99cb82c`

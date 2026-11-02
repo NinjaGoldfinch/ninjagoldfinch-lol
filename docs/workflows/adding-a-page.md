@@ -48,12 +48,12 @@ Each domain module has a test in `tests/unit/` named after it (here `tests/unit/
 
 ### 3. The loader
 
-A loader in `src/lib/server/` makes the riot-proxy calls through the one client, `proxy` from `src/lib/server/proxy.ts`, and accepts an injected client so tests can replace it (`src/lib/server/champions.ts:33-36`). Decide for each call whether the page can live without it:
+A loader in `src/lib/server/` makes the riot-proxy calls through the one client, `proxy` from `src/lib/server/proxy.ts`, and accepts an injected client so tests can replace it (`src/lib/server/champions.ts:35-38`). Decide for each call whether the page can live without it:
 
-- **Essential:** check `response.ok` and call `toHttpError(response, error)`, which turns riot-proxy's failure into the page's 404, 429 or 503 (`src/lib/server/champions.ts:44`, `src/lib/server/errors.ts:16-39`).
-- **Optional:** wrap the call in `optional(...)`, so a throw (unreachable, timed out) becomes a 503 response for that call alone, then degrade (`src/lib/server/champions.ts:39-41,45-46`, `src/lib/server/errors.ts:54-58`).
+- **Essential:** check `response.ok` and call `toHttpError(response, error)`, which turns riot-proxy's failure into the page's 404, 429 or 503 (`src/lib/server/champions.ts:46`, `src/lib/server/errors.ts:16-39`).
+- **Optional:** wrap the call in `optional(...)`, so a throw (unreachable, timed out) becomes a 503 response for that call alone, then degrade (`src/lib/server/champions.ts:41-43,47-48`, `src/lib/server/errors.ts:54-58`).
 
-Run independent calls in parallel with `Promise.all` (`src/lib/server/champions.ts:37-43`). Shared lookups such as the current patch and Data Dragon names come from `currentPatch` and `staticNames`, which hold their results in memory ([data/caching.md](../data/caching.md)).
+Run independent calls in parallel with `Promise.all` (`src/lib/server/champions.ts:39-45`). Shared lookups such as the current patch and Data Dragon names come from `currentPatch` and `staticNames`, which hold their results in memory ([data/caching.md](../data/caching.md)).
 
 ### 4. Test the loader with fixtures
 
@@ -70,12 +70,13 @@ export const load: PageServerLoad = async ({ url, untrack, setHeaders }) => {
 	if (untrack(() => url.search) !== query) redirect(307, url.pathname + query);
 
 	const page = await loadChampions(filter);
-	setHeaders(cacheControl('analytics'));
+	// A page with a part missing is not kept at the edge.
+	setHeaders(cacheControl(page.complete ? 'analytics' : 'none'));
 	return { filter, ...page };
 };
 ```
 
-(`src/routes/champions/+page.server.ts:7-19`.) Pick a policy from `CACHE_POLICIES` (`src/lib/server/cache.ts:5-16`) or add one there with a test in `tests/unit/cache.test.ts`. You do not need to handle errors or POSTs: `src/hooks.server.ts:5-10` overrides the header to `no-store` for non-GET requests and errors, and to `notFound` for 404s.
+(`src/routes/champions/+page.server.ts:7-20`.) Pick a policy from `CACHE_POLICIES` (`src/lib/server/cache.ts:5-16`) or add one there with a test in `tests/unit/cache.test.ts`. If the page has optional calls, have the loader return whether they all loaded (`complete`, `src/lib/server/champions.ts:50-53`) and send `none` when one failed, so the gap is not cached (ADR-045). You do not need to handle errors, POSTs or redirects: `src/hooks.server.ts:6-15` overrides the header to `no-store` for non-GET requests and errors, to `notFound` for 404s, and gives `no-store` to any response without one, such as a redirect thrown before `setHeaders`.
 
 A path that only redirects uses `+server.ts` with a `GET` handler instead (for example `src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 
@@ -104,5 +105,5 @@ Then commit on a task branch (`<type>/<task-id>-<slug>`) with a scoped Conventio
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L19`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L59`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L5-L10`, `src/routes/+layout.svelte:L1-L49`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L20`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L64`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L6-L15`, `src/routes/+layout.svelte:L1-L49`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
+**Last verified:** 2026-11-03 against commit `99cb82c`

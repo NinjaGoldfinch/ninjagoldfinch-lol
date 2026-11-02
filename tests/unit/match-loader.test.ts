@@ -52,6 +52,7 @@ describe('loadMatch', () => {
 		expect(match.ddragonVersion).toBe('16.20.1');
 		expect(match.teams).toHaveLength(2);
 		expect(match.gold).toHaveLength(34);
+		expect(match.complete).toBe(true);
 		expect(match.builds).toHaveLength(10);
 		expect(match.builds[7].timeline?.visits[0].at).toBe(15);
 		expect(match.builds[7].runes.shards.map((s) => s?.name)).toEqual([
@@ -72,6 +73,7 @@ describe('loadMatch', () => {
 		});
 		expect(match.builds[7].runes.shards).toEqual([null, null, null]);
 		expect(match.builds[7].runes.primary.path?.name).toBe('Sorcery');
+		expect(match.complete).toBe(false);
 	});
 
 	it("does not ask riot-proxy for a match id from another region's platform", async () => {
@@ -113,6 +115,7 @@ describe('loadMatch', () => {
 		const match = await loadMatch(oce, 'OC1_712351051', { client: proxy, cdragon });
 		expect(match.teams).toHaveLength(2);
 		expect(match.gold).toBeNull();
+		expect(match.complete).toBe(false);
 		expect(match.objectives).toBeNull();
 		expect(match.builds[0]).toMatchObject({ timeline: null });
 	});
@@ -147,5 +150,6 @@ describe('loadMatch', () => {
 		const match = await loadMatch(oce, 'OC1_712351051', { client: proxy, cdragon });
 		expect(match.teams[1].players[3].champion).toMatchObject({ key: null, name: 'Kaisa' });
 		expect(match.queue).toBe('Queue 420');
+		expect(match.complete).toBe(false);
 	});
 });

@@ -54,6 +54,8 @@ export interface ChampionPage {
 	ddragonVersion: string;
 	/** For the header search's suggestions. */
 	championNames: string[];
+	/** false when the set builds, the matchups or the patch list failed. */
+	complete: boolean;
 }
 
 /**
@@ -169,7 +171,8 @@ export async function loadChampionPage(
 		matchupRole,
 		patches: patchOptions(patches.response.ok ? patches.data : undefined),
 		ddragonVersion,
-		championNames: championNames(names.champions)
+		championNames: championNames(names.champions),
+		complete: builds.response.ok && matchups.response.ok && patches.response.ok
 	};
 }
 

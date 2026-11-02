@@ -14,6 +14,7 @@ export const load: PageServerLoad = async ({ url, untrack, setHeaders }) => {
 	if (untrack(() => url.search) !== query) redirect(307, url.pathname + query);
 
 	const page = await loadChampions(filter);
-	setHeaders(cacheControl('analytics'));
+	// A page with a part missing is not kept at the edge.
+	setHeaders(cacheControl(page.complete ? 'analytics' : 'none'));
 	return { filter, ...page };
 };

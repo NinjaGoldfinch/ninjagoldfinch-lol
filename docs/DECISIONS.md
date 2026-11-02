@@ -611,3 +611,18 @@ Date: 2026-11-03 · Task: RV-03
 - The unit tests run with `--expose-gc`, and a test collects garbage while hung calls wait on their deadlines.
 
 **Consequences.** A hung or stopped riot-proxy shows "Temporarily unavailable" with a 503 that the edge does not cache, in at most the call's budget. A 500 now means a bug.
+
+## ADR-045: No response leaves without a cache policy; a page with a part missing is not cached
+
+Date: 2026-11-03 · Task: RV-04
+
+**Context.** The `handle` hook replaced the policy only on errors and form posts. A redirect thrown before a load called `setHeaders` (the profile's and `/champions`' tidied queries, a champion's name, the two old-URL routes) went out with no `Cache-Control`, which Cloudflare's Cache Everything rule caches for its default TTL. A match page whose Data Dragon lookups or CommunityDragon shards fell back was cached for a day like a complete one, and a champions page without its patch list for 10 minutes. `/champions/[key]` tidied its query with a 308, which browsers keep for good, so a later change of default or a champion the lookups did not know yet could not undo it. SvelteKit's own data responses already carry `private, no-store`, failed loads included.
+
+**Decision.**
+
+- **A response without `Cache-Control` gets `no-store`** in the `handle` hook, after the error and form-post rules.
+- **The home page is prerendered**, like `/about`, so it is still served as a static file rather than falling under `no-store`.
+- **`complete`.** `loadMatch`, `loadChampions` and `loadChampionPage` return whether every optional part loaded: the timeline, lookups and shards on a match; the patch list and lookups on `/champions`; the set builds, matchups and patch list on a champion page. An incomplete page gets `none`, as the profile already did without its match history.
+- **308 for a champion's name, 307 for its query.**
+
+**Consequences.** A degraded page costs riot-proxy a request per view until it recovers, as an error page does. Redirects are not cached at the edge.

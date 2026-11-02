@@ -103,7 +103,7 @@ Observed on 2026-10-20 with the production build, before RV-03; RV-03 changed th
 2. `sudo journalctl -u riot-proxy --since '-15 min'`.
 3. Fix or restart riot-proxy per its own runbook. The site needs no restart; it recovers on the next request.
 
-Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s (`src/hooks.server.ts:5-10`).
+Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:6-15`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
 
 ## Riot outage or Riot key suspended
 
@@ -165,5 +165,5 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L94-L111`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L11-L19,L124-L128`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L5-L20`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L94-L111`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L11-L19,L124-L128`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L6-L25`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
+**Last verified:** 2026-11-03 against commit `99cb82c`

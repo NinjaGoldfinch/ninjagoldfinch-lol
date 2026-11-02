@@ -6,23 +6,23 @@ The modules inside ninjagoldfinch.lol, what each is responsible for, and which w
 
 The code is split so that anything holding the riot-proxy key stays on the server, and anything that shapes data is a pure function with a unit test (`CLAUDE.md:31-42`, `docs/IMPLEMENTATION.md:170`).
 
-| Layer           | Path                                                            | Runs on           | Responsibility                                                                                                   |
-| --------------- | --------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| hooks           | `src/hooks.server.ts`                                           | server            | Forces cache policy on errors and posts; turns unexpected errors into a generic message (`:5-20`)                |
-| env rules       | `src/env.ts`, `src/lib/server/env.ts`                           | server, start-up  | Declares and validates `PROXY_URL`, `PROXY_KEY`, `CDRAGON_URL`, `PUBLIC_SITE_NAME`                               |
-| route loads     | `src/routes/**/+page.server.ts`, `+server.ts`                   | server            | Parse the URL, redirect to the canonical URL, call a loader, set `Cache-Control`                                 |
-| loaders         | `src/lib/server/{profile,match,champions,champion-page}.ts`     | server            | Make the riot-proxy calls for one page, decide which are essential, build the page's data                        |
-| proxy client    | `src/lib/server/proxy.ts`                                       | server            | The one openapi-fetch client: base URL, bearer key, deadlines, failure and slow-call logging                     |
-| error mapping   | `src/lib/server/errors.ts`                                      | server            | Maps riot-proxy errors to 404, 429 or 503; `optional()` for calls a page can do without                          |
-| cache policy    | `src/lib/server/cache.ts`                                       | server            | The five `Cache-Control` policies and the rule for errors and posts                                              |
-| static lookups  | `src/lib/server/{patch,static-data,cdragon}.ts`                 | server            | Current patch (5 min), Data Dragon names (per patch) and CommunityDragon stat shards (per patch), held in memory |
-| API types       | `src/lib/api/schema.d.ts`                                       | both (types only) | Generated from `openapi/riot-proxy.json` by `just gen`; never edited by hand                                     |
-| API parsers     | `src/lib/api/{match,ddragon,cdragon,riot}.ts`                   | both              | Type and check the Riot and Data Dragon payloads the spec leaves untyped; project the fields the site uses       |
-| domain layer    | `src/lib/domain/*.ts`                                           | both              | Pure functions: Riot ID parsing, regions, filters, match rows, builds, timeline maths, champion tables           |
-| asset URLs      | `src/lib/assets.ts`                                             | both              | The only place image URLs are built (Data Dragon CDN, CommunityDragon)                                           |
-| components      | `src/lib/components/*.svelte`                                   | both              | Rendering; Svelte 5 runes only                                                                                   |
-| pages           | `src/routes/**/+page.svelte`, `+layout.svelte`, `+error.svelte` | both              | Compose components; the layout carries the search form and the Riot legal notice                                 |
-| browser helpers | `src/lib/recent-storage.ts`                                     | browser           | Recent searches in `localStorage`                                                                                |
+| Layer           | Path                                                            | Runs on           | Responsibility                                                                                                                   |
+| --------------- | --------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| hooks           | `src/hooks.server.ts`                                           | server            | Forces cache policy on errors and posts, `no-store` where none was set; turns unexpected errors into a generic message (`:6-25`) |
+| env rules       | `src/env.ts`, `src/lib/server/env.ts`                           | server, start-up  | Declares and validates `PROXY_URL`, `PROXY_KEY`, `CDRAGON_URL`, `PUBLIC_SITE_NAME`                                               |
+| route loads     | `src/routes/**/+page.server.ts`, `+server.ts`                   | server            | Parse the URL, redirect to the canonical URL, call a loader, set `Cache-Control`                                                 |
+| loaders         | `src/lib/server/{profile,match,champions,champion-page}.ts`     | server            | Make the riot-proxy calls for one page, decide which are essential, build the page's data                                        |
+| proxy client    | `src/lib/server/proxy.ts`                                       | server            | The one openapi-fetch client: base URL, bearer key, deadlines, failure and slow-call logging                                     |
+| error mapping   | `src/lib/server/errors.ts`                                      | server            | Maps riot-proxy errors to 404, 429 or 503; `optional()` for calls a page can do without                                          |
+| cache policy    | `src/lib/server/cache.ts`                                       | server            | The five `Cache-Control` policies and the rule for errors and posts                                                              |
+| static lookups  | `src/lib/server/{patch,static-data,cdragon}.ts`                 | server            | Current patch (5 min), Data Dragon names (per patch) and CommunityDragon stat shards (per patch), held in memory                 |
+| API types       | `src/lib/api/schema.d.ts`                                       | both (types only) | Generated from `openapi/riot-proxy.json` by `just gen`; never edited by hand                                                     |
+| API parsers     | `src/lib/api/{match,ddragon,cdragon,riot}.ts`                   | both              | Type and check the Riot and Data Dragon payloads the spec leaves untyped; project the fields the site uses                       |
+| domain layer    | `src/lib/domain/*.ts`                                           | both              | Pure functions: Riot ID parsing, regions, filters, match rows, builds, timeline maths, champion tables                           |
+| asset URLs      | `src/lib/assets.ts`                                             | both              | The only place image URLs are built (Data Dragon CDN, CommunityDragon)                                                           |
+| components      | `src/lib/components/*.svelte`                                   | both              | Rendering; Svelte 5 runes only                                                                                                   |
+| pages           | `src/routes/**/+page.svelte`, `+layout.svelte`, `+error.svelte` | both              | Compose components; the layout carries the search form and the Riot legal notice                                                 |
+| browser helpers | `src/lib/recent-storage.ts`                                     | browser           | Recent searches in `localStorage`                                                                                                |
 
 SvelteKit refuses to bundle `src/lib/server/` into client code, and no `.svelte` file imports it (checked with `grep -rn "lib/server" src --include=*.svelte`: no hits).
 
@@ -79,10 +79,10 @@ Each page has one loader that owns its riot-proxy calls. Essential calls fail th
 | Loader             | Page                 | Essential calls                                       | Optional calls                                      | Source                                    |
 | ------------------ | -------------------- | ----------------------------------------------------- | --------------------------------------------------- | ----------------------------------------- |
 | `loadProfile`      | `/summoner/{riotId}` | profile; current patch                                | match page; Data Dragon names (fallback `NO_NAMES`) | `src/lib/server/profile.ts:72-152`        |
-| `loadMatch`        | `/match/{matchId}`   | match; patch versions                                 | timeline; Data Dragon names; CommunityDragon shards | `src/lib/server/match.ts:29-73`           |
-| `loadChampions`    | `/champions`         | champion table; current patch                         | patch list; Data Dragon names                       | `src/lib/server/champions.ts:33-59`       |
-| `findChampionPage` | `/champions/{key}`   | current patch; Data Dragon names (to resolve the URL) | —                                                   | `src/lib/server/champion-page.ts:82-101`  |
-| `loadChampionPage` | `/champions/{key}`   | champion detail                                       | set builds; matchups; patch list                    | `src/lib/server/champion-page.ts:111-174` |
+| `loadMatch`        | `/match/{matchId}`   | match; patch versions                                 | timeline; Data Dragon names; CommunityDragon shards | `src/lib/server/match.ts:35-83`           |
+| `loadChampions`    | `/champions`         | champion table; current patch                         | patch list; Data Dragon names                       | `src/lib/server/champions.ts:35-64`       |
+| `findChampionPage` | `/champions/{key}`   | current patch; Data Dragon names (to resolve the URL) | —                                                   | `src/lib/server/champion-page.ts:84-103`  |
+| `loadChampionPage` | `/champions/{key}`   | champion detail                                       | set builds; matchups; patch list                    | `src/lib/server/champion-page.ts:113-177` |
 
 The search page (`src/routes/search/+page.server.ts:18-47`) has no loader module: it redirects a Riot ID without calling riot-proxy, and for a champion name it uses the static lookups only.
 
@@ -114,5 +114,5 @@ Each has a test in `tests/unit/` with the same base name.
 
 ---
 
-**Sources:** `src/hooks.server.ts:L5-L20`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L174`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `src/hooks.server.ts:L6-L25`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champions.ts:L35-L64`, `src/lib/server/champion-page.ts:L84-L177`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
+**Last verified:** 2026-11-03 against commit `99cb82c`

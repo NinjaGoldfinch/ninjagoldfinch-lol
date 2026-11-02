@@ -9,9 +9,9 @@ A page's time is almost all riot-proxy's: the site's own rendering is a few mill
 | Page                 | riot-proxy calls (in parallel where possible)                                                                                | Site work                                                            | Source                                                                  |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `/summoner/{riotId}` | profile, then match list (10 per page) and current patch together; Data Dragon lookups if not held                           | shaping rows                                                         | `src/lib/server/profile.ts:76-116`, `src/lib/domain/match-filters.ts:7` |
-| `/match/{matchId}`   | match, timeline and current patch together; then Data Dragon lookups and CommunityDragon `perks.json` together, if not held  | parsing match and timeline, builds, gold chart (the heaviest render) | `src/lib/server/match.ts:36-72`                                         |
-| `/champions`         | table, patch list and current patch together; Data Dragon lookups if not held                                                | summing tiers, sorting                                               | `src/lib/server/champions.ts:37-58`                                     |
-| `/champions/{key}`   | current patch and Data Dragon lookups first (to resolve the champion), then detail, builds, matchups and patch list together | shaping cards                                                        | `src/lib/server/champion-page.ts:86-148`                                |
+| `/match/{matchId}`   | match, timeline and current patch together; then Data Dragon lookups and CommunityDragon `perks.json` together, if not held  | parsing match and timeline, builds, gold chart (the heaviest render) | `src/lib/server/match.ts:42-81`                                         |
+| `/champions`         | table, patch list and current patch together; Data Dragon lookups if not held                                                | summing tiers, sorting                                               | `src/lib/server/champions.ts:39-63`                                     |
+| `/champions/{key}`   | current patch and Data Dragon lookups first (to resolve the champion), then detail, builds, matchups and patch list together | shaping cards                                                        | `src/lib/server/champion-page.ts:88-150`                                |
 
 Shared lookups are held in memory so most requests skip them: the current patch for 5 minutes, and the Data Dragon names and CommunityDragon stat shards for the current patch until it changes. Concurrent requests share one in-flight fetch, and a failed fetch is not kept (`src/lib/server/patch.ts:50-68`, `src/lib/server/static-data.ts:24-39`, ADR-013, ADR-041).
 
@@ -57,7 +57,7 @@ None of these is a setting; each is a constant in code, changed by a commit with
 | adapter-node settings               | `KEEP_ALIVE_TIMEOUT`, `HEADERS_TIMEOUT`, `BODY_SIZE_LIMIT`                                  | Node HTTP server behaviour; none set                                                          | [deployment/configuration.md](../deployment/configuration.md#server-settings-adapter-node) |
 | `NODE_OPTIONS=--max-old-space-size` | unset (Node's default)                                                                      | Bounds the V8 heap; not set in production                                                     | [deployment/capacity.md](../deployment/capacity.md#memory)                                 |
 
-The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and fewer riot-proxy calls, at the cost of staler pages. Profile pages are kept short because Refresh and new games should show quickly; match pages are long because a finished match never changes (`src/lib/server/cache.ts:6-11`).
+The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and fewer riot-proxy calls, at the cost of staler pages. Profile pages are kept short because Refresh and new games should show quickly; match pages are long because a finished match never changes (`src/lib/server/cache.ts:6-11`). A page with an optional part missing is sent `no-store`, so while that part fails every view of it is rendered again and calls riot-proxy, as an error page does (ADR-045).
 
 ## What was decided against
 
@@ -74,5 +74,5 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L76-L116`, `src/lib/server/match.ts:L36-L72`, `src/lib/server/champions.ts:L37-L58`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L24-L39`, `src/lib/server/proxy.ts:L36-L77`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L515-L563`; local measurements 2026-10-20
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `src/lib/server/profile.ts:L76-L116`, `src/lib/server/match.ts:L42-L81`, `src/lib/server/champions.ts:L39-L63`, `src/lib/server/champion-page.ts:L88-L150`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L24-L39`, `src/lib/server/proxy.ts:L36-L77`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L515-L563`; local measurements 2026-10-20
+**Last verified:** 2026-11-03 against commit `99cb82c`
