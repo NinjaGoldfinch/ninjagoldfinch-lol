@@ -46,7 +46,7 @@ cd "$repo" && just gen
 
 ## 2. Call it from a loader
 
-Loaders in `src/lib/server/` call the typed client `proxy` (`src/lib/server/proxy.ts:105-106`). openapi-fetch checks the path template and parameters against `paths` from the generated types:
+Loaders in `src/lib/server/` call the typed client `proxy` (`src/lib/server/proxy.ts:152-153`). openapi-fetch checks the path template and parameters against `paths` from the generated types:
 
 ```ts
 const [matchResponse, timelineResponse, versions] = await Promise.all([
@@ -61,14 +61,14 @@ if (!matchResponse.response.ok) toHttpError(matchResponse.response, matchRespons
 
 What the client already does for you, so do not repeat it:
 
-| Behaviour                                                                                                             | Source                           |
-| --------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| Sends `Authorization: Bearer <PROXY_KEY>` when a key is set                                                           | `src/lib/server/proxy.ts:89-100` |
-| Deadline per call: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else; a timeout throws a 503 | `src/lib/server/proxy.ts:55-87`  |
-| Logs every non-2xx with riot-proxy's `X-Request-Id`, and every throw as `proxy unreachable`                           | `src/lib/server/proxy.ts:6-21`   |
-| Logs analytics calls slower than 250 ms with `X-Cache`                                                                | `src/lib/server/proxy.ts:23-53`  |
+| Behaviour                                                                                                                                                                                                  | Source                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Sends `Authorization: Bearer <PROXY_KEY>` when a key is set                                                                                                                                                | `src/lib/server/proxy.ts:136-147` |
+| Deadline per call: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else; a timeout or an unreachable riot-proxy throws a 503 and is logged as `proxy timeout` or `proxy unreachable` | `src/lib/server/proxy.ts:68-134`  |
+| Logs every non-2xx with riot-proxy's `X-Request-Id`                                                                                                                                                        | `src/lib/server/proxy.ts:6-19`    |
+| Logs analytics calls slower than 250 ms with `X-Cache`                                                                                                                                                     | `src/lib/server/proxy.ts:36-66`   |
 
-If the new route sits under a new path prefix and should have the short budget, change `proxyBudget` and its test in `tests/unit/proxy.test.ts:107-112`. There are no retries in the site; riot-proxy does its own retrying of Riot ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md)).
+If the new route sits under a new path prefix and should have the short budget, change `proxyBudget` and its test in `tests/unit/proxy.test.ts:128-133`. There are no retries in the site; riot-proxy does its own retrying of Riot ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md)).
 
 ## 3. Type the response
 
@@ -104,5 +104,5 @@ Every path the code requests needs a fixture, or the mock proxy answers 500 (`te
 
 ---
 
-**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L55-L78`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L6-L106`, `src/lib/server/match.ts:L29-L48`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023)
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L55-L78`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/match.ts:L29-L48`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023)
+**Last verified:** 2026-11-03 against commit `2948c82`

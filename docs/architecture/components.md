@@ -81,8 +81,8 @@ Each page has one loader that owns its riot-proxy calls. Essential calls fail th
 | `loadProfile`      | `/summoner/{riotId}` | profile; current patch                                | match page; Data Dragon names (fallback `NO_NAMES`) | `src/lib/server/profile.ts:72-152`        |
 | `loadMatch`        | `/match/{matchId}`   | match; patch versions                                 | timeline; Data Dragon names; CommunityDragon shards | `src/lib/server/match.ts:29-73`           |
 | `loadChampions`    | `/champions`         | champion table; current patch                         | patch list; Data Dragon names                       | `src/lib/server/champions.ts:33-59`       |
-| `findChampionPage` | `/champions/{key}`   | current patch; Data Dragon names (to resolve the URL) | —                                                   | `src/lib/server/champion-page.ts:82-99`   |
-| `loadChampionPage` | `/champions/{key}`   | champion detail                                       | set builds; matchups; patch list                    | `src/lib/server/champion-page.ts:109-172` |
+| `findChampionPage` | `/champions/{key}`   | current patch; Data Dragon names (to resolve the URL) | —                                                   | `src/lib/server/champion-page.ts:82-101`  |
+| `loadChampionPage` | `/champions/{key}`   | champion detail                                       | set builds; matchups; patch list                    | `src/lib/server/champion-page.ts:111-174` |
 
 The search page (`src/routes/search/+page.server.ts:18-47`) has no loader module: it redirects a Riot ID without calling riot-proxy, and for a champion name it uses the static lookups only.
 
@@ -114,5 +114,5 @@ Each has a test in `tests/unit/` with the same base name.
 
 ---
 
-**Sources:** `src/hooks.server.ts:L5-L20`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L106`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L172`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `src/hooks.server.ts:L5-L20`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L174`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
+**Last verified:** 2026-11-03 against commit `2948c82`

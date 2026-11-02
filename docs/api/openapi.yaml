@@ -167,7 +167,7 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
         '500':
-          $ref: '#/components/responses/Unreachable'
+          $ref: '#/components/responses/UnexpectedError'
     post:
       tags: [pages]
       operationId: refreshProfile
@@ -230,7 +230,7 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
         '500':
-          $ref: '#/components/responses/Unreachable'
+          $ref: '#/components/responses/UnexpectedError'
   /summoner/{region}/{riotId}:
     parameters:
       - $ref: '#/components/parameters/RegionSlug'
@@ -299,7 +299,7 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
         '500':
-          $ref: '#/components/responses/Unreachable'
+          $ref: '#/components/responses/UnexpectedError'
   /match/{region}/{matchId}:
     parameters:
       - $ref: '#/components/parameters/RegionSlug'
@@ -342,7 +342,7 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
         '500':
-          $ref: '#/components/responses/Unreachable'
+          $ref: '#/components/responses/UnexpectedError'
   /champions/{key}:
     parameters:
       - name: key
@@ -395,7 +395,7 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
         '500':
-          $ref: '#/components/responses/Unreachable'
+          $ref: '#/components/responses/UnexpectedError'
   /robots.txt:
     get:
       tags: [pages]
@@ -510,7 +510,7 @@ components:
           schema:
             type: string
     Unavailable:
-      description: A riot-proxy call timed out, or riot-proxy answered with an error the site maps to 503.
+      description: A riot-proxy call timed out or could not connect, or riot-proxy answered with an error the site maps to 503.
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'
@@ -518,8 +518,8 @@ components:
         text/html:
           schema:
             type: string
-    Unreachable:
-      description: riot-proxy refused the connection, or another unexpected exception; handleError shows "Temporarily unavailable" with status 500.
+    UnexpectedError:
+      description: An unexpected exception (a bug); handleError shows "Temporarily unavailable" with status 500. An unreachable riot-proxy is a 503, not this.
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'

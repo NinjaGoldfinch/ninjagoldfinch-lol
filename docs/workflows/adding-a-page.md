@@ -44,7 +44,7 @@ Put everything that shapes data and has no I/O in `src/lib/domain/`, one module 
 
 ### 2. Unit-test the domain module
 
-Each domain module has a test in `tests/unit/` named after it (here `tests/unit/champion-stats.test.ts`). Vitest picks up `tests/unit/**/*.test.ts` (`vite.config.ts:24-31`) and requires every test to make at least one assertion (`vite.config.ts:23`).
+Each domain module has a test in `tests/unit/` named after it (here `tests/unit/champion-stats.test.ts`). Vitest picks up `tests/unit/**/*.test.ts` (`vite.config.ts:24-36`) and requires every test to make at least one assertion (`vite.config.ts:23`).
 
 ### 3. The loader
 
@@ -104,5 +104,5 @@ Then commit on a task branch (`<type>/<task-id>-<slug>`) with a scoped Conventio
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L19`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L59`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L5-L10`, `src/routes/+layout.svelte:L1-L49`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L34`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L19`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L59`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L5-L10`, `src/routes/+layout.svelte:L1-L49`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
+**Last verified:** 2026-11-03 against commit `2948c82`

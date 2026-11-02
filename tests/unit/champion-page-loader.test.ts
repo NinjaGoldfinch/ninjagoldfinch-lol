@@ -77,6 +77,17 @@ describe('findChampionPage', () => {
 		expect(isHttpError(failure) && failure.status).toBe(503);
 		expect(isRedirect(failure)).toBe(false);
 	});
+
+	it('stays rate limited, with the wait, when the lookups are', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { proxy } = client((path) =>
+			path.startsWith('/v1/static/champion')
+				? json(429, { error: { code: 'QUOTA_EXCEEDED', message: 'slow down', retryAfter: 7 } })
+				: undefined
+		);
+		const failure = await findChampionPage('ahri', { client: proxy }).catch((e: unknown) => e);
+		expect(isHttpError(failure, 429) && failure.body).toMatchObject({ retryAfter: 7 });
+	});
 });
 
 describe('loadChampionPage', () => {

@@ -24,7 +24,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Data Dragon version.** A full Data Dragon version, e.g. `16.20.1`, the "current patch" the site builds image URLs and loads names for. Held for 5 minutes (`src/lib/server/patch.ts:47-68`). A match from an older patch uses that patch's Data Dragon version for its icons (`src/lib/server/patch.ts:36-43`, `src/lib/server/match.ts:69`).
 
-**Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:7-71`, `src/lib/server/cdragon.ts:11-28`).
+**Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:7-71`, `src/lib/server/cdragon.ts:11-39`).
 
 **Stat shards.** The three small rune bonuses below the rune trees. Their names come from CommunityDragon because Data Dragon lacks them (ADR-015, ADR-026).
 
@@ -48,7 +48,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Essential call, optional call.** A riot-proxy call whose failure fails the page, versus one whose failure only degrades a section, wrapped in `optional()` (`src/lib/server/errors.ts:41-58`, ADR-040).
 
-**Budget (deadline).** The time limit on one riot-proxy call: 5 s for analytics and static data, 30 s otherwise; past it the call is a 503 (`src/lib/server/proxy.ts:55-87`).
+**Budget (deadline).** The time limit on one riot-proxy call: 5 s for analytics and static data, 30 s otherwise; past it the call is a 503 (`src/lib/server/proxy.ts:68-134`).
 
 **Edge cache.** Cloudflare's cache of rendered pages, controlled by the `Cache-Control` the site sends (`src/lib/server/cache.ts:5-16`, [data/caching.md](../data/caching.md)).
 
@@ -68,5 +68,5 @@ Definitions of the terms used across these docs and the code, with where each on
 
 ---
 
-**Sources:** `src/lib/domain/riot-id.ts:L14-L40`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L155-L157`, `src/lib/domain/champion-stats.ts:L22,L30`, `src/lib/api/match.ts:L8-L9`, `src/lib/server/match.ts:L20-L28,L69`, `src/lib/server/patch.ts:L36-L68`, `src/lib/server/profile.ts:L134-L135`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L55-L87`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L28`, `src/lib/assets.ts:L7-L71`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
-**Last verified:** 2026-11-03 against commit `b17c9f8`
+**Sources:** `src/lib/domain/riot-id.ts:L14-L40`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L155-L157`, `src/lib/domain/champion-stats.ts:L22,L30`, `src/lib/api/match.ts:L8-L9`, `src/lib/server/match.ts:L20-L28,L69`, `src/lib/server/patch.ts:L36-L68`, `src/lib/server/profile.ts:L134-L135`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L68-L134`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L7-L71`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
+**Last verified:** 2026-11-03 against commit `2948c82`

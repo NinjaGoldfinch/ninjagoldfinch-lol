@@ -133,15 +133,66 @@ describe('timeouts', () => {
 	});
 
 	it('fails a call that never answers once its budget is spent, as unavailable', async () => {
+		vi.useFakeTimers();
 		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const started = Date.now();
-		const failure = await createProxyClient(BASE, undefined, hang, () => 20)
+		const call = createProxyClient(BASE, undefined, hang, () => 5_000)
+			.GET('/healthz')
+			.catch((e: unknown) => e);
+
+		await vi.advanceTimersByTimeAsync(4_999);
+		expect(log).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(1);
+		const failure = await call;
+		vi.useRealTimers();
+
+		expect(isHttpError(failure, 503)).toBe(true);
+		expect(log).toHaveBeenCalledExactlyOnceWith('proxy timeout GET /healthz after 5000 ms');
+	});
+
+	// The deadline once never fired: a call nothing else held was collected
+	// before its abort reached it (RV-03). The unit tests run with --expose-gc.
+	it('fires the deadline on a call nothing else holds, through garbage collections', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { gc } = globalThis as { gc?: () => void };
+		expect(gc, 'vite.config.ts runs the unit tests with --expose-gc').toBeTypeOf('function');
+		const collect = setInterval(() => gc?.(), 1);
+		const outcomes = await Promise.all(
+			Array.from({ length: 20 }, () =>
+				createProxyClient(BASE, undefined, hang, () => 20)
+					.GET('/healthz')
+					.catch((e: unknown) => e)
+			)
+		);
+		clearInterval(collect);
+
+		expect(outcomes.every((failure) => isHttpError(failure, 503))).toBe(true);
+	});
+
+	it('fails a call to an unreachable riot-proxy as unavailable, not as a bug', async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const refused = new TypeError('fetch failed', { cause: new Error('connect ECONNREFUSED') });
+		const failure = await createProxyClient(BASE, undefined, async () => {
+			throw refused;
+		})
 			.GET('/healthz')
 			.catch((e: unknown) => e);
 
 		expect(isHttpError(failure, 503)).toBe(true);
-		expect(Date.now() - started).toBeLessThan(1_000);
-		expect(log).toHaveBeenCalledWith('proxy unreachable GET /healthz:', failure);
+		expect(log).toHaveBeenCalledExactlyOnceWith('proxy unreachable GET /healthz:', refused);
+	});
+
+	it('fails a body that breaks off as unavailable', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const broken = new ReadableStream({
+			start(controller) {
+				controller.error(new Error('socket hang up'));
+			}
+		});
+		const failure = await createProxyClient(BASE, undefined, async () => new Response(broken))
+			.GET('/healthz')
+			.catch((e: unknown) => e);
+
+		expect(isHttpError(failure, 503)).toBe(true);
 	});
 
 	it("keeps the caller's own abort", async () => {

@@ -64,7 +64,7 @@ Omitted: `data/schema.md` and `data/migrations.md`. The site has no database, ta
 | [workflows/development-setup.md](./workflows/development-setup.md)                   | Clean machine to tests and a local instance, with or without riot-proxy |
 | [workflows/adding-a-page.md](./workflows/adding-a-page.md)                           | Files to touch for a new page, with `/champions` as the example         |
 | [workflows/adding-a-proxy-call.md](./workflows/adding-a-proxy-call.md)               | Using a riot-proxy route the site does not call yet                     |
-| [workflows/testing.md](./workflows/testing.md)                                       | Unit, e2e, fixtures, mock proxy, the flaky test                         |
+| [workflows/testing.md](./workflows/testing.md)                                       | Unit, e2e, fixtures, mock proxy, deadlines under garbage collection     |
 | [workflows/release-process.md](./workflows/release-process.md)                       | Branch to production, by hand                                           |
 | [workflows/code-style-and-conventions.md](./workflows/code-style-and-conventions.md) | Format, lint, naming, errors, logging, commits                          |
 
@@ -129,4 +129,4 @@ Older project documents stay where they are: [IMPLEMENTATION.md](./IMPLEMENTATIO
 ---
 
 **Sources:** `README.md:L1-L115`, `CLAUDE.md`, `docs/_meta/inventory.md`, the files listed above
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `2948c82`

@@ -78,7 +78,7 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 | Browser ↔ Cloudflare                       | No                       | Cloudflare's edge                                                                     |
 | Cloudflare ↔ cloudflared (Tunnel)          | Yes                      | Every response the edge did not have cached                                           |
 | Site ↔ riot-proxy                          | No                       | Loopback                                                                              |
-| Site → CommunityDragon                     | Yes, small               | One `perks.json` per patch (`src/lib/server/cdragon.ts:11-28`)                        |
+| Site → CommunityDragon                     | Yes, small               | One `perks.json` per patch (`src/lib/server/cdragon.ts:11-39`)                        |
 | Browser → Data Dragon CDN, CommunityDragon | No                       | Images load from Riot's and CommunityDragon's CDNs directly (`src/lib/assets.ts:7-8`) |
 | riot-proxy ↔ Riot, Onidel, R2              | Yes                      | riot-proxy's; see its documentation                                                   |
 
@@ -98,5 +98,5 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 
 ---
 
-**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L515-L539`, `README.md:L103-L111`, `src/lib/server/cdragon.ts:L11-L28`, `src/lib/assets.ts:L7-L8`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L515-L539`, `README.md:L103-L111`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L7-L8`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
+**Last verified:** 2026-11-03 against commit `2948c82`

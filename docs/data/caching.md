@@ -49,7 +49,7 @@ The site caches no Riot player data and no analytics (`docs/DECISIONS.md:165,560
 | --------------- | ------------------------------------- | ------------------------------------------------------------------------------ | ----- | ------------------------------- |
 | `patchVersions` | `src/lib/server/patch.ts:47-68`       | Current Data Dragon version and Riot's version list from `/v1/static/versions` | —     | `PATCH_TTL_MS` 5 min            |
 | `staticNames`   | `src/lib/server/static-data.ts:24-39` | Champion, item, spell, queue and rune names; item catalogue                    | patch | Replaced when the patch changes |
-| `statShards`    | `src/lib/server/cdragon.ts:9-28`      | CommunityDragon stat shard names and icons (ids 5001–5013)                     | patch | Replaced when the patch changes |
+| `statShards`    | `src/lib/server/cdragon.ts:9-39`      | CommunityDragon stat shard names and icons (ids 5001–5013)                     | patch | Replaced when the patch changes |
 
 - One patch is held at a time; the previous one is dropped (`src/lib/server/static-data.ts:26`).
 - Concurrent requests share one in-flight fetch; a failed fetch is forgotten so the next request retries.
@@ -77,5 +77,5 @@ A profile's "Updated N minutes ago" comes from riot-proxy's `fetchedAgeSeconds`,
 
 ---
 
-**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L5-L10`, `src/lib/server/patch.ts:L47-L73`, `src/lib/server/static-data.ts:L24-L69`, `src/lib/server/cdragon.ts:L9-L33`, `src/lib/recent-storage.ts:L6`, `docs/DECISIONS.md:L163-L165,L233,L319,L527,L560-L562,L577`, `docs/IMPLEMENTATION.md:L386`, `docs/PROGRESS.md:L55`, `riot-proxy:src/riot/endpoints.rs:L14-L496`, `riot-proxy:src/config.rs:L713-L715,L726`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`, `riot-proxy:src/routes/statics.rs:L161-L167`, `riot-proxy:src/routes/players/refresh.rs:L17-L18`; headers observed on `node build` 2026-10-19
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L5-L10`, `src/lib/server/patch.ts:L47-L73`, `src/lib/server/static-data.ts:L24-L69`, `src/lib/server/cdragon.ts:L9-L44`, `src/lib/recent-storage.ts:L6`, `docs/DECISIONS.md:L163-L165,L233,L319,L527,L560-L562,L577`, `docs/IMPLEMENTATION.md:L386`, `docs/PROGRESS.md:L55`, `riot-proxy:src/riot/endpoints.rs:L14-L496`, `riot-proxy:src/config.rs:L713-L715,L726`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`, `riot-proxy:src/routes/statics.rs:L161-L167`, `riot-proxy:src/routes/players/refresh.rs:L17-L18`; headers observed on `node build` 2026-10-19
+**Last verified:** 2026-11-03 against commit `2948c82`

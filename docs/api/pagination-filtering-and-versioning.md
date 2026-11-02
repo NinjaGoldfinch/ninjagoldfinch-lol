@@ -45,7 +45,7 @@ Champion page extras: `vs=<champion key>` and `lane=<role>` pick builds against 
 
 Redirect status: `/champions` uses `307` (`src/routes/champions/+page.server.ts:14`); `/champions/{key}` uses `308`, also for a non-canonical key such as `Ahri` or `wukong` (`src/routes/champions/[key]/+page.server.ts:21-23`).
 
-Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, the detail for `limit=10`, matchups for `limit=200` (`src/lib/domain/champion-stats.ts:185-188`, `src/lib/server/champion-page.ts:121,130`).
+Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, the detail for `limit=10`, matchups for `limit=200` (`src/lib/domain/champion-stats.ts:185-188`, `src/lib/server/champion-page.ts:123,132`).
 
 ## Match page parameters
 
@@ -69,5 +69,5 @@ riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by commi
 
 ---
 
-**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L45-L50,L91-L101`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L60-L188`, `src/lib/domain/champion-page.ts:L222-L254`, `src/lib/server/champion-page.ts:L121,L130`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L23`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `docs/IMPLEMENTATION.md:L273`, `docs/DECISIONS.md:L423,L493,L572`, `README.md:L51-L66`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L45-L50,L91-L101`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L60-L188`, `src/lib/domain/champion-page.ts:L222-L254`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L23`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `docs/IMPLEMENTATION.md:L273`, `docs/DECISIONS.md:L423,L493,L572`, `README.md:L51-L66`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
+**Last verified:** 2026-11-03 against commit `2948c82`
