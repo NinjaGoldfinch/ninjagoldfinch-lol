@@ -65,6 +65,22 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 - [x] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items — #65
 
+## RV — fixes from the code review of 2026-11-03
+
+- [ ] RV-01 The deploy test cannot touch the real repo: every `GIT_*` location variable unset
+- [ ] RV-02 Riot IDs checked before they reach riot-proxy: no `.` or `..`, the spec's lengths; the proxy client refuses a rewritten path
+- [ ] RV-03 Every outbound call has a deadline that fires; anything but the caller's abort is a 503; a deadline on CommunityDragon; a 429 kept as a 429
+- [ ] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query
+- [ ] RV-05 Lower-case match ids redirect to upper case
+- [ ] RV-06 Match tabs keep the scroll; recent searches recorded on every profile
+- [ ] RV-07 Match and profile edge cases: skill order, a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait
+- [ ] RV-08 Champion pages: the tier in their wording, `?vs=` without regard to case
+- [ ] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint
+- [ ] RV-10 One definition each for duplicated helpers and labels
+- [ ] RV-11 Docs brought up to date with the ADRs; finished notes archived
+- [ ] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example`
+- [ ] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers
+
 ## Brought forward
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Remaining for P5-01: `cloudflared`, no published port, and the 200 MB image check.
