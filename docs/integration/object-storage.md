@@ -59,12 +59,12 @@ Onidel is in Sydney beside the VPS and holds the primary copy. R2 is a copy "for
 If a pack read fails (bucket unavailable, missing location or a sha256 mismatch), riot-proxy logs a warning and fetches the match or timeline from Riot again (`riot-proxy:src/archive/matches.rs:242-293`). For the site this means:
 
 - match pages for games older than the local window still load, but slower and at the cost of Riot rate limit;
-- under heavy Riot limits riot-proxy may answer `RATE_LIMITED`, which the site shows as "Too many requests" (match) or a section notice (timeline is optional, `src/lib/server/match.ts:43`);
+- under heavy Riot limits riot-proxy may answer `RATE_LIMITED`, which the site shows as "Too many requests" (match) or a section notice (timeline is optional, `src/lib/server/match.ts:59`);
 - profiles are unaffected unless a page of matches includes games riot-proxy must read from the archive.
 
 Matches already rendered stay at the edge for a day (`src/lib/server/cache.ts:8-9`), which hides a short outage for popular pages.
 
 ---
 
-**Sources:** `package.json:L48-L50`, `src/lib/assets.ts:L1-L10`, `src/lib/server/match.ts:L43`, `src/lib/server/cache.ts:L8-L9`, `README.md:L104-L112`, `riot-proxy:src/archive/pack.rs:L1-L133`, `riot-proxy:src/archive/recovery.rs:L5-L8`, `riot-proxy:src/archive/objects.rs:L1-L42`, `riot-proxy:src/archive/matches.rs:L242-L293`, `riot-proxy:src/config.rs:L736`, `riot-proxy:deploy/README.md:L14-L46`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L20`, `riot-proxy:deploy/riot-proxy-replica.timer`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L810-L820`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `package.json:L48-L50`, `src/lib/assets.ts:L1-L10`, `src/lib/server/match.ts:L59`, `src/lib/server/cache.ts:L8-L9`, `README.md:L104-L112`, `riot-proxy:src/archive/pack.rs:L1-L133`, `riot-proxy:src/archive/recovery.rs:L5-L8`, `riot-proxy:src/archive/objects.rs:L1-L42`, `riot-proxy:src/archive/matches.rs:L242-L293`, `riot-proxy:src/config.rs:L736`, `riot-proxy:deploy/README.md:L14-L46`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L20`, `riot-proxy:deploy/riot-proxy-replica.timer`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L810-L820`, owner-supplied env names (2026-10-19)
+**Last verified:** 2026-11-03 against commit `5fede17`

@@ -6,14 +6,14 @@ Where ninjagoldfinch.lol spends time on a request, the numbers measured so far, 
 
 A page's time is almost all riot-proxy's: the site's own rendering is a few milliseconds, and the edge cache answers repeat views without reaching the host at all.
 
-| Page                 | riot-proxy calls (in parallel where possible)                                                                                | Site work                                                            | Source                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `/summoner/{riotId}` | profile, then match list (10 per page) and current patch together; Data Dragon lookups if not held                           | shaping rows                                                         | `src/lib/server/profile.ts:74-111`, `src/lib/domain/match-filters.ts:7` |
-| `/match/{matchId}`   | match, timeline and current patch together; then Data Dragon lookups and CommunityDragon `perks.json` together, if not held  | parsing match and timeline, builds, gold chart (the heaviest render) | `src/lib/server/match.ts:40-76`                                         |
-| `/champions`         | table, patch list and current patch together; Data Dragon lookups if not held                                                | summing tiers, sorting                                               | `src/lib/server/champions.ts:37-57`                                     |
-| `/champions/{key}`   | current patch and Data Dragon lookups first (to resolve the champion), then detail, builds, matchups and patch list together | shaping cards                                                        | `src/lib/server/champion-page.ts:86-148`                                |
+| Page                 | riot-proxy calls (each chain in order, chains in parallel)                                                                            | Site work                                                            | Source                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `/summoner/{riotId}` | two chains together: profile, then match list (10 per page); current patch, then Data Dragon lookups if not held                      | shaping rows                                                         | `src/lib/server/profile.ts:76-114`, `src/lib/domain/match-filters.ts:7` |
+| `/match/{matchId}`   | three chains together: match; timeline; current patch, then Data Dragon lookups and CommunityDragon `perks.json` together if not held | parsing match and timeline, builds, gold chart (the heaviest render) | `src/lib/server/match.ts:42-61`                                         |
+| `/champions`         | three chains together: table; patch list; current patch, then Data Dragon lookups if not held                                         | summing tiers, sorting                                               | `src/lib/server/champions.ts:37-48`                                     |
+| `/champions/{key}`   | current patch and Data Dragon lookups first (to resolve the champion), then detail, builds, matchups and patch list together          | shaping cards                                                        | `src/lib/server/champion-page.ts:86-148`                                |
 
-Shared lookups are held in memory so most requests skip them: the current patch for 5 minutes, and the Data Dragon names and CommunityDragon stat shards for the current patch until it changes. Concurrent requests share one in-flight fetch, and a failed fetch is not kept (`src/lib/server/patch.ts:48-66`, `src/lib/server/static-data.ts:22-37`, ADR-013, ADR-041).
+No call waits for another it does not need: the current patch and its lookups depend on nothing the page asks for, so on the profile, match and champions pages they start alongside the page's own calls rather than after them (SPD-08). Shared lookups are held in memory so most requests skip them: the current patch for 5 minutes, and the Data Dragon names and CommunityDragon stat shards for the current patch until it changes. Concurrent requests share one in-flight fetch, and a failed fetch is not kept (`src/lib/server/patch.ts:48-66`, `src/lib/server/static-data.ts:22-37`, ADR-013, ADR-041).
 
 The Data Dragon `item.json` alone is about 700 kB, which is why the reduced lookups are held rather than fetched per request (`src/lib/server/static-data.ts:22-24`).
 
@@ -36,6 +36,8 @@ Warm loads usually finish under the threshold and are not logged, so they are me
 | Through Cloudflare                                                                     | `MISS` 55–69 ms, `HIT` 25–30 ms      |
 
 Before ADR-039's riot-proxy changes, production's `/champions/__data.json` took 3.9 s (`docs/DECISIONS.md:521`).
+
+**Production cold loads before SPD-08** (from `slow load` lines): a cold profile took 204–222 ms, with the static lookups waiting for the profile and match calls; a cold match page took 149–167 ms. The times after SPD-08 are to be measured with the same `slow load` line once it is deployed.
 
 **Local** (2026-10-20, 4-core development machine, Node 22.23.3, production build against the mock proxy, so riot-proxy time is near zero and this is the site's own cost):
 
@@ -81,5 +83,5 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L76`, `src/lib/server/champions.ts:L37-L57`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L9-L11`, `src/lib/server/timing.ts:L10-L86`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L647`; local measurements 2026-10-20
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/lib/server/profile.ts:L76-L114`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L9-L11`, `src/lib/server/timing.ts:L10-L86`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L647`; local measurements 2026-10-20
+**Last verified:** 2026-11-03 against commit `5fede17`

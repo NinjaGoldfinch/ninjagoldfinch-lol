@@ -34,18 +34,22 @@ export async function loadChampions(
 	filter: ChampionFilter,
 	{ client = proxy }: { client?: ProxyClient } = {}
 ): Promise<ChampionsPage> {
-	const [champions, patches, ddragonVersion] = await Promise.all([
+	// The patch's lookups start as soon as the patch is known, alongside the
+	// table rather than after it (SPD-08).
+	const [champions, patches, { ddragonVersion, names, fellBack }] = await Promise.all([
 		client.GET('/v1/lol/analytics/champions', { params: { query: proxyQuery(filter) } }),
 		optional(
 			client.GET('/v1/lol/analytics/patches', { params: { query: { queue: ANALYTICS_QUEUE } } })
 		),
-		currentPatch(client)
+		currentPatch(client).then(async (ddragonVersion) => ({
+			ddragonVersion,
+			...(await namesOrFallback(ddragonVersion, client))
+		}))
 	]);
 	if (!champions.response.ok || !champions.data) toHttpError(champions.response, champions.error);
 	if (!patches.response.ok)
 		console.error('analytics patches unavailable:', patches.response.status);
 
-	const { names, fellBack } = await namesOrFallback(ddragonVersion, client);
 	const complete = patches.response.ok && !fellBack;
 
 	return {

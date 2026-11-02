@@ -49,15 +49,17 @@ cd "$repo" && just gen
 Loaders in `src/lib/server/` call the typed client `proxy` (`src/lib/server/proxy.ts:153-154`). openapi-fetch checks the path template and parameters against `paths` from the generated types:
 
 ```ts
-const [matchResponse, timelineResponse, versions] = await Promise.all([
+const [matchResponse, timelineResponse, { versions, names, shards }] = await Promise.all([
 	client.GET('/v1/lol/matches/{region}/{matchId}', { params: { path } }),
 	optional(client.GET('/v1/lol/matches/{region}/{matchId}/timeline', { params: { path } })),
-	patchVersions(client)
+	lookups
 ]);
 if (!matchResponse.response.ok) toHttpError(matchResponse.response, matchResponse.error);
 ```
 
-(`src/lib/server/match.ts:40-46`.) Take the client as an injectable parameter defaulting to `proxy`, so tests can pass their own (`src/lib/server/match.ts:33-37`).
+(`src/lib/server/match.ts:57-62`.) Take the client as an injectable parameter defaulting to `proxy`, so tests can pass their own (`src/lib/server/match.ts:34-38`).
+
+Start calls that do not depend on each other together, and chain a call only after the one it needs. `lookups` above is the patch versions followed by the Data Dragon lookups and stat shards for that patch; none of them needs the match, so the chain runs alongside it rather than after it (SPD-08, `src/lib/server/match.ts:42-56`). If a chain is started before an `await` that can fail the page, as the profile's patch lookups are started before its profile call, wrap it in `early()`: that marks its failure handled at once, so a page that fails first leaves no unhandled rejection, while awaiting it still throws (`src/lib/server/errors.ts:60-68`, `src/lib/server/profile.ts:76-83`). `tests/unit/cold-path.test.ts` checks the order for the profile, match and champions loaders.
 
 What the client already does for you, so do not repeat it:
 
@@ -76,7 +78,7 @@ If the new route sits under a new path prefix and should have the short budget, 
 ## 3. Type the response
 
 - **Typed in the spec:** use the generated type from `components['schemas']`, as `src/lib/api/riot.ts` does for `AccountDto`, `SummonerDTO` and `LeagueEntryDTO` (ADR-018).
-- **`unknown` in the spec:** riot-proxy passes some Riot payloads through without a schema; match-v5 matches and timelines are `unknown`. Write a parser in `src/lib/api/` that types only the fields the site reads and checks them, returning `undefined` on a payload it cannot read (`src/lib/api/match.ts:1-4`, ADR-006, ADR-023). A loader treats an unreadable essential payload as 503 and logs it (`src/lib/server/match.ts:48-52`).
+- **`unknown` in the spec:** riot-proxy passes some Riot payloads through without a schema; match-v5 matches and timelines are `unknown`. Write a parser in `src/lib/api/` that types only the fields the site reads and checks them, returning `undefined` on a payload it cannot read (`src/lib/api/match.ts:1-4`, ADR-006, ADR-023). A loader treats an unreadable essential payload as 503 and logs it (`src/lib/server/match.ts:64-68`).
 
 No `any` and no non-null `!` on proxy data (`CLAUDE.md:60`).
 
@@ -107,5 +109,5 @@ Every path the code requests needs a fixture, or the mock proxy answers 500 (`te
 
 ---
 
-**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L56-L79`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/timing.ts:L32-L51`, `src/lib/server/match.ts:L33-L52`, `src/lib/server/errors.ts:L16-L58`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023, ADR-046)
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L56-L79`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/timing.ts:L32-L51`, `src/lib/server/match.ts:L34-L68`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/profile.ts:L76-L83`, `tests/unit/cold-path.test.ts`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023, ADR-046)
+**Last verified:** 2026-11-03 against commit `5fede17`

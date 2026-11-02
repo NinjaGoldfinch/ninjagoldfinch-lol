@@ -25,7 +25,7 @@ PUUIDs are never part of a model (ADR-032).
 
 ## `ProfileData` — `/summoner/{riotId}`
 
-Defined in `src/lib/server/profile.ts:18-51`, built at `:121-146`.
+Defined in `src/lib/server/profile.ts:18-51`, built at `:128-153`.
 
 | Field                             | Type                                       | From                                                                                                            |
 | --------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
@@ -62,12 +62,12 @@ Defined in `src/lib/domain/match-detail.ts:53-72`, built by `toMatchDetail` (`:9
 | `startedAt`      | epoch ms                  | Riot `info.gameCreation`                                                                                                                                       |
 | `duration`       | seconds                   | Riot `info.gameDuration`                                                                                                                                       |
 | `patch`          | `major.minor`             | Riot `info.gameVersion`                                                                                                                                        |
-| `ddragonVersion` | `string`                  | Newest Data Dragon version with the same `major.minor`, else current (`src/lib/server/match.ts:73`)                                                            |
+| `ddragonVersion` | `string`                  | Newest Data Dragon version with the same `major.minor`, else current (`src/lib/server/match.ts:80`)                                                            |
 | `teams`          | `TeamScoreboard[]`        | Riot `info.participants` grouped by `teamId`, `info.teams`                                                                                                     |
 | `gold`           | `GoldFrame[] \| null`     | Per timeline frame, each team's summed `totalGold`                                                                                                             |
 | `objectives`     | `ObjectiveKill[] \| null` | Timeline `ELITE_MONSTER_KILL` (to `killerTeamId`) and `BUILDING_KILL` (to the other team) (ADR-029)                                                            |
 | `builds`         | `Build[]`                 | Per participant: timeline build and rune page                                                                                                                  |
-| `complete`       | `boolean`                 | Added by `loadMatch`: false when the timeline, Data Dragon lookups or stat shards fell back; such a page is not cached (`src/lib/server/match.ts:18-22,60-77`) |
+| `complete`       | `boolean`                 | Added by `loadMatch`: false when the timeline, Data Dragon lookups or stat shards fell back; such a page is not cached (`src/lib/server/match.ts:18-22,76-84`) |
 
 `TeamScoreboard` (`:39-51`): `teamId`, `name`, `result`, summed `kills`/`deaths`/`assists`/`gold`, `objectives` (towers, inhibitors, dragons, barons, `riftHerald`, `horde` = voidgrubs, from Riot `teams[].objectives`), `bans`, `players`.
 
@@ -112,5 +112,5 @@ Against a lane opponent the 4th and 5th item steps are dropped and the card omit
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L17-L146`, `src/lib/server/match.ts:L18-L22,L60-L77`, `src/lib/server/patch.ts:L30-L41`, `src/lib/server/champions.ts:L14-L24`, `src/lib/server/champion-page.ts:L31-L57`, `src/lib/domain/matches.ts:L9-L85,L160-L167`, `src/lib/domain/match-detail.ts:L18-L155`, `src/lib/domain/builds.ts:L21-L214`, `src/lib/domain/champion-stats.ts:L34-L40,L197-L241`, `src/lib/domain/champion-page.ts:L17-L215`, `src/lib/domain/champion-stats.ts:L44-L47`, `src/lib/api/match.ts`, `docs/DECISIONS.md:L167`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/server/profile.ts:L17-L154`, `src/lib/server/match.ts:L18-L22,L76-L84`, `src/lib/server/patch.ts:L30-L41`, `src/lib/server/champions.ts:L14-L24`, `src/lib/server/champion-page.ts:L31-L57`, `src/lib/domain/matches.ts:L9-L85,L160-L167`, `src/lib/domain/match-detail.ts:L18-L155`, `src/lib/domain/builds.ts:L21-L214`, `src/lib/domain/champion-stats.ts:L34-L40,L197-L241`, `src/lib/domain/champion-page.ts:L17-L215`, `src/lib/domain/champion-stats.ts:L44-L47`, `src/lib/api/match.ts`, `docs/DECISIONS.md:L167`
+**Last verified:** 2026-11-03 against commit `5fede17`

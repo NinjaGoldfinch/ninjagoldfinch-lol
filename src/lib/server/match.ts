@@ -22,7 +22,8 @@ export type LoadedMatch = MatchDetail & {
 };
 
 /**
- * The match and its timeline, fetched in parallel with the patch list.
+ * The match and its timeline, fetched in parallel with the patch list and,
+ * once the patch is known, its lookups and stat shards (SPD-08).
  *
  * Only the match is essential. If the timeline fails, the page still renders
  * with `gold: null` and no item or skill order; if the Data Dragon lookups
@@ -38,10 +39,25 @@ export async function loadMatch(
 	if (!isMatchIdFor(region, matchId)) error(404, 'Not found');
 
 	const path = { region: region.route, matchId };
-	const [matchResponse, timelineResponse, versions] = await Promise.all([
+	// The patch, its lookups and stat shards don't depend on the match, so
+	// they load alongside it rather than after it.
+	const lookups = patchVersions(client).then(async (versions) => {
+		const [names, shards] = await Promise.all([
+			namesOrFallback(versions.current, client),
+			cdragon(versions.current).then(
+				(shards) => ({ shards, ok: true }),
+				(e: unknown) => {
+					console.error('CommunityDragon stat shards unavailable:', e);
+					return { shards: {}, ok: false };
+				}
+			)
+		]);
+		return { versions, names, shards };
+	});
+	const [matchResponse, timelineResponse, { versions, names, shards }] = await Promise.all([
 		client.GET('/v1/lol/matches/{region}/{matchId}', { params: { path } }),
 		optional(client.GET('/v1/lol/matches/{region}/{matchId}/timeline', { params: { path } })),
-		patchVersions(client)
+		lookups
 	]);
 	if (!matchResponse.response.ok) toHttpError(matchResponse.response, matchResponse.error);
 
@@ -57,22 +73,13 @@ export async function loadMatch(
 		console.error(`match ${matchId}: unexpected timeline payload`);
 	}
 
-	let complete = timeline !== undefined;
-	const [{ names, fellBack }, shards] = await Promise.all([
-		namesOrFallback(versions.current, client),
-		cdragon(versions.current).catch((e: unknown) => {
-			console.error('CommunityDragon stat shards unavailable:', e);
-			complete = false;
-			return {};
-		})
-	]);
-	if (fellBack) complete = false;
+	const complete = timeline !== undefined && !names.fellBack && shards.ok;
 
-	const detail = toMatchDetail(match, names, {
+	const detail = toMatchDetail(match, names.names, {
 		region,
 		ddragonVersion: ddragonVersionFor(versions.versions, match.gameVersion) ?? versions.current,
 		timeline,
-		shards
+		shards: shards.shards
 	});
 	return { ...detail, complete };
 }
