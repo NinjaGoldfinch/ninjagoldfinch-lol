@@ -118,8 +118,8 @@ Old profile URL. `308` to `/summoner/{riotId}`, keeping the query, with `no-stor
 
 Both teams' scoreboards, each player's build (in a popup), and a Timeline tab with the gold difference and objectives.
 
-- Handler: `src/routes/match/[matchId]/+page.server.ts:7-17`; loader `loadMatch`, `src/lib/server/match.ts:35-83`
-- `{matchId}`: Riot's id, e.g. `OC1_712351051`. The prefix picks the region; an unknown prefix is `404` without calling riot-proxy (`src/lib/domain/regions.ts:46-50`).
+- Handler: `src/routes/match/[matchId]/+page.server.ts:8-21`; loader `loadMatch`, `src/lib/server/match.ts:35-83`
+- `{matchId}`: Riot's id, e.g. `OC1_712351051`. The prefix picks the region; an unknown prefix is `404` without calling riot-proxy (`src/lib/domain/regions.ts:46-50`). A lower-case id (`oc1_…`) is a `308` to the upper-case one, keeping the query, with `no-store` (RV-05).
 
 | Query    | Meaning                                     | Read by                                                 |
 | -------- | ------------------------------------------- | ------------------------------------------------------- |
@@ -146,7 +146,7 @@ content-type: text/html
 
 ### `GET /match/{region}/{matchId}`
 
-Old match URL. `308` to `/match/{matchId}`, keeping the query, with `no-store`; `404` for an unknown region slug. The region in the old URL is otherwise ignored (`src/routes/match/[region]/[matchId]/+server.ts:8-11`).
+Old match URL. `308` to `/match/{matchId}`, the id upper-cased, keeping the query, with `no-store`; `404` for an unknown region slug. The region in the old URL is otherwise ignored (`src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 
 ## Champions
 
@@ -210,5 +210,5 @@ Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=6
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champions.ts:L35-L64`, `src/lib/server/champion-page.ts:L84-L188`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L6-L15`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L615-L628`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champions.ts:L35-L64`, `src/lib/server/champion-page.ts:L84-L188`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L6-L15`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L615-L628`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
+**Last verified:** 2026-11-03 against commit `c092968`

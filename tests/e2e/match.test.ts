@@ -464,6 +464,19 @@ test('a malformed match id, or an old URL with an unknown region, shows not foun
 	}
 });
 
+test('a lower-case match id moves to the upper-case one, keeping the query', async ({
+	request
+}) => {
+	const lower = await request.get('/match/oc1_712351051?tab=builds', { maxRedirects: 0 });
+	expect(lower.status()).toBe(308);
+	expect(lower.headers()['location']).toBe('/match/OC1_712351051?tab=builds');
+
+	const old = await request.get('/match/oce/oc1_712351051', { maxRedirects: 0 });
+	expect(old.headers()['location']).toBe('/match/OC1_712351051');
+
+	expect((await request.get('/match/oc1_712351051')).status()).toBe(200);
+});
+
 test('an old match URL with the wrong region still opens the match: its id names the region', async ({
 	page
 }) => {

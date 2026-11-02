@@ -265,7 +265,7 @@ paths:
         The region is the one the match id's prefix names. `player`, `tab`
         and `build` are read by the page in the browser, not by the server
         load, so they do not change the data; each URL is still its own edge
-        cache entry.
+        cache entry. A match id written in lower case moves to upper case.
       parameters:
         - name: player
           in: query
@@ -300,6 +300,13 @@ paths:
             text/html:
               schema:
                 type: string
+        '308':
+          description: A lower-case match id; redirect to the upper-case one, keeping the query.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -318,7 +325,7 @@ paths:
       summary: Old match URL with a region; redirects permanently
       responses:
         '308':
-          description: Redirect to `/match/{matchId}`, keeping the query.
+          description: Redirect to `/match/{matchId}`, the id upper-cased, keeping the query.
           headers:
             Location:
               $ref: '#/components/headers/Location'

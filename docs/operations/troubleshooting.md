@@ -130,7 +130,7 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 10. Match page without gold chart, item or skill order
 
-**Cause.** The timeline call is optional; when it fails the scoreboard renders with no gold, objectives or build timeline, and the page is sent `no-store` instead of being cached for a day (`src/lib/server/match.ts:45,57-60`, `src/routes/match/[matchId]/+page.server.ts:13-15`). An unparseable timeline logs `match <id>: unexpected timeline payload`. A match page whose Data Dragon lookups or stat shards failed is not cached either (ADR-045).
+**Cause.** The timeline call is optional; when it fails the scoreboard renders with no gold, objectives or build timeline, and the page is sent `no-store` instead of being cached for a day (`src/lib/server/match.ts:45,57-60`, `src/routes/match/[matchId]/+page.server.ts:17-19`). An unparseable timeline logs `match <id>: unexpected timeline payload`. A match page whose Data Dragon lookups or stat shards failed is not cached either (ADR-045).
 
 **Fix.** Reload later; since the page was not cached, the next request tries again.
 
@@ -194,5 +194,5 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ---
 
-**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L11-L134`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L6-L25`, `src/lib/server/profile.ts:L76-L116`, `src/lib/server/match.ts:L42-L73`, `src/lib/server/champion-page.ts:L88-L101`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L40`, `src/routes/match/[matchId]/+page.server.ts:L13-L15`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L6-L8`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L515-L563`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L11-L134`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L6-L25`, `src/lib/server/profile.ts:L76-L116`, `src/lib/server/match.ts:L42-L73`, `src/lib/server/champion-page.ts:L88-L101`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L40`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L6-L8`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L515-L563`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
+**Last verified:** 2026-11-03 against commit `c092968`
