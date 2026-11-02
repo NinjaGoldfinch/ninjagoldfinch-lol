@@ -628,3 +628,20 @@ Date: 2026-11-03 · Task: RV-04
 - **308 for a champion's name, 307 for its query.**
 
 **Consequences.** A degraded page costs riot-proxy a request per view until it recovers, as an error page does. Redirects are not cached at the edge.
+
+## ADR-046: Timing for each load, in the server log
+
+Date: 2026-11-03 · Task: SPD-07
+
+**Context.** The page-speed plan (`docs/notes/page-speed.md`) changes how loads call riot-proxy (SPD-08, SPD-09) and what they return (SPD-11). Each change needs a before and after. The only timing logged so far was a slow analytics call (`proxy slow …`, SPD-01). The owner chose server logs only: no `Server-Timing` header, so nothing reaches the browser and the edge never replays a stale timing.
+
+**Decision.**
+
+- **One line per slow request.** The `handle` hook runs each request inside `timeLoad` (`src/lib/server/timing.ts`). A request slower than `SLOW_LOAD_MS` (100 ms) logs one `console.warn` line: `slow load <route id>[ (data)] <total>ms: <METHOD> <spec path> <ms>[ <status>|failed], …`.
+- **Names, not values.** The page is its SvelteKit route id (`/summoner/[riotId]`), and each riot-proxy call its spec path template (openapi-fetch's `schemaPath`), so no player name is logged. `X-Cache` stays on the slow-analytics line.
+- **Per request.** The `timeCalls` middleware records each call in an `AsyncLocalStorage` store that `timeLoad` opens, so calls from concurrent requests are never mixed. A call made outside a request is not recorded.
+- **The total** is the whole request through `resolve`, render included.
+
+**Measurements.** Cold and warm timings for each page type (profile, match, champions, champion, search) are to be recorded here from production. Warm loads fall under the threshold, so they are measured on the host with `curl -w '%{time_total}'` against the site's own port, as ADR-039 did. Pending: the owner deploys this change first.
+
+**Consequences.** A slow page names the riot-proxy calls it waited on. The four `/v1/static/{file}` calls share one template; their order matches `staticNames`' (champion, item, summoner, runesReforged). No new dependency (`node:async_hooks`).

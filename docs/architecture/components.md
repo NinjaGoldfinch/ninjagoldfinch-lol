@@ -13,6 +13,7 @@ The code is split so that anything holding the riot-proxy key stays on the serve
 | route loads     | `src/routes/**/+page.server.ts`, `+server.ts`                   | server            | Parse the URL, redirect to the canonical URL, call a loader, set `Cache-Control`                                                 |
 | loaders         | `src/lib/server/{profile,match,champions,champion-page}.ts`     | server            | Make the riot-proxy calls for one page, decide which are essential, build the page's data                                        |
 | proxy client    | `src/lib/server/proxy.ts`                                       | server            | The one openapi-fetch client: base URL, bearer key, deadlines, failure and slow-call logging                                     |
+| load timing     | `src/lib/server/timing.ts`                                      | server            | Records each request's riot-proxy calls (`timeCalls`) and logs a request slower than 100 ms (`timeLoad`, ADR-046)                |
 | error mapping   | `src/lib/server/errors.ts`                                      | server            | Maps riot-proxy errors to 404, 429 or 503; `optional()` for calls a page can do without                                          |
 | cache policy    | `src/lib/server/cache.ts`                                       | server            | The five `Cache-Control` policies and the rule for errors and posts                                                              |
 | static lookups  | `src/lib/server/{patch,static-data,cdragon}.ts`                 | server            | Current patch (5 min), Data Dragon names (per patch) and CommunityDragon stat shards (per patch), held in memory                 |
@@ -40,6 +41,7 @@ flowchart TD
   Client[proxy client]
   Errors[error mapping]
   Cache[cache policy]
+  Timing[load timing]
   Env[env rules]
   Parsers[API parsers]
   Schema[API types schema.d.ts]
@@ -52,6 +54,7 @@ flowchart TD
   Loads --> Cache
   Loads --> Domain
   Hooks --> Cache
+  Hooks --> Timing
   Loaders --> Client
   Loaders --> Errors
   Loaders --> Static
@@ -62,6 +65,7 @@ flowchart TD
   Static -->|fetch perks.json| CDragon
   Client --> Env
   Client --> Schema
+  Client --> Timing
   Client -->|HTTP Bearer key| Proxy
   Errors --> Schema
   Domain --> Parsers
@@ -70,7 +74,7 @@ flowchart TD
   Pages --> Assets
 ```
 
-The server-only boxes are route loads, hooks, loaders, static lookups, proxy client, error mapping, cache policy and env rules. Pages and components reach only the domain layer, asset URLs and API types, which are shared.
+The server-only boxes are route loads, hooks, loaders, static lookups, proxy client, load timing, error mapping, cache policy and env rules. Pages and components reach only the domain layer, asset URLs and API types, which are shared.
 
 ## Loaders
 
@@ -115,5 +119,5 @@ Each has a test in `tests/unit/` with the same base name.
 
 ---
 
-**Sources:** `src/hooks.server.ts:L6-L25`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L70-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champions.ts:L33-L58`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L172`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/hooks.server.ts:L8-L29`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L154`, `src/lib/server/timing.ts:L1-L86`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L70-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champions.ts:L33-L58`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L172`
+**Last verified:** 2026-11-03 against commit `2658c48`

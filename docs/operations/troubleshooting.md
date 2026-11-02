@@ -51,7 +51,7 @@ Other messages from the same validators: `PROXY_URL is required, e.g. http://rio
 
 ## 2. Data pages 503 at once, `/healthz` fine
 
-**Cause.** riot-proxy is not listening. The connection is refused; the proxy client logs `proxy unreachable` and fails the call as 503, "Temporarily unavailable" (`src/lib/server/proxy.ts:124-128`). **Observed** on 2026-10-20, before RV-03: `/champions`, `/summoner/…`, `/match/…` answered in under 0.05 s, then with status 500; RV-03 made it 503.
+**Cause.** riot-proxy is not listening. The connection is refused; the proxy client logs `proxy unreachable` and fails the call as 503, "Temporarily unavailable" (`src/lib/server/proxy.ts:125-129`). **Observed** on 2026-10-20, before RV-03: `/champions`, `/summoner/…`, `/match/…` answered in under 0.05 s, then with status 500; RV-03 made it 503.
 
 **Confirm.**
 
@@ -65,7 +65,7 @@ systemctl status riot-proxy
 
 ## 3. Data pages 503 after 5 s or 30 s
 
-**Cause.** riot-proxy accepts connections but does not answer in time. Each call has a deadline: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for player and match routes; a spent deadline is a 503 (`src/lib/server/proxy.ts:68-134`, ADR-040). **Observed**: `/champions` 503 at 5.02 s; `/match/…` and `/summoner/…` 503 at 30.0 s. Before RV-03 a call's deadline could fail to fire, and one match page never finished; that was fixed ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md#deadlines-and-failures)).
+**Cause.** riot-proxy accepts connections but does not answer in time. Each call has a deadline: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for player and match routes; a spent deadline is a 503 (`src/lib/server/proxy.ts:69-135`, ADR-040). **Observed**: `/champions` 503 at 5.02 s; `/match/…` and `/summoner/…` 503 at 30.0 s. Before RV-03 a call's deadline could fail to fire, and one match page never finished; that was fixed ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md#deadlines-and-failures)).
 
 **Confirm.** `proxy timeout GET <path> after 5000 ms` (or `30000 ms`) in the journal; `curl -s -m 5 http://127.0.0.1:8080/readyz` hangs or is slow.
 
@@ -152,7 +152,9 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 13. Slow first view of a champion page
 
-**Cause.** riot-proxy computes a champion slice on first request after each analytics rebuild: about 200 ms on production, then about 1 ms (ADR-039, `docs/DECISIONS.md:523-529`). The site logs analytics calls over 250 ms as `proxy slow GET <path> x-cache=MISS <ms>ms` (`src/lib/server/proxy.ts:41-62`).
+**Cause.** riot-proxy computes a champion slice on first request after each analytics rebuild: about 200 ms on production, then about 1 ms (ADR-039, `docs/DECISIONS.md:523-529`). The site logs analytics calls over 250 ms as `proxy slow GET <path> x-cache=MISS <ms>ms` (`src/lib/server/proxy.ts:42-63`).
+
+**Confirm.** For this or any other slow page, `sudo journalctl -u ninjagoldfinch-lol | grep 'slow load'` lists each request over 100 ms with its route id and every riot-proxy call it made, by spec path and time, in the form `slow load /champions/[key] <total>ms: …, GET /v1/lol/analytics/champions/{championId} <ms>ms, …`; the slowest call is the one to look at in riot-proxy (`src/lib/server/timing.ts:58-86`, ADR-046).
 
 **Fix.** None on the site. Warming is riot-proxy's (ADR-039).
 
@@ -194,5 +196,5 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ---
 
-**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L11-L134`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L6-L25`, `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L67`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L44`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L12-L135`, `src/lib/server/errors.ts:L16-L74`, `src/hooks.server.ts:L8-L29`, `src/lib/server/timing.ts:L58-L86`, `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L67`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L44`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
+**Last verified:** 2026-11-03 against commit `2658c48`

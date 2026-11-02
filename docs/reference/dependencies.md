@@ -16,7 +16,7 @@ Version numbers below are those installed from the lockfile on 2026-10-20 (`node
 
 | Package         | Range     | Installed | Purpose                                                                                                                              | Notes                                                                                                                                                                                                  |
 | --------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `openapi-fetch` | `^0.17.0` | 0.17.0    | The typed riot-proxy client: path templates and parameters checked against the generated types (`src/lib/server/proxy.ts:2,143-149`) | ADR-006: about 6 kB, one dependency; replaces re-typing riot-proxy's paths by hand. The only package the built server imports from `node_modules` at runtime (checked in `build/server` on 2026-10-20) |
+| `openapi-fetch` | `^0.17.0` | 0.17.0    | The typed riot-proxy client: path templates and parameters checked against the generated types (`src/lib/server/proxy.ts:2,144-150`) | ADR-006: about 6 kB, one dependency; replaces re-typing riot-proxy's paths by hand. The only package the built server imports from `node_modules` at runtime (checked in `build/server` on 2026-10-20) |
 
 Everything else, Svelte and SvelteKit included, is bundled into `build/` at build time. Production still installs all dependencies because it builds on the host; the preview image prunes to production dependencies after building (`Dockerfile:12`).
 
@@ -80,4 +80,4 @@ There is no Dependabot configuration and no CI, so updates are ordinary tasks: c
 ---
 
 **Sources:** `package.json:L6-L50`, `pnpm-workspace.yaml:L1-L12`, `.npmrc:L1`, `Dockerfile:L7,L12`, `vite.config.ts:L1-L37`, `justfile:L15-L25`, `tsconfig.json:L4`, `README.md:L16-L17,L56-L65,L109`, `CLAUDE.md:L26-L27`, `deploy/proxmox/README.md:L98`, `docs/DECISIONS.md:L5-L79` (ADR-001, ADR-004, ADR-005, ADR-006), `node_modules/*/package.json` (installed versions), `build/server/chunks/static-data.js` (runtime import)
-**Last verified:** 2026-11-03 against commit `6d46c74`
+**Last verified:** 2026-11-03 against commit `2658c48`

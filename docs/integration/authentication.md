@@ -9,7 +9,7 @@ riot-proxy issues one consumer key per client. The site holds exactly one, named
 | Property             | Value                                                                             | Source                                                                                     |
 | -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Format               | `rpx_` followed by base64url of 24 random bytes                                   | `riot-proxy:src/consumers.rs:12,95-103`                                                    |
-| Sent as              | `Authorization: Bearer <key>`                                                     | `src/lib/server/proxy.ts:146`                                                              |
+| Sent as              | `Authorization: Bearer <key>`                                                     | `src/lib/server/proxy.ts:147`                                                              |
 | Stored by riot-proxy | SHA-256 hash only, in SQLite table `consumers`                                    | `riot-proxy:src/consumers.rs:105-107`, `riot-proxy:src/db/migrations/V0001__init.sql:5-13` |
 | Scopes               | `read` (all `/v1/players`, `/v1/riot`, `/v1/lol`, `/v1/static` routes) or `admin` | `riot-proxy:src/consumers.rs:18-36`, `riot-proxy:src/routes/docs.rs:118-126`               |
 | Quota                | `quota_per_min`, default 600, sliding 60 s window                                 | `riot-proxy:src/consumers.rs:14`, `riot-proxy:src/http/quota.rs:1-8`                       |
@@ -25,7 +25,7 @@ riot-proxy also accepts `?token=` when no `Authorization` header is present, but
 - Optional otherwise, for a riot-proxy running with auth disabled.
 - Validation is skipped during `vite build`, so building needs no key (`src/env.ts:5-10`, ADR-004).
 
-When the key is unset the client sends no `Authorization` header at all (`src/lib/server/proxy.ts:136-147`).
+When the key is unset the client sends no `Authorization` header at all (`src/lib/server/proxy.ts:137-148`).
 
 Where the value lives:
 
@@ -73,7 +73,7 @@ The production name `ninjagoldfinch-lol-prod` may change on the next rotation (o
 - CLI: `riot-proxy key revoke <id-or-name>`. The row and hash stay, so the key can never be reissued (`riot-proxy:src/consumers.rs:226-251`). riot-proxy's auth cache may keep accepting the key for up to 60 s (`riot-proxy:src/http/auth.rs:29-30`).
 - Admin API: `DELETE /v1/admin/consumers/{id}` revokes it and drops it from the auth cache at once (`riot-proxy:src/routes/admin.rs:240-280`).
 
-A revoked or wrong key makes riot-proxy answer `UNAUTHORIZED` (401). The site shows "Temporarily unavailable" and logs `proxy 401 GET <path> request-id=…` (`src/lib/server/errors.ts:32`, `src/lib/server/proxy.ts:11-17`).
+A revoked or wrong key makes riot-proxy answer `UNAUTHORIZED` (401). The site shows "Temporarily unavailable" and logs `proxy 401 GET <path> request-id=…` (`src/lib/server/errors.ts:32`, `src/lib/server/proxy.ts:12-18`).
 
 ## Auth-off mode for development
 
@@ -93,5 +93,5 @@ Covered in [../architecture/concurrency-and-rate-limiting.md](../architecture/co
 
 ---
 
-**Sources:** `src/env.ts:L5-L30`, `src/lib/server/env.ts:L42-L55`, `src/lib/server/proxy.ts:L11-L17,L136-L147`, `src/lib/server/errors.ts:L32`, `tests/record-fixture.ts:L105-L108`, `playwright.config.ts:L26`, `.gitignore:L15-L18`, `.dockerignore:L4-L6`, `CLAUDE.md:L15-L17`, `docs/IMPLEMENTATION.md:L194,L201`, `docs/PROGRESS.md:L123`, `riot-proxy:src/consumers.rs:L12-L251`, `riot-proxy:src/cli/key.rs:L10-L57`, `riot-proxy:src/http/auth.rs:L29-L52,L141-L156`, `riot-proxy:src/http/quota.rs:L1-L58`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:src/routes/admin.rs:L173-L280`, `riot-proxy:src/routes/docs.rs:L104-L126`, `riot-proxy:docs/CUTOVER.md:L108`, `riot-proxy:README.md:L70-L72`, `riot-proxy:docs/design/07-deployment.md:L75-L93`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L626-L627`, owner-supplied unit and answers (2026-10-19)
-**Last verified:** 2026-11-03 against commit `fbba06d`
+**Sources:** `src/env.ts:L5-L30`, `src/lib/server/env.ts:L42-L55`, `src/lib/server/proxy.ts:L12-L18,L137-L148`, `src/lib/server/errors.ts:L32`, `tests/record-fixture.ts:L105-L108`, `playwright.config.ts:L26`, `.gitignore:L15-L18`, `.dockerignore:L4-L6`, `CLAUDE.md:L15-L17`, `docs/IMPLEMENTATION.md:L194,L201`, `docs/PROGRESS.md:L123`, `riot-proxy:src/consumers.rs:L12-L251`, `riot-proxy:src/cli/key.rs:L10-L57`, `riot-proxy:src/http/auth.rs:L29-L52,L141-L156`, `riot-proxy:src/http/quota.rs:L1-L58`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:src/routes/admin.rs:L173-L280`, `riot-proxy:src/routes/docs.rs:L104-L126`, `riot-proxy:docs/CUTOVER.md:L108`, `riot-proxy:README.md:L70-L72`, `riot-proxy:docs/design/07-deployment.md:L75-L93`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L626-L627`, owner-supplied unit and answers (2026-10-19)
+**Last verified:** 2026-11-03 against commit `2658c48`

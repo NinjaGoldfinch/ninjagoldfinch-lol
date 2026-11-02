@@ -28,7 +28,7 @@ sudo journalctl -u ninjagoldfinch-lol | grep 'proxy '         # every riot-proxy
 
 Logs are plain text from `console.error`/`console.warn`, collected by journald (`README.md:101`); there is no log level setting. Every line the site writes is listed in [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#logs).
 
-**Following a failure into riot-proxy.** A failed call is logged as `proxy <status> <METHOD> <path> request-id=<id>` (`src/lib/server/proxy.ts:11-17`). riot-proxy writes the same id as `request_id` in its JSON log, so:
+**Following a failure into riot-proxy.** A failed call is logged as `proxy <status> <METHOD> <path> request-id=<id>` (`src/lib/server/proxy.ts:12-18`). riot-proxy writes the same id as `request_id` in its JSON log, so:
 
 ```sh
 sudo journalctl -u riot-proxy | grep '<id>'
@@ -97,13 +97,13 @@ Symptoms: `/healthz` 200 but data pages fail; ninja-monitor reports `riot-proxy`
 | Accepting connections but not answering | "Temporarily unavailable", HTTP 503 after 5 s (champions) or 30 s (profile, match) | `proxy timeout GET … after 5000 ms` (or `30000 ms`)               |
 | Answering 401 (bad key)                 | HTTP 503                                                                           | `proxy 401 GET … request-id=…`                                    |
 
-Observed on 2026-10-20 with the production build, before RV-03; RV-03 changed the refused connection from 500 to 503, the timeout log line, and fixed a match request against a hung riot-proxy that never finished (`src/lib/server/proxy.ts:124-128`).
+Observed on 2026-10-20 with the production build, before RV-03; RV-03 changed the refused connection from 500 to 503, the timeout log line, and fixed a match request against a hung riot-proxy that never finished (`src/lib/server/proxy.ts:125-129`).
 
 1. `systemctl status riot-proxy` and `curl -s http://127.0.0.1:8080/readyz`.
 2. `sudo journalctl -u riot-proxy --since '-15 min'`.
 3. Fix or restart riot-proxy per its own runbook. The site needs no restart; it recovers on the next request.
 
-Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:6-15`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
+Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:8-19`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
 
 ## Riot outage or Riot key suspended
 
@@ -165,5 +165,5 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L11-L19,L124-L128`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L6-L25`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L8-L29`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
+**Last verified:** 2026-11-03 against commit `2658c48`

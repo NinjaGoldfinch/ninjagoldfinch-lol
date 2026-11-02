@@ -1,10 +1,14 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { CACHE_POLICIES, responseCachePolicy } from '#lib/server/cache.ts';
+import { timeLoad } from '#lib/server/timing.ts';
 
 // Errors and form posts must never be cached at the edge, whatever a load set,
-// and a response no load gave a policy is not cached either.
+// and a response no load gave a policy is not cached either. A slow request is
+// logged with its riot-proxy calls (SPD-07).
 export const handle: Handle = async ({ event, resolve }) => {
-	const response = await resolve(event);
+	const response = await timeLoad(event.route?.id ?? null, event.isDataRequest, () =>
+		resolve(event)
+	);
 	const policy =
 		responseCachePolicy(event.request.method, response.status) ??
 		// A redirect thrown before a load set a policy comes back without one:

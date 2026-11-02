@@ -17,6 +17,12 @@ Shared lookups are held in memory so most requests skip them: the current patch 
 
 The Data Dragon `item.json` alone is about 700 kB, which is why the reduced lookups are held rather than fetched per request (`src/lib/server/static-data.ts:22-24`).
 
+## Where timings come from
+
+The site times every request itself. `handle` runs each request inside `timeLoad`, and the `timeCalls` middleware records each riot-proxy call the request makes by its spec path template. A request slower than `SLOW_LOAD_MS` (100 ms), render included, logs one `slow load` line with its route id, its total and each call's time (`src/hooks.server.ts:9-11`, `src/lib/server/timing.ts:11,32-86`, ADR-046). The log is the only output: there is no `Server-Timing` header and no metrics endpoint. To read them on production, see [observability.md](./observability.md#finding-slow-pages).
+
+Warm loads usually finish under the threshold and are not logged, so they are measured on the host with `curl -w '%{time_total}'` against the site's own port, as ADR-039 did. Cold and warm timings for each page type (profile, match, champions, champion, search) are to be recorded in ADR-046 once this logging is deployed; until then the numbers below are the latest.
+
 ## Measured numbers
 
 **Production** (ADR-039, measured 2026-10-15 on the production server, `docs/DECISIONS.md:523-529`):
@@ -48,9 +54,10 @@ None of these is a setting; each is a constant in code, changed by a commit with
 
 | Constant                            | Value                                                                                       | Effect                                                                                        | Source                                                                                     |
 | ----------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `proxyBudget`                       | 5 s analytics and static, 30 s otherwise                                                    | Longest wait on a riot-proxy call before a 503                                                | `src/lib/server/proxy.ts:68-77`                                                            |
+| `proxyBudget`                       | 5 s analytics and static, 30 s otherwise                                                    | Longest wait on a riot-proxy call before a 503                                                | `src/lib/server/proxy.ts:69-78`                                                            |
 | `PATCH_TTL_MS`                      | 5 min                                                                                       | How long the current patch is held                                                            | `src/lib/server/patch.ts:45-46`                                                            |
-| `SLOW_ANALYTICS_MS`                 | 250 ms                                                                                      | Threshold for the `proxy slow` log line                                                       | `src/lib/server/proxy.ts:36-37`                                                            |
+| `SLOW_ANALYTICS_MS`                 | 250 ms                                                                                      | Threshold for the `proxy slow` log line                                                       | `src/lib/server/proxy.ts:37-38`                                                            |
+| `SLOW_LOAD_MS`                      | 100 ms                                                                                      | Threshold for the `slow load` log line                                                        | `src/lib/server/timing.ts:10-11`                                                           |
 | `CDRAGON_BUDGET_MS`                 | 5 s                                                                                         | Longest wait on CommunityDragon's `perks.json` before a match page leaves out the stat shards | `src/lib/server/cdragon.ts:11-12`                                                          |
 | `CACHE_POLICIES`                    | profile 60 s (+300 s stale), match 1 day (+1 day), analytics 600 s (+600 s), not-found 60 s | How long Cloudflare may serve a page without asking the host                                  | `src/lib/server/cache.ts:5-16`                                                             |
 | `MATCHES_PER_PAGE`                  | 10                                                                                          | Matches per profile page, so match-list size                                                  | `src/lib/domain/match-filters.ts:7`                                                        |
@@ -69,10 +76,10 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 
 - The site uses at most about one of six vCPUs and stays in the tens of milliseconds per uncached page when riot-proxy is warm.
 - Latency spikes come from riot-proxy: cold analytics slices (about 200 ms), uncached profiles waiting on Riot (seconds, up to the 30 s budget), or riot-proxy's background jobs competing for CPU and SQLite.
-- `proxy slow … x-cache=MISS` lines in the journal mark cold slices; many of them after an analytics rebuild are expected (ADR-039).
+- `proxy slow … x-cache=MISS` lines in the journal mark cold slices; many of them after an analytics rebuild are expected (ADR-039). A `slow load` line for the same page names the call it waited on (ADR-046).
 - A sustained rise in uncached traffic shows first as `QUOTA_EXCEEDED` or `RATE_LIMITED` (429 pages), not as CPU load ([deployment/capacity.md](../deployment/capacity.md#the-real-throughput-limit-riot-proxy-and-the-riot-key)).
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L76`, `src/lib/server/champions.ts:L37-L57`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L36-L77`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565`; local measurements 2026-10-20
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L76`, `src/lib/server/champions.ts:L37-L57`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L9-L11`, `src/lib/server/timing.ts:L10-L86`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L647`; local measurements 2026-10-20
+**Last verified:** 2026-11-03 against commit `2658c48`

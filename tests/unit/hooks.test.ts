@@ -60,3 +60,24 @@ describe('handle', () => {
 		expect((await run('GET', 200)).headers.get('cache-control')).toBe('public, s-maxage=60');
 	});
 });
+
+describe('handle timing', () => {
+	it('logs a slow request under its route id, not its URL (SPD-07)', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		await handle({
+			event: {
+				...event,
+				route: { id: '/summoner/[riotId]' },
+				isDataRequest: false
+			} as RequestEvent,
+			resolve: async () => {
+				await new Promise((resolve) => setTimeout(resolve, 120));
+				return new Response('x', { headers: { 'cache-control': 'public, s-maxage=60' } });
+			}
+		});
+
+		expect(warn).toHaveBeenCalledWith(
+			expect.stringMatching(/^slow load \/summoner\/\[riotId\] \d+ms: no riot-proxy calls$/)
+		);
+	});
+});
