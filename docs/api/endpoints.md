@@ -179,7 +179,7 @@ location: /champions
 
 One champion: header rates, set builds in tabs, lane matchups and rates by tier.
 
-- Handler: `src/routes/champions/[key]/+page.server.ts:9-28`; loaders `findChampionPage` and `loadChampionPage`, `src/lib/server/champion-page.ts:82-172`
+- Handler: `src/routes/champions/[key]/+page.server.ts:9-28`; loaders `findChampionPage` and `loadChampionPage`, `src/lib/server/champion-page.ts:82-174`
 - `{key}`: Data Dragon's id lower-cased (`ahri`, `monkeyking`). Any spelling of the id or display name (`Ahri`, `wukong`) gets `308` to it. No match → `404`.
 
 | Extra query | Meaning                                                                             | Source                                    |
@@ -203,5 +203,5 @@ Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=6
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/about/+page.ts:L1-L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L19`, `src/routes/champions/[key]/+page.server.ts:L9-L28`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L183`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L5-L10`, `src/lib/legal.ts:L3-L4`; probes of `node build` against the mock proxy, 2026-10-19
-**Last verified:** 2026-11-03 against commit `b17c9f8`
+**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/about/+page.ts:L1-L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L7-L17`, `src/routes/match/[matchId]/+page.svelte:L31-L67`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L19`, `src/routes/champions/[key]/+page.server.ts:L9-L28`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L29-L73`, `src/lib/server/champions.ts:L33-L59`, `src/lib/server/champion-page.ts:L82-L185`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L12-L189`, `src/lib/domain/champion-page.ts:L222-L316`, `src/hooks.server.ts:L5-L10`, `src/lib/legal.ts:L3-L4`; probes of `node build` against the mock proxy, 2026-10-19
+**Last verified:** 2026-11-03 against commit `2948c82`

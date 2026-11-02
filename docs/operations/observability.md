@@ -22,19 +22,19 @@ The site pushes nothing anywhere; everything is read from the host or from Cloud
 
 ## Logs
 
-| Aspect         | Value                                                                                                                                                                                                            | Source                                                                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Mechanism      | `console.error` and `console.warn`; no logging library                                                                                                                                                           | every `console.*` call under `src/`                                        |
-| Format         | Plain text, one line per event plus any error's stack; no JSON, no timestamps of its own (journald adds them)                                                                                                    | `src/lib/server/proxy.ts:14-19,46-48`, `src/hooks.server.ts:18`            |
-| Levels         | `warn` for slow analytics calls; `error` for everything else; no level setting                                                                                                                                   | `src/lib/server/proxy.ts:46`                                               |
-| What is logged | Failures only: non-2xx and unreachable riot-proxy calls, unexpected exceptions, degraded sections, unreadable payloads, analytics calls over 250 ms. Successful requests are not logged by the production server | [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#logs) |
-| Where          | Production: journald, `sudo journalctl -u ninjagoldfinch-lol`. Development: the terminal running `just dev`, which also prints one line per request (`200 GET /champions`, observed)                             | `README.md:100`                                                            |
-| Personal data  | Failed-call lines include the request path, which can contain a PUUID (`/v1/players/{puuid}/matches`) or a Riot ID; profile warning lines name the Riot ID                                                       | `src/lib/server/proxy.ts:14-19`, `src/lib/server/profile.ts:85,116`        |
-| Retention      | journald's settings on the host (not recorded)                                                                                                                                                                   | [deployment/capacity.md](../deployment/capacity.md#disk)                   |
+| Aspect         | Value                                                                                                                                                                                                                       | Source                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Mechanism      | `console.error` and `console.warn`; no logging library                                                                                                                                                                      | every `console.*` call under `src/`                                         |
+| Format         | Plain text, one line per event plus any error's stack; no JSON, no timestamps of its own (journald adds them)                                                                                                               | `src/lib/server/proxy.ts:15-17,59-61,126-127`, `src/hooks.server.ts:18`     |
+| Levels         | `warn` for slow analytics calls; `error` for everything else; no level setting                                                                                                                                              | `src/lib/server/proxy.ts:59`                                                |
+| What is logged | Failures only: non-2xx, timed-out and unreachable riot-proxy calls, unexpected exceptions, degraded sections, unreadable payloads, analytics calls over 250 ms. Successful requests are not logged by the production server | [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#logs)  |
+| Where          | Production: journald, `sudo journalctl -u ninjagoldfinch-lol`. Development: the terminal running `just dev`, which also prints one line per request (`200 GET /champions`, observed)                                        | `README.md:100`                                                             |
+| Personal data  | Failed-call lines include the request path, which can contain a PUUID (`/v1/players/{puuid}/matches`) or a Riot ID; profile warning lines name the Riot ID                                                                  | `src/lib/server/proxy.ts:15-17,126-127`, `src/lib/server/profile.ts:85,116` |
+| Retention      | journald's settings on the host (not recorded)                                                                                                                                                                              | [deployment/capacity.md](../deployment/capacity.md#disk)                    |
 
 ### Correlating with riot-proxy
 
-Every riot-proxy response carries `X-Request-Id`; riot-proxy generates a ULID per request, or keeps the caller's own id if well-formed, and records it as `request_id` in its JSON logs (`riot-proxy:src/http/request_id.rs:1-3`). The site logs that id on every failed call (`proxy <status> <METHOD> <path> request-id=<id>`, `src/lib/server/proxy.ts:10-17`). To follow one failure:
+Every riot-proxy response carries `X-Request-Id`; riot-proxy generates a ULID per request, or keeps the caller's own id if well-formed, and records it as `request_id` in its JSON logs (`riot-proxy:src/http/request_id.rs:1-3`). The site logs that id on every failed call (`proxy <status> <METHOD> <path> request-id=<id>`, `src/lib/server/proxy.ts:11-17`). To follow one failure:
 
 ```sh
 sudo journalctl -u ninjagoldfinch-lol --since '-1 hour' | grep 'request-id='
@@ -51,7 +51,7 @@ Consumers today: operators with `curl`; the preview VM's Docker `HEALTHCHECK` ev
 
 ## Metrics
 
-The site exposes no metrics endpoint and keeps no counters; the only timing it takes is for slow analytics calls (`src/lib/server/proxy.ts:23-53`). What exists instead:
+The site exposes no metrics endpoint and keeps no counters; the only timing it takes is for slow analytics calls (`src/lib/server/proxy.ts:36-66`). What exists instead:
 
 | Need                          | Where to get it                                                                                                                                                                                                                            |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -72,5 +72,5 @@ Watches the `ninjagoldfinch-lol` unit on the host: down after 30 s (repeated eve
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L10-L53`, `src/hooks.server.ts:L15-L19`, `src/lib/server/profile.ts:L85,L116`, `src/routes/healthz/+server.ts:L5-L6`, `Dockerfile:L22`, `playwright.config.ts:L18-L20`, `package.json:L23-L52`, `README.md:L100`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `src/lib/server/proxy.ts:L11-L66`, `src/hooks.server.ts:L15-L19`, `src/lib/server/profile.ts:L85,L116`, `src/routes/healthz/+server.ts:L5-L6`, `Dockerfile:L22`, `playwright.config.ts:L18-L20`, `package.json:L23-L52`, `README.md:L100`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
+**Last verified:** 2026-11-03 against commit `2948c82`

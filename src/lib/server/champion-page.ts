@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
 import type { Named } from '#lib/api/ddragon.ts';
 import {
 	toChampionStats,
@@ -90,6 +90,8 @@ export async function findChampionPage(
 }> {
 	const ddragonVersion = await currentPatch(client);
 	const names = await staticNames(ddragonVersion, client).catch((e: unknown) => {
+		// Rate limited stays rate limited, with its wait; anything else is unavailable.
+		if (isHttpError(e, 429)) throw e;
 		console.error('Data Dragon lookups unavailable:', e);
 		error(503, 'Temporarily unavailable');
 	});

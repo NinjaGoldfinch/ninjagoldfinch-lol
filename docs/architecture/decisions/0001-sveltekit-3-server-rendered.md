@@ -25,9 +25,9 @@ Accepted, in force.
 
 ## Evidence
 
-`package.json:23-24,45-47`, `vite.config.ts:1-37`, `src/lib/server/proxy.ts:1-106`, ADR-001.
+`package.json:23-24,45-47`, `vite.config.ts:1-37`, `src/lib/server/proxy.ts:1-153`, ADR-001.
 
 ---
 
 **Sources:** `docs/IMPLEMENTATION.md:L49`, `docs/DECISIONS.md:L5-L19,L372`, `CLAUDE.md:L15-L17,L57-L59`, `package.json:L6-L8,L23-L24,L45-L47`, `vite.config.ts:L1-L37`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `2948c82`

@@ -9,7 +9,7 @@ riot-proxy already caches Riot responses, so the plan said the site adds no cach
 ## Decision
 
 - Data Dragon `champion`, `item`, `summoner`, `runesReforged` and `queues` are reduced to small lookups and held for the current patch only (`src/lib/server/static-data.ts:24-39`, ADR-013).
-- CommunityDragon stat shards are held the same way (`src/lib/server/cdragon.ts:5-28`, ADR-026).
+- CommunityDragon stat shards are held the same way (`src/lib/server/cdragon.ts:5-39`, ADR-026).
 - The current patch and Riot's version list are held for 5 minutes (`src/lib/server/patch.ts:47-68`, ADR-041).
 - Concurrent callers share one fetch; a failed fetch is not kept.
 
@@ -29,5 +29,5 @@ ADR-013, ADR-026, ADR-041; `tests/unit/static-data.test.ts`, `tests/unit/patch.t
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L159-L169,L305-L319,L554-L562`, `docs/IMPLEMENTATION.md:L243`, `src/lib/server/static-data.ts:L24-L39`, `src/lib/server/cdragon.ts:L5-L28`, `src/lib/server/patch.ts:L47-L68`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `docs/DECISIONS.md:L159-L169,L305-L319,L554-L562`, `docs/IMPLEMENTATION.md:L243`, `src/lib/server/static-data.ts:L24-L39`, `src/lib/server/cdragon.ts:L5-L39`, `src/lib/server/patch.ts:L47-L68`
+**Last verified:** 2026-11-03 against commit `2948c82`

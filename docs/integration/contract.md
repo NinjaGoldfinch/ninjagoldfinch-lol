@@ -19,8 +19,8 @@ The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a n
 ## Transport and authentication
 
 - Base URL from `PROXY_URL`; production `http://127.0.0.1:8080`.
-- `Authorization: Bearer <PROXY_KEY>` on every call when `PROXY_KEY` is set (`src/lib/server/proxy.ts:89-100`). The key needs the `read` scope (`riot-proxy:src/routes/docs.rs:118-126`). See [authentication.md](./authentication.md).
-- All calls are `GET` with JSON responses. Deadlines: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for the rest (`src/lib/server/proxy.ts:60-64`).
+- `Authorization: Bearer <PROXY_KEY>` on every call when `PROXY_KEY` is set (`src/lib/server/proxy.ts:136-147`). The key needs the `read` scope (`riot-proxy:src/routes/docs.rs:118-126`). See [authentication.md](./authentication.md).
+- All calls are `GET` with JSON responses. Deadlines: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for the rest (`src/lib/server/proxy.ts:73-77`).
 
 ## Routes used
 
@@ -41,9 +41,9 @@ Twelve of the spec's 70 paths. Required means a failure fails the page.
 | `GET /v1/lol/analytics/champions/{championId}/matchups`   | `/champions/{key}`   | as above with `limit=200`                                                                | no       |
 | `GET /v1/lol/analytics/patches`                           | champion pages       | `queue=RANKED_SOLO_5x5`, `championId` on a champion page                                 | no       |
 
-\* The Data Dragon files fall back to plain names when unavailable, except on a champion page, which cannot resolve its URL without them (`src/lib/server/champion-page.ts:91-95`).
+\* The Data Dragon files fall back to plain names when unavailable, except on a champion page, which cannot resolve its URL without them (`src/lib/server/champion-page.ts:92-97`).
 
-Sources: `src/lib/server/profile.ts:78-104`, `src/lib/server/match.ts:36-40`, `src/lib/server/patch.ts:76`, `src/lib/server/static-data.ts:42-51`, `src/lib/server/champions.ts:38-41`, `src/lib/server/champion-page.ts:119-137,179-183`, `src/lib/domain/champion-stats.ts:172-189`.
+Sources: `src/lib/server/profile.ts:78-104`, `src/lib/server/match.ts:36-40`, `src/lib/server/patch.ts:76`, `src/lib/server/static-data.ts:42-51`, `src/lib/server/champions.ts:38-41`, `src/lib/server/champion-page.ts:121-139,181-185`, `src/lib/domain/champion-stats.ts:172-189`.
 
 Parameter values come from site tables: `platform` from `REGIONS` (`src/lib/domain/regions.ts:15-31`); `region` (regional route) from the match id's platform; `role` one of `TOP`, `JUNGLE`, `MIDDLE`, `BOTTOM`, `UTILITY`; `tier`/`minTier` one of Riot's ten tiers (`src/lib/domain/champion-stats.ts:33-57`); `queue` for matches one of 420, 440, 400, 490, 480, 450, 1700 (`src/lib/domain/match-filters.ts:5`); `start` at most 10000 and `champion` 1–10000 (`src/lib/domain/match-filters.ts:7-11`).
 
@@ -60,7 +60,7 @@ The generated types cover every field; this is the subset the site's behaviour d
 | versions     | `current`, else `versions[0]`; `versions[]`                                                                                                                                                                                                                                              | `src/lib/server/patch.ts:16-30`                                                    |
 | static files | Data Dragon JSON as published; `queues` as Riot publishes them                                                                                                                                                                                                                           | `src/lib/api/ddragon.ts`                                                           |
 | champions    | `patch`, `tier`, `totalGames`, `computedAt`, `champions[]` (`championId`, `championName`, `tier`, `games`, `winRate`, `pickRate`, `banRate`)                                                                                                                                             | `src/lib/domain/champion-stats.ts:217-235`                                         |
-| detail       | `patch`, `tier`, `stats[]`, `byTier[]`, `items`, `runes`, `spells`                                                                                                                                                                                                                       | `src/lib/server/champion-page.ts:153-162`, `src/lib/domain/champion-page.ts:35-90` |
+| detail       | `patch`, `tier`, `stats[]`, `byTier[]`, `items`, `runes`, `spells`                                                                                                                                                                                                                       | `src/lib/server/champion-page.ts:155-164`, `src/lib/domain/champion-page.ts:35-90` |
 | builds       | `role`, `opponentId`, `totalGames`, `builds[]` (`core`, `next`, `boots`, `starter`, `skillOrder`, `runes`, `spells`, `games`, `winRate`, `pickRate`)                                                                                                                                     | `src/lib/domain/champion-page.ts:120-160`                                          |
 | matchups     | `matchups[]` (`opponentId`, `opponentName`, `role`, `games`, `winRate`)                                                                                                                                                                                                                  | `src/lib/domain/champion-page.ts:193-225`                                          |
 | patches      | `patches[].patch`                                                                                                                                                                                                                                                                        | `src/lib/domain/champion-stats.ts:237-239`                                         |
@@ -77,8 +77,8 @@ Semantics the site relies on:
 
 | Header         | Use                                                       | Code                             |
 | -------------- | --------------------------------------------------------- | -------------------------------- |
-| `X-Request-Id` | Logged with every failed call                             | `src/lib/server/proxy.ts:13`     |
-| `X-Cache`      | Logged with analytics calls over 250 ms                   | `src/lib/server/proxy.ts:45`     |
+| `X-Request-Id` | Logged with every failed call                             | `src/lib/server/proxy.ts:14`     |
+| `X-Cache`      | Logged with analytics calls over 250 ms                   | `src/lib/server/proxy.ts:58`     |
 | `Retry-After`  | Wait time for 429 pages when the body has no `retryAfter` | `src/lib/server/errors.ts:66-74` |
 
 `X-Cache-Age`, `X-Cache-Fetched-Age`, `X-RateLimit-*` and `ETag` are sent by riot-proxy but not read (ADR-007 explains why `X-RateLimit-*` is not used for the retry time, `docs/DECISIONS.md:87`).
@@ -107,5 +107,5 @@ WebSockets (`/v1/ws`), admin routes, `riot` account routes, live game and master
 
 ---
 
-**Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L13-L106`, `src/lib/server/errors.ts:L16-L74`, `src/lib/server/profile.ts:L78-L151`, `src/lib/server/match.ts:L34-L40`, `src/lib/server/patch.ts:L16-L76`, `src/lib/server/static-data.ts:L42-L51`, `src/lib/server/champions.ts:L38-L41`, `src/lib/server/champion-page.ts:L91-L183`, `src/lib/domain/champion-stats.ts:L33-L57,L172-L239`, `src/lib/domain/champion-page.ts:L35-L225`, `src/lib/domain/matches.ts:L48-L84,L159-L162`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L157-L215`, `src/lib/api/riot.ts:L11-L35`, `README.md:L51-L66`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L538,L575,L595`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L14-L153`, `src/lib/server/errors.ts:L16-L74`, `src/lib/server/profile.ts:L78-L151`, `src/lib/server/match.ts:L34-L40`, `src/lib/server/patch.ts:L16-L76`, `src/lib/server/static-data.ts:L42-L51`, `src/lib/server/champions.ts:L38-L41`, `src/lib/server/champion-page.ts:L91-L185`, `src/lib/domain/champion-stats.ts:L33-L57,L172-L239`, `src/lib/domain/champion-page.ts:L35-L225`, `src/lib/domain/matches.ts:L48-L84,L159-L162`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L157-L215`, `src/lib/api/riot.ts:L11-L35`, `README.md:L51-L66`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L538,L575,L595`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
+**Last verified:** 2026-11-03 against commit `2948c82`

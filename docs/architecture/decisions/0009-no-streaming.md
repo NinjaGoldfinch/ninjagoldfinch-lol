@@ -10,7 +10,7 @@ Production's `/champions/__data.json` took 3.9 s on 2026-10-14. riot-proxy 2.6.0
 
 - No streaming: warm, it saves about 1 ms; cold, at most about 110 ms once per champion per rebuild, and a streamed card never fills in without JavaScript (`docs/DECISIONS.md:533`).
 - The site does not cache analytics; requests to warm them go to riot-proxy.
-- Analytics calls over 250 ms are logged with riot-proxy's `X-Cache` (`src/lib/server/proxy.ts:23-53`).
+- Analytics calls over 250 ms are logged with riot-proxy's `X-Cache` (`src/lib/server/proxy.ts:36-66`).
 
 ## Consequences
 
@@ -26,5 +26,5 @@ Measurements in ADR-039; `tests/unit/proxy.test.ts`.
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L515-L538`, `src/lib/server/proxy.ts:L23-L53`
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `docs/DECISIONS.md:L515-L538`, `src/lib/server/proxy.ts:L36-L66`
+**Last verified:** 2026-11-03 against commit `2948c82`

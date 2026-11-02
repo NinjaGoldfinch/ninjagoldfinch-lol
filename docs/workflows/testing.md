@@ -6,7 +6,7 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 
 | Path                                         | What                                                                                     | Run by              |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------- |
-| `tests/unit/*.test.ts`                       | 34 Vitest files: domain modules, loaders, proxy client, env rules, hooks, mock, fixtures | `just check`        |
+| `tests/unit/*.test.ts`                       | 35 Vitest files: domain modules, loaders, proxy client, env rules, hooks, mock, fixtures | `just check`        |
 | `tests/unit/fixtures.ts`                     | Helpers: `fixtureBody(path)`, recorded paths, `recordedNames()`                          | imported by tests   |
 | `tests/e2e/*.test.ts`                        | 5 Playwright files: `routes`, `match`, `champion-page`, `champions`, `layout`            | `just e2e`          |
 | `tests/mock-proxy/`                          | `mock.ts` (fixture loader and HTTP server), `server.ts` (CLI, default port 8787)         | Playwright, by hand |
@@ -27,26 +27,24 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 | `pnpm playwright test tests/e2e/match.test.ts -g "bot laner"` | One file or test by title                                      | Playwright        |
 | `bash deploy/proxmox/test.sh`                                 | Deploy-script test alone                                       | `justfile:28`     |
 
-Results on 2026-10-20 at `e7c395c`: unit `Test Files 34 passed (34)`, `Tests 332 passed (332)` (with the flake below on some runs); e2e `81 passed (31.9s)`.
+Results on 2026-10-20 at `e7c395c`: unit `Test Files 34 passed (34)`, `Tests 332 passed (332)`; e2e `81 passed (31.9s)`. On 2026-11-03, with RV-03: `Test Files 35 passed (35)`, `Tests 341 passed (341)`.
 
 ## Unit tests
 
-Vitest runs one project, `server`, in the Node environment over `tests/unit/**/*.test.ts`, and `expect.requireAssertions` fails any test that asserts nothing (`vite.config.ts:22-34`). Tests import app code through the `#lib/*` alias (`package.json:46-49`).
+Vitest runs one project, `server`, in the Node environment over `tests/unit/**/*.test.ts`, and `expect.requireAssertions` fails any test that asserts nothing. Node runs with `--expose-gc`, so a test can call `gc()` (`vite.config.ts:22-37`). Tests import app code through the `#lib/*` alias (`package.json:46-49`).
 
 What is covered:
 
 - **Domain modules.** Every module in `src/lib/domain/` (15) is imported by at least one test file, as `CLAUDE.md:35` requires.
 - **Loaders.** `profile`, `match-loader`, `champions-loader` and `champion-page-loader` tests build a real client with `createProxyClient(base, key, fetch)` whose `fetch` answers from fixtures, override single paths to simulate failures, and record which paths were asked (`tests/unit/match-loader.test.ts:24-37`). They call `clearStaticNames()` and `clearPatchVersions()` in `beforeEach` because those holds live in module memory (`tests/unit/match-loader.test.ts:39-42`).
-- **Proxy client.** Bearer header on and off, failure and slow-call logging, deadlines (`tests/unit/proxy.test.ts`).
+- **Proxy client.** Bearer header on and off, dot-segment refusal, failure and slow-call logging, deadlines (`tests/unit/proxy.test.ts`). The deadline test uses fake timers, so it does not depend on wall-clock time (`tests/unit/proxy.test.ts:135-150`).
 - **Error mapping, cache policy, hooks, env rules.** `errors.test.ts`, `cache.test.ts`, `hooks.test.ts`, `env.test.ts`.
 - **The mock itself.** `mock-proxy.test.ts` runs the real client against the mock server on a random port, which proves the client's path encoding matches the recorded paths (`tests/unit/mock-proxy.test.ts:1-30`).
 - **Fixtures against the spec.** `fixtures-spec.test.ts` resolves each recorded 200 body's schema in `openapi/riot-proxy.json` and fails on any required field missing, so a spec bump that adds a required field breaks the tests until the fixtures catch up. It also checks that every build's `winRateLow` is the Wilson lower bound (`tests/unit/fixtures-spec.test.ts:84-120`).
 
-### Known flaky test
+### Deadlines and garbage collection
 
-`tests/unit/proxy.test.ts:114-124`, "fails a call that never answers once its budget is spent, as unavailable", gives the client a 20 ms budget and a fetch that only settles when its signal aborts. It passed in every run of the file alone (4 of 4) but timed out at Vitest's 5 s limit in 3 of 7 full-suite runs on 2026-10-20, on a machine also running dev servers and a local riot-proxy. When it fails, `just check` (and so `git push`) fails; re-run. The cause was not established.
-
-> **TODO (unverified):** Root cause of the intermittent timeout in `tests/unit/proxy.test.ts:114-124`. The abort signal from `AbortSignal.any([request.signal, AbortSignal.timeout(...)])` (`src/lib/server/proxy.ts:75-76`) apparently never fires in the failing runs. Reproduce with `for i in $(seq 10); do pnpm vitest run | grep Tests; done` under load; if it is the signal, it could also leave a production request without its deadline.
+"fires the deadline on a call nothing else holds, through garbage collections" fires 20 calls at a fetch that never answers, with a 20 ms budget, while calling `gc()` every 1 ms, and expects every call to end as a 503 (`tests/unit/proxy.test.ts:154-169`). It guards the RV-03 fix: the old `withTimeout` handed its abort signal to `new Request(…, { signal })`, which holds it only weakly, so a call nothing else held could be collected before the abort reached it and never settle. That was the cause of the test that used to time out at 5 s in some full-suite runs, and of a match page that never finished against a hung riot-proxy. It fails at once if `--expose-gc` is missing.
 
 ## How riot-proxy is mocked
 
@@ -113,5 +111,5 @@ There is no coverage tool or threshold: no coverage provider in `package.json` a
 
 ---
 
-**Sources:** `justfile:L19-L36`, `package.json:L10-L21,L46-L49`, `vite.config.ts:L22-L34`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L99-L124`, `src/lib/server/proxy.ts:L73-L87`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
-**Last verified:** 2026-11-03 against commit `8cc2076`
+**Sources:** `justfile:L19-L36`, `package.json:L10-L21,L46-L49`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `src/lib/server/proxy.ts:L81-L134`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
+**Last verified:** 2026-11-03 against commit `2948c82`

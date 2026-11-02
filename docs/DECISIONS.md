@@ -595,3 +595,19 @@ Date: 2026-10-19 · Task: VS-03
 - **Marking.** Builds against an opponent are marked "Low sample" under 100 games, as every rate is (ADR-035). `winRateLow` is not used (VS-04 dropped).
 
 **Consequences.** Against an opponent most builds are marked, which is the honest reading of 10 to 50 games. Each pick is a riot-proxy MISS on its first view after a rebuild (2–3 ms per champion read). Opponent builds are empty in production until a builds rebuild has run since 2.7.0 started; until then the card says there are none. Tests use synthetic opponent bodies until real ones are recorded.
+
+## ADR-044: Deadlines race the call; every riot-proxy outage is a 503
+
+Date: 2026-11-03 · Task: RV-03
+
+**Context.** ADR-040's deadline sometimes never fired: a page against a riot-proxy that accepted connections and never answered did not finish, and the unit test for it timed out in about one full run in three. `new Request(…, { signal })` follows the given signal through a weak reference, so a call that nothing else held could be garbage collected before the abort reached it. Collecting garbage while ten deadlines ran, the old wrapper hung every time and the new one never. A refused connection was also a 500, though ADR-040 calls every riot-proxy outage a 503, and CommunityDragon's `perks.json`, which every match page of a patch waits on, had no deadline.
+
+**Decision.**
+
+- **The call races the deadline.** `withTimeout` races the fetch, and then the body read, against a promise that its timer or the caller's abort rejects; the timer holds that promise, so it settles whatever else is collected. The fetch's own controller is still aborted, so a real request is cancelled.
+- **Anything but the caller's own abort is a 503:** a spent budget, a refused connection, a DNS failure or a body that breaks off. `withTimeout` logs `proxy timeout <METHOD> <path> after <ms> ms` or `proxy unreachable <METHOD> <path>: <error>`; `logFailures` logs only error responses.
+- **CommunityDragon gets 5 s** (`CDRAGON_BUDGET_MS`); a failure is not held, as before.
+- **A 429 from the static lookups stays a 429** on a champion page, with its wait.
+- The unit tests run with `--expose-gc`, and a test collects garbage while hung calls wait on their deadlines.
+
+**Consequences.** A hung or stopped riot-proxy shows "Temporarily unavailable" with a 503 that the edge does not cache, in at most the call's budget. A 500 now means a bug.

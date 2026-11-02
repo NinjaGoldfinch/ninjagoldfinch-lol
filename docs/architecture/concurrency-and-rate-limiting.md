@@ -15,7 +15,7 @@ Within one page, independent calls run together with `Promise.all`:
 | profile           | — (profile first, it supplies the `puuid` and platform)                | match page + current patch, in parallel; then Data Dragon names | `src/lib/server/profile.ts:78-111`        |
 | match             | match + timeline + patch versions                                      | Data Dragon names + CommunityDragon shards, in parallel         | `src/lib/server/match.ts:37-65`           |
 | champion table    | table + patch list + current patch                                     | Data Dragon names                                               | `src/lib/server/champions.ts:37-51`       |
-| champion page     | detail + builds + matchups + patch list (after resolving the champion) | —                                                               | `src/lib/server/champion-page.ts:119-138` |
+| champion page     | detail + builds + matchups + patch list (after resolving the champion) | —                                                               | `src/lib/server/champion-page.ts:121-140` |
 | Data Dragon names | `champion`, `item`, `summoner`, `runesReforged`, `queues`              | —                                                               | `src/lib/server/static-data.ts:45-51`     |
 
 ADR-039 measured a cold champion page at about the sum of its four riot-proxy reads rather than the slowest one, which suggests riot-proxy serialises them or they compete for CPU; it was not confirmed (`docs/DECISIONS.md:529`).
@@ -28,13 +28,15 @@ Three lookups are held in process memory and shared by concurrent requests. Each
 | --------------- | ----- | ----------------------- | ------------------------------------- |
 | `patchVersions` | none  | `PATCH_TTL_MS` = 5 min  | `src/lib/server/patch.ts:47-68`       |
 | `staticNames`   | patch | until the patch changes | `src/lib/server/static-data.ts:27-39` |
-| `statShards`    | patch | until the patch changes | `src/lib/server/cdragon.ts:9-28`      |
+| `statShards`    | patch | until the patch changes | `src/lib/server/cdragon.ts:9-39`      |
 
 Riot player data and analytics are never held by the site (`docs/DECISIONS.md:560`, ADR-041).
 
 ## Deadlines and failures
 
-Every riot-proxy call carries a deadline from `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else. The body is read inside the deadline, and a caller's own abort still applies (`src/lib/server/proxy.ts:55-87`). There are no retries in the site. The 30 s budget leaves room for riot-proxy's own Riot client, which allows 25 s per request (`riot-proxy:src/riot/client.rs:22-24`). CommunityDragon's `perks.json` fetch has no deadline (`src/lib/server/cdragon.ts:18`).
+Every riot-proxy call carries a deadline from `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else. The body is read inside the deadline, and a caller's own abort still applies (`src/lib/server/proxy.ts:68-134`). There are no retries in the site. The 30 s budget leaves room for riot-proxy's own Riot client, which allows 25 s per request (`riot-proxy:src/riot/client.rs:22-24`). CommunityDragon's `perks.json` fetch has its own 5 s deadline, `CDRAGON_BUDGET_MS`, body included (`src/lib/server/cdragon.ts:11-32`).
+
+`withTimeout` races the fetch, and then the body read, against a promise that only its own timer or the caller's abort rejects; either one also aborts the fetch (`src/lib/server/proxy.ts:94-134`). Any throw other than the caller's own abort becomes `error(503)`: a spent deadline, a refused connection, a DNS failure, a body that breaks off. The caller's own abort passes through as it was.
 
 This state diagram shows what one riot-proxy call can end as, and what the page does with it.
 
@@ -44,22 +46,22 @@ stateDiagram-v2
   Sent --> Ok: 2xx within budget
   Sent --> ErrorResponse: 4xx or 5xx within budget
   Sent --> TimedOut: budget spent
-  Sent --> Threw: riot-proxy unreachable
+  Sent --> Threw: riot-proxy unreachable or body broke off
   Ok --> [*]
   ErrorResponse --> Classified: classifyProxyError
   Classified --> PageError: essential call
   Classified --> SectionNotice: optional call
   TimedOut --> PageError: error 503
   TimedOut --> SectionNotice: optional call, 503 response
-  Threw --> PageError: essential call, handleError 500
+  Threw --> PageError: error 503
   Threw --> SectionNotice: optional call, 503 response
   PageError --> [*]
   SectionNotice --> [*]
 ```
 
-`optional()` turns a thrown or timed-out call into a 503 response for that call alone, so the loader's "not ok" branch handles it (`src/lib/server/errors.ts:41-58`). Essential calls go through `toHttpError`, which throws a SvelteKit error with status 404, 429 or 503 (`src/lib/server/errors.ts:16-39`). An essential call that throws (riot-proxy down) reaches `handleError`, which logs it and shows "Temporarily unavailable" with status 500, SvelteKit's status for an unknown error (`src/hooks.server.ts:15-20`; observed 2026-10-20: connection refused gave 500, a hung riot-proxy gave 503 after 5.0 s on `/champions` and 30.0 s on profile and match pages).
+`optional()` turns a thrown or timed-out call into a 503 response for that call alone, so the loader's "not ok" branch handles it (`src/lib/server/errors.ts:41-58`). Essential calls go through `toHttpError`, which throws a SvelteKit error with status 404, 429 or 503 (`src/lib/server/errors.ts:16-39`). An essential call that times out or cannot reach riot-proxy throws the client's 503, so the page is a 503 (`src/lib/server/proxy.ts:124-128`). Observed 2026-10-20, before RV-03: a hung riot-proxy gave 503 after 5.0 s on `/champions` and 30.0 s on profile and match pages; a refused connection then gave 500, which RV-03 changed to 503.
 
-> **TODO (unverified):** On 2026-10-20 one match page request against a riot-proxy that accepted connections but never answered did not finish at all (still pending after 4.5 minutes): its match and timeline calls hit their 30 s deadline and were logged, but its `/v1/static/versions` call never logged a timeout, so `Promise.all` never settled. The flaky unit test in [workflows/testing.md](../workflows/testing.md#known-flaky-test) shows the same symptom. If a deadline can fail to fire, a hung riot-proxy can hold site requests until Cloudflare gives up. Reproduce and fix in `withTimeout` (`src/lib/server/proxy.ts:73-87`); a code task.
+Fixed in RV-03: on 2026-10-20 one match page request against a riot-proxy that accepted connections but never answered did not finish at all, because one call's deadline never fired. The old `withTimeout` passed an `AbortSignal.any` of the caller's signal and `AbortSignal.timeout` to `new Request(…, { signal })`, which follows the signal through a weak reference. A call nothing else held could be garbage collected before the abort reached it, so its promise never settled. Under repeated garbage collection the old code hung 200 of 200 times and the new code 0 of 200. A unit test now fires 20 hung calls while collecting garbage every 1 ms (`tests/unit/proxy.test.ts:154-169`).
 
 ## Rate limits that apply to the site
 
@@ -92,5 +94,5 @@ There is none in the site beyond the deadlines: a slow riot-proxy holds each aff
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L55-L106`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/static-data.ts:L27-L51`, `src/lib/server/cdragon.ts:L9-L28`, `src/lib/server/profile.ts:L78-L124`, `src/lib/server/match.ts:L37-L65`, `src/lib/server/champions.ts:L37-L51`, `src/lib/server/champion-page.ts:L119-L138`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L15-L20`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L529,L560`, `docs/IMPLEMENTATION.md:L387`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `src/lib/server/proxy.ts:L68-L153`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/static-data.ts:L27-L51`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/profile.ts:L78-L124`, `src/lib/server/match.ts:L37-L65`, `src/lib/server/champions.ts:L37-L51`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L15-L20`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L529,L560`, `docs/IMPLEMENTATION.md:L387`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
+**Last verified:** 2026-11-03 against commit `2948c82`

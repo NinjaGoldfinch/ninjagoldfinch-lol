@@ -28,7 +28,7 @@ sudo journalctl -u ninjagoldfinch-lol | grep 'proxy '         # every riot-proxy
 
 Logs are plain text from `console.error`/`console.warn`, collected by journald (`README.md:100`); there is no log level setting. Every line the site writes is listed in [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#logs).
 
-**Following a failure into riot-proxy.** A failed call is logged as `proxy <status> <METHOD> <path> request-id=<id>` (`src/lib/server/proxy.ts:10-17`). riot-proxy writes the same id as `request_id` in its JSON log, so:
+**Following a failure into riot-proxy.** A failed call is logged as `proxy <status> <METHOD> <path> request-id=<id>` (`src/lib/server/proxy.ts:11-17`). riot-proxy writes the same id as `request_id` in its JSON log, so:
 
 ```sh
 sudo journalctl -u riot-proxy | grep '<id>'
@@ -91,11 +91,13 @@ TTLs: [data/caching.md](../data/caching.md).
 
 Symptoms: `/healthz` 200 but data pages fail; ninja-monitor reports `riot-proxy` down.
 
-| riot-proxy state                        | What visitors get (observed 2026-10-20)                                                                                        | Site log                                                                         |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| Stopped (connection refused)            | "Temporarily unavailable", HTTP 500, at once                                                                                   | `proxy unreachable GET … TypeError: fetch failed` then `error GET /champions: …` |
-| Accepting connections but not answering | "Temporarily unavailable", HTTP 503 after 5 s (champions) or 30 s (profile, match); in one case a match request never finished | `proxy unreachable GET …: HttpError { status: 503 … }`                           |
-| Answering 401 (bad key)                 | HTTP 503                                                                                                                       | `proxy 401 GET … request-id=…`                                                   |
+| riot-proxy state                        | What visitors get                                                                  | Site log                                                          |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Stopped (connection refused)            | "Temporarily unavailable", HTTP 503, at once (HTTP 500 before RV-03)               | `proxy unreachable GET …: TypeError: fetch failed … ECONNREFUSED` |
+| Accepting connections but not answering | "Temporarily unavailable", HTTP 503 after 5 s (champions) or 30 s (profile, match) | `proxy timeout GET … after 5000 ms` (or `30000 ms`)               |
+| Answering 401 (bad key)                 | HTTP 503                                                                           | `proxy 401 GET … request-id=…`                                    |
+
+Observed on 2026-10-20 with the production build, before RV-03; RV-03 changed the refused connection from 500 to 503, the timeout log line, and fixed a match request against a hung riot-proxy that never finished (`src/lib/server/proxy.ts:124-128`).
 
 1. `systemctl status riot-proxy` and `curl -s http://127.0.0.1:8080/readyz`.
 2. `sudo journalctl -u riot-proxy --since '-15 min'`.
@@ -163,5 +165,5 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L94-L111`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L10-L21`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L5-L20`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L94-L111`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L11-L19,L124-L128`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L5-L20`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
+**Last verified:** 2026-11-03 against commit `2948c82`

@@ -76,16 +76,16 @@ sequenceDiagram
   else error
     Proxy-->>Site: 4xx or 5xx error envelope, X-Request-Id
     Site->>Site: log status, path and request id
-  else no answer within budget
-    Site->>Site: abort, 503 Temporarily unavailable
+  else no answer within budget, or no connection
+    Site->>Site: abort, log, 503 Temporarily unavailable
   end
 ```
 
 - Base URL `PROXY_URL`; production `http://127.0.0.1:8080` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:630`).
-- The header is sent only when `PROXY_KEY` is set (`src/lib/server/proxy.ts:89-100`).
+- The header is sent only when `PROXY_KEY` is set (`src/lib/server/proxy.ts:136-147`).
 - Routes, payloads and error codes: [contract.md](./contract.md). Key handling: [authentication.md](./authentication.md).
 - Retries: none in the site. riot-proxy retries its own Riot calls (`riot-proxy:src/fetcher.rs:9-14`).
-- Every failed response is logged with riot-proxy's `X-Request-Id`, which riot-proxy also records on its request log span, so one page error can be traced across both services (`src/lib/server/proxy.ts:6-21`, `riot-proxy:src/http/request_id.rs:49-66`, `riot-proxy:src/app.rs:107-115`).
+- Every failed response is logged with riot-proxy's `X-Request-Id`, which riot-proxy also records on its request log span, so one page error can be traced across both services (`src/lib/server/proxy.ts:6-19`, `riot-proxy:src/http/request_id.rs:49-66`, `riot-proxy:src/app.rs:107-115`).
 
 ## 3. The site to CommunityDragon
 
@@ -93,19 +93,19 @@ sequenceDiagram
 sequenceDiagram
   participant Site as ninjagoldfinch.lol
   participant CDragon as CommunityDragon
-  Site->>CDragon: GET {CDRAGON_URL}/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perks.json
+  Site->>CDragon: GET {CDRAGON_URL}/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perks.json (budget 5 s)
   alt 200
     CDragon-->>Site: perks list, about 100 kB
     Site->>Site: keep stat shards 5001-5013 for this patch
-  else error or network failure
+  else error, network failure or no answer within 5 s
     CDragon-->>Site: error
     Site->>Site: log, render the match page without stat shards
   end
 ```
 
-- Only the match page needs it, once per patch per process (`src/lib/server/cdragon.ts:11-28`, `src/lib/server/match.ts:61-64`).
+- Only the match page needs it, once per patch per process (`src/lib/server/cdragon.ts:14-39`, `src/lib/server/match.ts:61-64`).
 - `CDRAGON_URL` defaults to `https://raw.communitydragon.org` (`src/lib/server/env.ts:17-25`); production does not set it (owner-supplied env names).
-- No deadline is set on this fetch (`src/lib/server/cdragon.ts:18`).
+- The fetch has a 5 s deadline, `CDRAGON_BUDGET_MS`, which covers the body; the timer is cleared once the body is parsed (`src/lib/server/cdragon.ts:11-32`).
 - This is the one outbound call that does not go to riot-proxy; it is for data riot-proxy does not mirror (ADR-026, `docs/DECISIONS.md:319`).
 
 ## 4. The Browser to the image CDNs
@@ -122,5 +122,5 @@ A deploy pulls `main` over SSH with a read-only deploy key belonging to the `nin
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L6-L106`, `src/lib/server/cdragon.ts:L11-L28`, `src/lib/server/match.ts:L61-L64`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L7-L71`, `README.md:L55-L64,L96-L111`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L388`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-10-19 against commit `85d9cf8`
+**Sources:** `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L61-L64`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L7-L71`, `README.md:L55-L64,L96-L111`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L388`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
+**Last verified:** 2026-11-03 against commit `2948c82`

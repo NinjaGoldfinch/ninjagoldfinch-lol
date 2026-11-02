@@ -27,7 +27,9 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
-					include: ['tests/unit/**/*.test.ts']
+					include: ['tests/unit/**/*.test.ts'],
+					// proxy.test.ts collects garbage while a deadline runs (RV-03).
+					execArgv: ['--expose-gc']
 				}
 			}
 		]
