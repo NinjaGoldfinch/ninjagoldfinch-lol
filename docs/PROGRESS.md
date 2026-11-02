@@ -79,7 +79,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-10 One definition each for duplicated helpers and labels — #82
 - [x] RV-11 Docs brought up to date with the ADRs; finished notes archived — #83
 - [x] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example` — #84
-- [ ] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers
+- [x] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers — #85
 
 ## Brought forward
 
