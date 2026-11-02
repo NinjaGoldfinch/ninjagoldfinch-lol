@@ -110,10 +110,10 @@ None belong to ninjagoldfinch.lol. All are riot-proxy's.
 - Site routes: `GET /summoner/{riotId}`; riot-proxy routes: `GET /v1/lol/matches/{region}/{matchId}`. Path parameters in braces, named as in the code or spec.
 - Environment variables in code font, upper case: `PROXY_URL`.
 - Dates: ISO `YYYY-MM-DD`. Durations: `30 s`, `5 min`.
-- Source citations: `path/to/file.ts:L10-L42` in footers; inline as `src/lib/server/proxy.ts:73-77`. riot-proxy paths are prefixed `riot-proxy:` (e.g. `riot-proxy:src/config.rs:658-662`) and refer to commit `48f32aa`.
+- Source citations: `path/to/file.ts:L10-L42` in footers; inline as `src/lib/server/proxy.ts:74-78`. riot-proxy paths are prefixed `riot-proxy:` (e.g. `riot-proxy:src/config.rs:658-662`) and refer to commit `48f32aa`.
 - Unknowns: `> **TODO (unverified):** <what and where you looked>`, also listed in `_meta/gaps.md`.
 
 ---
 
-**Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L68-L77`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L69-L78`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`
+**Last verified:** 2026-11-03 against commit `2658c48`

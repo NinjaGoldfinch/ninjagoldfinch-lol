@@ -19,8 +19,8 @@ The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a n
 ## Transport and authentication
 
 - Base URL from `PROXY_URL`; production `http://127.0.0.1:8080`.
-- `Authorization: Bearer <PROXY_KEY>` on every call when `PROXY_KEY` is set (`src/lib/server/proxy.ts:136-147`). The key needs the `read` scope (`riot-proxy:src/routes/docs.rs:118-126`). See [authentication.md](./authentication.md).
-- All calls are `GET` with JSON responses. Deadlines: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for the rest (`src/lib/server/proxy.ts:73-77`).
+- `Authorization: Bearer <PROXY_KEY>` on every call when `PROXY_KEY` is set (`src/lib/server/proxy.ts:137-148`). The key needs the `read` scope (`riot-proxy:src/routes/docs.rs:118-126`). See [authentication.md](./authentication.md).
+- All calls are `GET` with JSON responses. Deadlines: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for the rest (`src/lib/server/proxy.ts:74-78`).
 
 ## Routes used
 
@@ -77,8 +77,8 @@ Semantics the site relies on:
 
 | Header         | Use                                                       | Code                             |
 | -------------- | --------------------------------------------------------- | -------------------------------- |
-| `X-Request-Id` | Logged with every failed call                             | `src/lib/server/proxy.ts:14`     |
-| `X-Cache`      | Logged with analytics calls over 250 ms                   | `src/lib/server/proxy.ts:58`     |
+| `X-Request-Id` | Logged with every failed call                             | `src/lib/server/proxy.ts:15`     |
+| `X-Cache`      | Logged with analytics calls over 250 ms                   | `src/lib/server/proxy.ts:59`     |
 | `Retry-After`  | Wait time for 429 pages when the body has no `retryAfter` | `src/lib/server/errors.ts:66-74` |
 
 `X-Cache-Age`, `X-Cache-Fetched-Age`, `X-RateLimit-*` and `ETag` are sent by riot-proxy but not read (ADR-007 explains why `X-RateLimit-*` is not used for the retry time, `docs/DECISIONS.md:87`).
@@ -107,5 +107,5 @@ WebSockets (`/v1/ws`), admin routes, `riot` account routes, live game and master
 
 ---
 
-**Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L14-L153`, `src/lib/server/errors.ts:L16-L74`, `src/lib/server/profile.ts:L76-L146`, `src/lib/server/match.ts:L38-L44`, `src/lib/server/patch.ts:L14-L74`, `src/lib/server/static-data.ts:L40-L49`, `src/lib/server/champions.ts:L38-L41`, `src/lib/server/champion-page.ts:L91-L186`, `src/lib/domain/champion-stats.ts:L34-L63,L178-L245`, `src/lib/domain/champion-page.ts:L37-L215`, `src/lib/domain/matches.ts:L49-L85,L160-L163`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/riot.ts:L11-L35`, `README.md:L52-L67`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L540,L577,L597`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L15-L154`, `src/lib/server/errors.ts:L16-L74`, `src/lib/server/profile.ts:L76-L146`, `src/lib/server/match.ts:L38-L44`, `src/lib/server/patch.ts:L14-L74`, `src/lib/server/static-data.ts:L40-L49`, `src/lib/server/champions.ts:L38-L41`, `src/lib/server/champion-page.ts:L91-L186`, `src/lib/domain/champion-stats.ts:L34-L63,L178-L245`, `src/lib/domain/champion-page.ts:L37-L215`, `src/lib/domain/matches.ts:L49-L85,L160-L163`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/riot.ts:L11-L35`, `README.md:L52-L67`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L540,L577,L597`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
+**Last verified:** 2026-11-03 against commit `2658c48`

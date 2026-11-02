@@ -8,7 +8,7 @@ The proxy client had no timeout, so a riot-proxy that stopped answering held pag
 
 ## Decision
 
-- `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s otherwise (`src/lib/server/proxy.ts:68-77`).
+- `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s otherwise (`src/lib/server/proxy.ts:69-78`).
 - `withTimeout` combines the caller's signal with `AbortSignal.timeout(budget)` and reads the body inside the deadline; a spent budget is `error(503)`. (Replaced in RV-03; see Status.)
 - `optional()` turns a throw into a 503 response for that call alone (`src/lib/server/errors.ts:41-58`). Optional: the profile's match page, the match timeline, the table's patch list, the champion page's builds, matchups and patch list.
 
@@ -21,7 +21,7 @@ The proxy client had no timeout, so a riot-proxy that stopped answering held pag
 
 Accepted (SPD-05, PR #63).
 
-2026-11-03, RV-03: the mechanism was replaced, the decision stands. `AbortSignal.timeout` could fail to fire: `new Request(…, { signal })` holds its signal only weakly, so a call nothing else held could be garbage collected before the abort reached it, and the page never finished. `withTimeout` now races the fetch and the body read against a promise its own `setTimeout` or the caller's abort rejects, and aborts its own `AbortController`. Any failure other than the caller's own abort is now a 503, a refused connection included (it was a 500). Deadlines are logged as `proxy timeout` (`src/lib/server/proxy.ts:81-134`). The CommunityDragon `perks.json` fetch gained a 5 s deadline too (`src/lib/server/cdragon.ts:11-32`).
+2026-11-03, RV-03: the mechanism was replaced, the decision stands. `AbortSignal.timeout` could fail to fire: `new Request(…, { signal })` holds its signal only weakly, so a call nothing else held could be garbage collected before the abort reached it, and the page never finished. `withTimeout` now races the fetch and the body read against a promise its own `setTimeout` or the caller's abort rejects, and aborts its own `AbortController`. Any failure other than the caller's own abort is now a 503, a refused connection included (it was a 500). Deadlines are logged as `proxy timeout` (`src/lib/server/proxy.ts:82-135`). The CommunityDragon `perks.json` fetch gained a 5 s deadline too (`src/lib/server/cdragon.ts:11-32`).
 
 ## Evidence
 
@@ -29,5 +29,5 @@ Accepted (SPD-05, PR #63).
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L542-L554`, `src/lib/server/proxy.ts:L68-L134`, `src/lib/server/cdragon.ts:L11-L32`, `tests/unit/proxy.test.ts:L154-L169`, `src/lib/server/errors.ts:L41-L58`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Sources:** `docs/DECISIONS.md:L542-L554`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cdragon.ts:L11-L32`, `tests/unit/proxy.test.ts:L154-L169`, `src/lib/server/errors.ts:L41-L58`
+**Last verified:** 2026-11-03 against commit `2658c48`

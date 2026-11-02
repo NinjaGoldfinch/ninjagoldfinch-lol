@@ -48,7 +48,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Essential call, optional call.** A riot-proxy call whose failure fails the page, versus one whose failure only degrades a section, wrapped in `optional()` (`src/lib/server/errors.ts:41-58`, ADR-040).
 
-**Budget (deadline).** The time limit on one riot-proxy call: 5 s for analytics and static data, 30 s otherwise; past it the call is a 503 (`src/lib/server/proxy.ts:68-134`).
+**Budget (deadline).** The time limit on one riot-proxy call: 5 s for analytics and static data, 30 s otherwise; past it the call is a 503 (`src/lib/server/proxy.ts:69-135`).
 
 **Edge cache.** Cloudflare's cache of rendered pages, controlled by the `Cache-Control` the site sends (`src/lib/server/cache.ts:5-16`, [data/caching.md](../data/caching.md)).
 
@@ -68,5 +68,5 @@ Definitions of the terms used across these docs and the code, with where each on
 
 ---
 
-**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L32,L73`, `src/lib/server/patch.ts:L34-L66`, `src/lib/server/profile.ts:L129-L130`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L68-L134`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L32,L73`, `src/lib/server/patch.ts:L34-L66`, `src/lib/server/profile.ts:L129-L130`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
+**Last verified:** 2026-11-03 against commit `2658c48`

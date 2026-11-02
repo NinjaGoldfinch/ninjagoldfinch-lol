@@ -87,7 +87,7 @@ A rollback takes as long as `pnpm install` plus `pnpm build`. Measured on a 4-co
 
 ### If bad pages were cached at the edge
 
-A rollback does not remove pages the bad version rendered from Cloudflare's cache. Most expire within minutes, but match pages are cached for a day and may be served stale for another (`src/lib/server/cache.ts:8-9`). Purge them in the Cloudflare dashboard (the zone's Caching → Configuration → Purge Cache), by URL or everything. Error responses are never cached, except 404s for 60 s (`src/hooks.server.ts:6-15`, `src/lib/server/cache.ts:12-13,29-34`).
+A rollback does not remove pages the bad version rendered from Cloudflare's cache. Most expire within minutes, but match pages are cached for a day and may be served stale for another (`src/lib/server/cache.ts:8-9`). Purge them in the Cloudflare dashboard (the zone's Caching → Configuration → Purge Cache), by URL or everything. Error responses are never cached, except 404s for 60 s (`src/hooks.server.ts:8-19`, `src/lib/server/cache.ts:12-13,29-34`).
 
 ## riot-proxy upgrades and rollbacks
 
@@ -105,5 +105,5 @@ The site depends on riot-proxy's routes and fields at the committed spec's versi
 
 ---
 
-**Sources:** `README.md:L47-L67,L104-L114`, `CLAUDE.md:L11-L12`, `docs/DECISIONS.md:L500-L516`, `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/lib/recent-storage.ts:L6-L22`, `node_modules/@sveltejs/adapter-node/index.js:L17`, `riot-proxy:README.md:L122`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:.github/workflows/release.yml`
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `README.md:L47-L67,L104-L114`, `CLAUDE.md:L11-L12`, `docs/DECISIONS.md:L500-L516`, `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L8-L19`, `src/lib/recent-storage.ts:L6-L22`, `node_modules/@sveltejs/adapter-node/index.js:L17`, `riot-proxy:README.md:L122`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:.github/workflows/release.yml`
+**Last verified:** 2026-11-03 against commit `2658c48`

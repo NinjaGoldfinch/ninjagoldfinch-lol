@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import createClient, { type ClientOptions, type Middleware } from 'openapi-fetch';
 import { PROXY_KEY, PROXY_URL } from '$app/env/private';
 import type { paths } from '#lib/api/schema.d.ts';
+import { timeCalls } from './timing.ts';
 
 /**
  * Logs every failed proxy response with riot-proxy's X-Request-Id, so a page
@@ -145,7 +146,7 @@ export function createProxyClient(
 		fetch: withTimeout(fetch, budget),
 		headers: key ? { Authorization: `Bearer ${key}` } : {}
 	});
-	client.use(refuseDotSegments, logFailures, logSlowAnalytics);
+	client.use(refuseDotSegments, timeCalls, logFailures, logSlowAnalytics);
 	return client;
 }
 

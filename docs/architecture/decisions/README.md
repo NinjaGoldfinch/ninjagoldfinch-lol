@@ -1,6 +1,6 @@
 # Architecture decisions
 
-Short records of the design decisions that shape ninjagoldfinch.lol, each with its evidence. The full, dated log of all 45 decisions is [docs/DECISIONS.md](../../DECISIONS.md); these digests group and summarise the ones a newcomer needs.
+Short records of the design decisions that shape ninjagoldfinch.lol, each with its evidence. The full, dated log of all 46 decisions is [docs/DECISIONS.md](../../DECISIONS.md); these digests group and summarise the ones a newcomer needs.
 
 Each record has the sections Context, Decision, Consequences, Status and Evidence.
 
@@ -14,7 +14,7 @@ Each record has the sections Context, Decision, Consequences, Status and Evidenc
 | [0006](./0006-build-time-origin.md)            | `ORIGIN` fixed at build time                              | ADR-014                            |
 | [0007](./0007-region-from-riot-id.md)          | Region from the Riot ID and match id                      | ADR-037                            |
 | [0008](./0008-deadlines-and-optional-calls.md) | Deadlines on every call; optional calls degrade alone     | ADR-040                            |
-| [0009](./0009-no-streaming.md)                 | No streaming; riot-proxy warms analytics                  | ADR-039                            |
+| [0009](./0009-no-streaming.md)                 | No streaming; riot-proxy warms analytics                  | ADR-039, ADR-046                   |
 | [0010](./0010-local-hooks-instead-of-ci.md)    | No CI; `just check` behind a git hook                     | ADR-002, ADR-003                   |
 | [0011](./0011-images-from-public-cdns.md)      | Images from Data Dragon CDN and CommunityDragon           | ADR-009, ADR-015, ADR-026          |
 
@@ -24,5 +24,5 @@ UI and presentation decisions (ADR-020 to ADR-036, ADR-042, ADR-043) are not dig
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L1-L630`, `riot-proxy:deploy/README.md:L14-L18`, `riot-proxy:docs/DECISIONS.md:L1510`
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `docs/DECISIONS.md:L1-L647`, `riot-proxy:deploy/README.md:L14-L18`, `riot-proxy:docs/DECISIONS.md:L1510`
+**Last verified:** 2026-11-03 against commit `2658c48`

@@ -82,10 +82,10 @@ sequenceDiagram
 ```
 
 - Base URL `PROXY_URL`; production `http://127.0.0.1:8080` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:630`).
-- The header is sent only when `PROXY_KEY` is set (`src/lib/server/proxy.ts:136-147`).
+- The header is sent only when `PROXY_KEY` is set (`src/lib/server/proxy.ts:137-148`).
 - Routes, payloads and error codes: [contract.md](./contract.md). Key handling: [authentication.md](./authentication.md).
 - Retries: none in the site. riot-proxy retries its own Riot calls (`riot-proxy:src/fetcher.rs:9-14`).
-- Every failed response is logged with riot-proxy's `X-Request-Id`, which riot-proxy also records on its request log span, so one page error can be traced across both services (`src/lib/server/proxy.ts:6-19`, `riot-proxy:src/http/request_id.rs:49-66`, `riot-proxy:src/app.rs:107-115`).
+- Every failed response is logged with riot-proxy's `X-Request-Id`, which riot-proxy also records on its request log span, so one page error can be traced across both services (`src/lib/server/proxy.ts:7-20`, `riot-proxy:src/http/request_id.rs:49-66`, `riot-proxy:src/app.rs:107-115`).
 
 ## 3. The site to CommunityDragon
 
@@ -122,5 +122,5 @@ A deploy pulls `main` over SSH with a read-only deploy key belonging to the `nin
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L6-L153`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L63-L67`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L64`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L392`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/server/match.ts:L63-L67`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L64`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L392`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
+**Last verified:** 2026-11-03 against commit `2658c48`

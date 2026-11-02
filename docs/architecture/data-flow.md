@@ -57,7 +57,7 @@ Everything left of the site belongs to riot-proxy and is summarised here only so
 
 | Step                | Input                                                          | Output                                                                              | Code                                                                  |
 | ------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Typed call          | riot-proxy JSON                                                | `data` typed by the generated `paths` (`schema.d.ts`), or `error`                   | `src/lib/server/proxy.ts:136-153`                                     |
+| Typed call          | riot-proxy JSON                                                | `data` typed by the generated `paths` (`schema.d.ts`), or `error`                   | `src/lib/server/proxy.ts:137-154`                                     |
 | Riot DTO projection | `SummonerDTO`, `LeagueEntryDTO`                                | Only the fields shown: icon id, level; queue, tier, rank, LP, wins, losses          | `src/lib/api/riot.ts:11-35`                                           |
 | Match parse         | match-v5 body (`unknown` in the spec)                          | `Match`: id, queue, times, version, participants, teams; or `undefined`             | `src/lib/api/match.ts:159-212`                                        |
 | Timeline parse      | match-v5 timeline (about 1.6 MB for a ranked game)             | Per-frame gold, item and skill events, objective kills                              | `src/lib/api/match.ts:214-…`, `docs/DECISIONS.md:272`                 |
@@ -71,7 +71,7 @@ What does not leave the server:
 
 - **PUUIDs.** The profile's `puuid` is used to ask for the match page (`src/lib/server/profile.ts:89-91`), and each participant's `puuid` to find their build in the timeline (`src/lib/domain/match-detail.ts:145`). Neither is in the page data (ADR-032, `docs/DECISIONS.md:402`).
 - **The proxy key and raw proxy error bodies.** Errors become one of three messages (`src/lib/server/errors.ts:11-33`).
-- **riot-proxy's cache headers.** `X-Cache` is logged for slow analytics calls only (`src/lib/server/proxy.ts:41-62`).
+- **riot-proxy's cache headers.** `X-Cache` is logged for slow analytics calls only (`src/lib/server/proxy.ts:42-63`).
 
 `ProfileData` is documented as "everything the profile page renders, and nothing more: it is embedded in the HTML" (`src/lib/server/profile.ts:17`). The page data models are described field by field in [../data/models.md](../data/models.md).
 
@@ -92,5 +92,5 @@ A restart of the site loses only its in-memory lookups, which reload on the next
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L41-L153`, `src/lib/api/riot.ts:L1-L35`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/ddragon.ts:L1-L141`, `src/lib/api/cdragon.ts:L1-L34`, `src/lib/server/static-data.ts:L22-L62`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/profile.ts:L17,L89-L91`, `src/lib/server/errors.ts:L11-L33`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-detail.ts:L145`, `src/lib/domain/matches.ts:L156-L162`, `src/lib/recent-storage.ts:L6-L22`, `src/lib/assets.ts:L9-L64`, `docs/DECISIONS.md:L272,L402`, `riot-proxy:src/archive/pack.rs:L124-L133`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:src/riot/endpoints.rs:L93-L234`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `src/lib/server/proxy.ts:L42-L154`, `src/lib/api/riot.ts:L1-L35`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/ddragon.ts:L1-L141`, `src/lib/api/cdragon.ts:L1-L34`, `src/lib/server/static-data.ts:L22-L62`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/profile.ts:L17,L89-L91`, `src/lib/server/errors.ts:L11-L33`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-detail.ts:L145`, `src/lib/domain/matches.ts:L156-L162`, `src/lib/recent-storage.ts:L6-L22`, `src/lib/assets.ts:L9-L64`, `docs/DECISIONS.md:L272,L402`, `riot-proxy:src/archive/pack.rs:L124-L133`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:src/riot/endpoints.rs:L93-L234`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
+**Last verified:** 2026-11-03 against commit `2658c48`
