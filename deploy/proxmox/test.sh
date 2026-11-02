@@ -4,6 +4,11 @@
 # ninjagoldfinch-update against a throwaway repo with a fake docker.
 set -euo pipefail
 
+# Git exports these to hooks (more of them from a worktree), and the pre-push
+# hook runs this test: left set, the scratch repos below would be the real one.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_COMMON_DIR \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE GIT_PREFIX
+
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

@@ -61,7 +61,7 @@ Each run fetches with the deploy key, prunes and force-updates tags to match Git
 
 ## Tests that still run
 
-`deploy/proxmox/test.sh` runs at the end of `just check` (`justfile:28`): shellcheck when installed, the vendor-data, the dry-run `qm` commands, and `ninjagoldfinch-update` against a throwaway git repository with a fake `docker`, including following a moved tag and pruning a deleted one. It cannot exercise Proxmox or Docker (`deploy/proxmox/README.md:94-96`, `deploy/proxmox/test.sh:46-82`). It prints `deploy test: ok` (observed 2026-10-20). Because it runs git commands, never run it from a hook inside a linked worktree ([workflows/development-setup.md](../workflows/development-setup.md#2-run-the-gate)).
+`deploy/proxmox/test.sh` runs at the end of `just check` (`justfile:28`): shellcheck when installed, the vendor-data, the dry-run `qm` commands, and `ninjagoldfinch-update` against a throwaway git repository with a fake `docker`, including following a moved tag and pruning a deleted one. It cannot exercise Proxmox or Docker (`deploy/proxmox/README.md:94-96`, `deploy/proxmox/test.sh:51-88`). It prints `deploy test: ok` (observed 2026-10-20). It unsets the location variables git exports to hooks before running git, so it is safe from a hook in a linked worktree (RV-01).
 
 ## Differences from production
 
@@ -78,5 +78,5 @@ Each run fetches with the deploy key, prunes and force-updates tags to match Git
 
 ---
 
-**Sources:** `deploy/proxmox/README.md:L1-L96`, `deploy/proxmox/create-vm.sh:L1-L38` and `--help`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `deploy/proxmox/test.sh:L46-L82`, `deploy/compose.yaml:L1-L14`, `Dockerfile:L1-L23`, `justfile:L28,L38-L40`, `docs/DECISIONS.md:L113-L127,L175,L500-L514`, `README.md:L103-L111`, owner answer 2026-10-19
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Sources:** `deploy/proxmox/README.md:L1-L96`, `deploy/proxmox/create-vm.sh:L1-L38` and `--help`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `deploy/proxmox/test.sh:L1-L88`, `deploy/compose.yaml:L1-L14`, `Dockerfile:L1-L23`, `justfile:L28,L38-L40`, `docs/DECISIONS.md:L113-L127,L175,L500-L514`, `README.md:L103-L111`, owner answer 2026-10-19
+**Last verified:** 2026-11-03 against commit `8cc2076`

@@ -95,7 +95,7 @@ Chromium needs its system packages, fonts included; without them text lays out a
 
 ## Deploy-script test
 
-`deploy/proxmox/test.sh` exercises the preview VM scripts in a temporary directory, including `ninjagoldfinch-update` following a moved tag and pruning a deleted one, with throwaway git repositories (`deploy/proxmox/test.sh:46-82`). It prints `deploy test: ok`. It runs `git init`, `commit` and `tag`, so never run it from a hook inside a linked worktree (see [development-setup.md](./development-setup.md#2-run-the-gate)).
+`deploy/proxmox/test.sh` exercises the preview VM scripts in a temporary directory, including `ninjagoldfinch-update` following a moved tag and pruning a deleted one, with throwaway git repositories (`deploy/proxmox/test.sh:51-88`). It prints `deploy test: ok`. It runs `git init`, `commit` and `tag`, after unsetting the location variables git exports to hooks; `tests/unit/deploy-test.test.ts` runs it with `GIT_DIR` set and checks that repository is untouched (RV-01).
 
 ## Coverage expectations
 
@@ -114,4 +114,4 @@ There is no coverage tool or threshold: no coverage provider in `package.json` a
 ---
 
 **Sources:** `justfile:L19-L36`, `package.json:L10-L21,L46-L49`, `vite.config.ts:L22-L34`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L99-L124`, `src/lib/server/proxy.ts:L73-L87`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `8cc2076`

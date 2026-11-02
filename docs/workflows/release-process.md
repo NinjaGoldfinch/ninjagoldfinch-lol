@@ -44,7 +44,7 @@ just e2e              # not in the hook; run it for anything a page shows
 git push -u origin <branch>
 ```
 
-`.githooks/pre-push` runs `exec just check`, so a failing gate stops the push (`.githooks/pre-push:1-3`). Do not push from a linked git worktree ([development-setup.md](./development-setup.md#2-run-the-gate)). GitHub does not enforce branch protection on this private repo (the API answers 403 for the plan), so the local hook is the only guard on `main` (ADR-003, `docs/DECISIONS.md:31-39`).
+`.githooks/pre-push` runs `exec just check`, so a failing gate stops the push (`.githooks/pre-push:1-3`). Pushing from a linked git worktree is safe since RV-01 ([development-setup.md](./development-setup.md#2-run-the-gate)). GitHub does not enforce branch protection on this private repo (the API answers 403 for the plan), so the local hook is the only guard on `main` (ADR-003, `docs/DECISIONS.md:31-39`).
 
 ### 3. Pull request and merge
 
@@ -97,4 +97,4 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 ---
 
 **Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L514`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L46-L66,L103-L115`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L5-L6`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `8cc2076`

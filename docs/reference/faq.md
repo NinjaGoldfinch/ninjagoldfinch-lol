@@ -29,7 +29,7 @@ Probably not: that test is flaky under load. Re-run it; it passes alone ([workfl
 Either you are on `main`, or a staged line contains `rpx_` or `RGAPI-` followed by a key character (`.githooks/pre-commit:4-23`). Work on a task branch; redact keys.
 
 **Can I push from a git worktree?**
-No: the pre-push hook's `deploy/proxmox/test.sh` would run git commands against the real repository ([workflows/development-setup.md](../workflows/development-setup.md#2-run-the-gate)).
+Yes, since RV-01: `deploy/proxmox/test.sh` unsets the location variables git exports to hooks before it runs git in its scratch repositories ([workflows/development-setup.md](../workflows/development-setup.md#2-run-the-gate)).
 
 **Why must every page work without JavaScript?**
 It is a project rule (`CLAUDE.md:59`): pages are rendered on the server and enhanced on top, and the e2e tests check each page with JavaScript off ([workflows/testing.md](../workflows/testing.md#browser-tests)).
@@ -77,4 +77,4 @@ The committed spec is riot-proxy 2.7.0; riot-proxy facts were read from its repo
 ---
 
 **Sources:** `CLAUDE.md:L11-L24,L59`, `README.md:L44`, `justfile:L15-L22`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `vite.config.ts:L16-L19`, `src/lib/server/cache.ts:L6-L7`, `src/lib/domain/matches.ts:L155-L157`, `deploy/proxmox/README.md:L55`, `docs/IMPLEMENTATION.md:L187`, and the linked pages
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `8cc2076`
