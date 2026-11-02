@@ -464,6 +464,19 @@ test('a malformed match id, or an old URL with an unknown region, shows not foun
 	}
 });
 
+test('a lower-case match id moves to the upper-case one, keeping the query', async ({
+	request
+}) => {
+	const lower = await request.get('/match/oc1_712351051?tab=builds', { maxRedirects: 0 });
+	expect(lower.status()).toBe(308);
+	expect(lower.headers()['location']).toBe('/match/OC1_712351051?tab=builds');
+
+	const old = await request.get('/match/oce/oc1_712351051', { maxRedirects: 0 });
+	expect(old.headers()['location']).toBe('/match/OC1_712351051');
+
+	expect((await request.get('/match/oc1_712351051')).status()).toBe(200);
+});
+
 test('an old match URL with the wrong region still opens the match: its id names the region', async ({
 	page
 }) => {
@@ -504,3 +517,17 @@ for (const [width, oneLine] of [
 		expect(box.height < 100).toBe(oneLine);
 	});
 }
+
+test('switching tabs keeps the page where it was, not back at the top', async ({ page }) => {
+	await page.setViewportSize({ width: 1280, height: 500 });
+	await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+	const tabs = page.getByRole('navigation', { name: 'Match views' });
+	await tabs.scrollIntoViewIfNeeded();
+	await page.evaluate(() => window.scrollBy(0, 150));
+	const scrolled = await page.evaluate(() => window.scrollY);
+	expect(scrolled).toBeGreaterThan(0);
+
+	await tabs.getByRole('link', { name: 'Timeline' }).click();
+	await expect(page.getByRole('region', { name: 'Gold difference' })).toBeVisible();
+	expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+});

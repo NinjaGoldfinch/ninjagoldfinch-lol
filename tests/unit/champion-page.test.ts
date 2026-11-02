@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { components } from '#lib/api/schema.d.ts';
 import {
-	formatSkillOrder,
 	openBuild,
 	roleLabel,
 	toChampionStats,
@@ -176,7 +175,7 @@ describe('toMatchups', () => {
 	});
 });
 
-describe('openBuild, roleLabel and formatSkillOrder', () => {
+describe('openBuild and roleLabel', () => {
 	it('reads the open build, 1-based, defaulting to the first', () => {
 		expect(openBuild('2', 3)).toBe(1);
 		expect(openBuild('4', 3)).toBe(0);
@@ -189,14 +188,6 @@ describe('openBuild, roleLabel and formatSkillOrder', () => {
 		expect(roleLabel('UTILITY')).toBe('Support');
 		expect(roleLabel('NONE')).toBe('None');
 	});
-
-	it('writes a skill order with arrows', () => {
-		expect(formatSkillOrder('QEW')).toBe('Q › E › W');
-	});
-
-	it("writes Udyr's four-skill order", () => {
-		expect(formatSkillOrder('RWEQ')).toBe('R › W › E › Q');
-	});
 });
 
 describe('toSetBuilds against a lane opponent', () => {
@@ -207,9 +198,8 @@ describe('toSetBuilds against a lane opponent', () => {
 		names
 	);
 
-	it("names the opponent and riot-proxy's lane", () => {
-		expect(against).toMatchObject({ role: 'MIDDLE', opponentId: 134, totalGames: 71 });
-		expect(toSetBuilds(builds, names).opponentId).toBeNull();
+	it("keeps riot-proxy's lane and games against the opponent", () => {
+		expect(against).toMatchObject({ role: 'MIDDLE', totalGames: 71 });
 	});
 
 	it('keeps the 3rd item and leaves out the empty 4th and 5th, starter and skills', () => {
@@ -248,9 +238,15 @@ describe('parseVsPick and withPick', () => {
 		});
 	});
 
+	it('reads the opponent without regard to case, as the champion route does', () => {
+		expect(parseVsPick(params('vs=Syndra'), names.champions, null)).toEqual({
+			...syndra,
+			lane: null
+		});
+	});
+
 	it('drops an unknown opponent, and only the lane when it is unknown', () => {
 		expect(parseVsPick(params(''), names.champions, null)).toBeNull();
-		expect(parseVsPick(params('vs=Syndra'), names.champions, null)).toBeNull();
 		expect(parseVsPick(params('vs=134'), names.champions, null)).toBeNull();
 		expect(parseVsPick(params('vs=nobody&lane=mid'), names.champions, null)).toBeNull();
 		expect(parseVsPick(params('vs=syndra&lane=MIDDLE'), names.champions, null)).toEqual({

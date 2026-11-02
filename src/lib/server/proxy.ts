@@ -4,19 +4,32 @@ import { PROXY_KEY, PROXY_URL } from '$app/env/private';
 import type { paths } from '#lib/api/schema.d.ts';
 
 /**
- * Logs every failed proxy call with riot-proxy's X-Request-Id, so a page
- * error can be traced in riot-proxy's logs.
+ * Logs every failed proxy response with riot-proxy's X-Request-Id, so a page
+ * error can be traced in riot-proxy's logs. A call that got no response is
+ * logged by `withTimeout`.
  */
-export const logFailures: Middleware = {
+const logFailures: Middleware = {
 	onResponse({ request, response }) {
 		if (response.ok) return;
 		const requestId = response.headers.get('x-request-id') ?? 'none';
 		console.error(
 			`proxy ${response.status} ${request.method} ${new URL(request.url).pathname} request-id=${requestId}`
 		);
-	},
-	onError({ request, error }) {
-		console.error(`proxy unreachable ${request.method} ${new URL(request.url).pathname}:`, error);
+	}
+};
+
+/**
+ * Refuses a path parameter of `.` or `..`. openapi-fetch encodes `/` but not
+ * dots, and the URL would then resolve to another riot-proxy route. Callers
+ * check their input first (`parseRiotId`), so reaching this is a bug.
+ */
+export const refuseDotSegments: Middleware = {
+	onRequest({ schemaPath, params }) {
+		for (const [name, value] of Object.entries(params.path ?? {})) {
+			if (value === '.' || value === '..' || value === '') {
+				throw new Error(`proxy path parameter ${name} of ${schemaPath} is '${String(value)}'`);
+			}
+		}
 	}
 };
 
@@ -67,21 +80,55 @@ type Fetch = NonNullable<ClientOptions['fetch']>;
 
 /**
  * Sends each request with a deadline from `budget`, keeping the caller's own
- * abort. A call past its deadline is unavailable (503), as for any other
- * riot-proxy outage.
+ * abort. A call that gets no answer, from a deadline spent or a riot-proxy
+ * that can't be reached, is logged and is unavailable (503), as for any
+ * other riot-proxy outage. Only the caller's own abort passes through as it
+ * was.
+ *
+ * The fetch races a promise that only the deadline or the caller's abort
+ * settles, held by its timer. Aborting a signal alone was not enough:
+ * `new Request(…, { signal })` follows it through a weak reference, so a call
+ * nothing else held (a riot-proxy that accepts and never answers) could be
+ * collected before the abort reached it, and the page never finished.
  */
-export function withTimeout(fetch?: Fetch, budget: (pathname: string) => number = proxyBudget) {
+function withTimeout(fetch?: Fetch, budget: (pathname: string) => number = proxyBudget) {
 	return async (request: Request): Promise<Response> => {
-		const timeout = AbortSignal.timeout(budget(new URL(request.url).pathname));
-		const signal = AbortSignal.any([request.signal, timeout]);
+		const { pathname } = new URL(request.url);
+		const ms = budget(pathname);
+		const controller = new AbortController();
+		let timedOut = false;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		let forward = () => {};
+		const stopped = new Promise<never>((_, reject) => {
+			const stop = (reason: unknown) => {
+				controller.abort(reason);
+				reject(reason);
+			};
+			timer = setTimeout(() => {
+				timedOut = true;
+				stop(new DOMException(`no answer in ${ms} ms`, 'TimeoutError'));
+			}, ms);
+			forward = () => stop(request.signal.reason);
+		});
+		if (request.signal.aborted) forward();
+		else request.signal.addEventListener('abort', forward, { once: true });
+
 		try {
-			const response = await (fetch ?? globalThis.fetch)(new Request(request, { signal }));
+			const response = await Promise.race([
+				(fetch ?? globalThis.fetch)(new Request(request, { signal: controller.signal })),
+				stopped
+			]);
 			// Read the body here, so the deadline covers it too.
-			const body = await response.arrayBuffer();
+			const body = await Promise.race([response.arrayBuffer(), stopped]);
 			return new Response(body.byteLength > 0 ? body : null, response);
 		} catch (e) {
-			if (timeout.aborted) error(503, 'Temporarily unavailable');
-			throw e;
+			if (request.signal.aborted && !timedOut) throw e;
+			if (timedOut) console.error(`proxy timeout ${request.method} ${pathname} after ${ms} ms`);
+			else console.error(`proxy unreachable ${request.method} ${pathname}:`, e);
+			error(503, 'Temporarily unavailable');
+		} finally {
+			clearTimeout(timer);
+			request.signal.removeEventListener('abort', forward);
 		}
 	};
 }
@@ -98,9 +145,11 @@ export function createProxyClient(
 		fetch: withTimeout(fetch, budget),
 		headers: key ? { Authorization: `Bearer ${key}` } : {}
 	});
-	client.use(logFailures, logSlowAnalytics);
+	client.use(refuseDotSegments, logFailures, logSlowAnalytics);
 	return client;
 }
 
 /** The one riot-proxy client. Server only. */
 export const proxy = createProxyClient(PROXY_URL, PROXY_KEY);
+
+export type ProxyClient = typeof proxy;

@@ -8,7 +8,7 @@ export interface Fixture {
 	response: { status: number; headers: Record<string, string>; body: unknown };
 }
 
-export const FIXTURES_DIR = join(import.meta.dirname, '../fixtures');
+const FIXTURES_DIR = join(import.meta.dirname, '../fixtures');
 
 export function loadFixtures(dir = FIXTURES_DIR): Fixture[] {
 	return readdirSync(dir)

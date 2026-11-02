@@ -1,5 +1,6 @@
 import type { components } from '#lib/api/schema.d.ts';
 import type { StaticNames } from '#lib/api/ddragon.ts';
+import { championName } from './names.ts';
 
 type ChampionStatsResponse = components['schemas']['ChampionStatsResponse'];
 type AnalyticsPatchesResponse = components['schemas']['AnalyticsPatchesResponse'];
@@ -39,6 +40,11 @@ export const ROLES = [
 ] as const;
 
 export type RoleSlug = (typeof ROLES)[number]['slug'];
+
+/** Riot's teamPosition values, as the site names them: `MIDDLE` → `Mid`. */
+export const LANES: Record<string, string> = Object.fromEntries(
+	ROLES.map((r) => [r.proxy, r.label])
+);
 
 /** Riot's tiers by URL value, highest first, with riot-proxy's name and the label shown. */
 export const TIERS = [
@@ -106,7 +112,7 @@ export function parseChampionFilter(params: URLSearchParams): ChampionFilter {
  * Nothing is above Challenger, so `challenger+` is Challenger. Anything else
  * is every tier.
  */
-export function parseRank(value: string | null): RankFilter | null {
+function parseRank(value: string | null): RankFilter | null {
 	const match = RANK.exec(value ?? '');
 	const tier = TIERS.find((t) => t.slug === match?.[1])?.slug;
 	if (!match || !tier) return null;
@@ -123,6 +129,11 @@ export function rankLabel(rank: RankFilter | null): string {
 	if (!rank) return 'All tiers';
 	const label = TIERS.find((t) => t.slug === rank.tier)?.label ?? rank.tier;
 	return `${label}${rank.andAbove ? '+' : ''}`;
+}
+
+/** What a page's rates count: `every tier`, or `Diamond+` with a tier picked. */
+export function rateScope(rank: RankFilter | null): string {
+	return rank ? rankLabel(rank) : 'every tier';
 }
 
 /** `every region and tier`, or `every region · Diamond+`, for a page's scope line. */
@@ -202,9 +213,7 @@ export interface ChampionRow {
 export interface ChampionTable {
 	/** The patch the rows are for: `all` or a `major.minor`. */
 	patch: string | null;
-	totalGames: number;
-	computedAt: string | null;
-	/** Most played first, as riot-proxy returns them. */
+	/** In riot-proxy's order; the page sorts them itself. */
 	rows: ChampionRow[];
 }
 
@@ -217,14 +226,12 @@ export interface ChampionTable {
 export function toChampionTable(body: ChampionStatsResponse, names: StaticNames): ChampionTable {
 	return {
 		patch: body.patch,
-		totalGames: body.totalGames,
-		computedAt: body.computedAt,
 		rows: body.champions
 			.filter((c) => c.tier === body.tier)
 			.map((c) => ({
 				id: c.championId,
 				key: names.champions[c.championId]?.id ?? null,
-				name: names.champions[c.championId]?.name ?? c.championName ?? `Champion ${c.championId}`,
+				name: championName(names, c.championId, c.championName),
 				games: c.games,
 				winRate: c.winRate,
 				pickRate: c.pickRate ?? null,
@@ -238,7 +245,7 @@ export function patchOptions(body: AnalyticsPatchesResponse | undefined): string
 	return (body?.patches ?? []).map((p) => p.patch).filter((p) => PATCH.test(p));
 }
 
-export const SORTS = ['pick', 'win', 'ban'] as const;
+const SORTS = ['pick', 'win', 'ban'] as const;
 export type ChampionSort = (typeof SORTS)[number];
 export const DEFAULT_SORT: ChampionSort = 'pick';
 

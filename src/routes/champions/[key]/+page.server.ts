@@ -18,11 +18,15 @@ export const load: PageServerLoad = async ({ params, url, untrack, setHeaders })
 	const build = untrack(() => url.searchParams.get('build'));
 	const query = withPick(championQuery(filter), vs);
 	const canonical = `${query}${build ? `${query ? '&' : '?'}build=${encodeURIComponent(build)}` : ''}`;
-	if (params.key !== championSlug(found.champion) || untrack(() => url.search) !== canonical) {
+	// The name for good (308); the query only for now (307), since a default
+	// or a champion the lookups don't know yet can change.
+	if (params.key !== championSlug(found.champion)) {
 		redirect(308, championPath(found.champion) + canonical);
 	}
+	if (untrack(() => url.search) !== canonical) redirect(307, url.pathname + canonical);
 
 	const page = await loadChampionPage(found, filter, { vs });
-	setHeaders(cacheControl('analytics'));
+	// A page with a part missing is not kept at the edge.
+	setHeaders(cacheControl(page.complete ? 'analytics' : 'none'));
 	return { filter, ...page };
 };

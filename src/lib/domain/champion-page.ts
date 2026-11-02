@@ -2,7 +2,9 @@ import type { components } from '#lib/api/schema.d.ts';
 import type { Named, Rune, StaticNames } from '#lib/api/ddragon.ts';
 import { stackItems, type StackedItem } from './builds.ts';
 import { championSlug } from './champion-search.ts';
-import { ROLES, type RoleSlug } from './champion-stats.ts';
+import { ROLES, TIERS, type RoleSlug } from './champion-stats.ts';
+import { championName, itemName } from './names.ts';
+import { titleCase } from './ranks.ts';
 
 type Schemas = components['schemas'];
 type StatEntry = Schemas['ChampionStatEntry'];
@@ -48,19 +50,7 @@ export function toChampionStats(
 }
 
 /** Highest tier first; `UNKNOWN` (players no ladder or lookup placed) last. */
-const TIER_ORDER = [
-	'CHALLENGER',
-	'GRANDMASTER',
-	'MASTER',
-	'DIAMOND',
-	'EMERALD',
-	'PLATINUM',
-	'GOLD',
-	'SILVER',
-	'BRONZE',
-	'IRON',
-	'UNKNOWN'
-];
+const TIER_ORDER: string[] = [...TIERS.map((t) => t.proxy), 'UNKNOWN'];
 
 export interface TierRow extends ChampionStats {
 	tier: string;
@@ -117,8 +107,6 @@ export interface SetBuilds {
 	 * played, or against an opponent the lane they met in most.
 	 */
 	role: string | null;
-	/** The lane opponent the builds are against; null for every game. */
-	opponentId: number | null;
 	/** Games in that role that had a build. */
 	totalGames: number;
 	builds: SetBuild[];
@@ -128,13 +116,12 @@ export function toSetBuilds(
 	body: Schemas['ChampionBuildsResponse'],
 	names: StaticNames
 ): SetBuilds {
-	const item = (id: number): NamedItem => ({ id, name: names.items[id] ?? `Item ${id}` });
+	const item = (id: number): NamedItem => ({ id, name: itemName(names, id) });
 	// Against an opponent riot-proxy keeps only the 3rd item of the path, so
 	// the 4th and 5th come back empty and are left out (riot-proxy ADR-171).
 	const against = body.opponentId !== null;
 	return {
 		role: body.role,
-		opponentId: body.opponentId,
 		totalGames: body.totalGames,
 		builds: body.builds.map((b) => {
 			const rune = b.runes[0];
@@ -149,7 +136,7 @@ export function toSetBuilds(
 						options.map((o) => ({ ...item(o.itemId), games: o.games, winRate: o.winRate }))
 					)
 					.filter((options) => !against || options.length > 0),
-				starter: b.starter[0] ? stackItems(b.starter[0].items, names.items) : null,
+				starter: b.starter[0] ? stackItems(b.starter[0].items, names) : null,
 				boots: b.boots[0] ? item(b.boots[0].itemId) : null,
 				skillOrder: b.skillOrder[0]?.order ?? null,
 				runes: rune ? runeChoice(rune.keystoneId, rune.subStyleId, names) : null,
@@ -173,7 +160,7 @@ export function toPopularChoices(
 	return {
 		items: detail.items.map((i) => ({
 			id: i.itemId,
-			name: names.items[i.itemId] ?? `Item ${i.itemId}`,
+			name: itemName(names, i.itemId),
 			games: i.games,
 			winRate: i.winRate
 		})),
@@ -210,7 +197,7 @@ export function toMatchups(
 		.map((m) => ({
 			opponentId: m.opponentId,
 			key: names.champions[m.opponentId]?.id ?? null,
-			name: names.champions[m.opponentId]?.name ?? m.opponentName ?? `Champion ${m.opponentId}`,
+			name: championName(names, m.opponentId, m.opponentName),
 			role: m.role,
 			games: m.games,
 			winRate: m.winRate
@@ -237,7 +224,9 @@ export function parseVsPick(
 	champions: Record<number, Named>,
 	role: RoleSlug | null
 ): VsPick | null {
-	const vs = params.get('vs');
+	// Slugs are lower case; `?vs=Syndra` names the same pick, and the page's
+	// redirect writes it as `syndra`.
+	const vs = params.get('vs')?.toLowerCase();
 	if (!vs) return null;
 	const found = Object.entries(champions).find(([, c]) => championSlug(c) === vs);
 	if (!found) return null;
@@ -314,11 +303,6 @@ export function openBuild(value: string | null, count: number): number {
 	return Number.isInteger(n) && n >= 1 && n <= count ? n - 1 : 0;
 }
 
-/** `Q › W › E`. */
-export function formatSkillOrder(order: string): string {
-	return [...order].join(' › ');
-}
-
 function runeChoice(keystoneId: number, subStyleId: number, names: StaticNames): RuneChoice {
 	const rune = (id: number) => (names.runes[id] ? { id, ...names.runes[id] } : null);
 	return { keystone: rune(keystoneId), subStyle: rune(subStyleId) };
@@ -327,8 +311,4 @@ function runeChoice(keystoneId: number, subStyleId: number, names: StaticNames):
 function spellPair(a: number, b: number, names: StaticNames): SpellPair {
 	const spell = (key: number) => (names.spells[key] ? { key, ...names.spells[key] } : null);
 	return [spell(a), spell(b)];
-}
-
-function titleCase(value: string): string {
-	return value.charAt(0) + value.slice(1).toLowerCase();
 }

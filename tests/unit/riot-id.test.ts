@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseRiotId, parseRiotIdInput, profilePath, sameRiotId } from '#lib/domain/riot-id.ts';
+import {
+	parseRiotId,
+	parseRiotIdInput,
+	profilePath,
+	riotIdKey,
+	sameRiotId
+} from '#lib/domain/riot-id.ts';
 
 describe('parseRiotIdInput', () => {
 	it('splits Name#TAG and trims both parts', () => {
@@ -30,6 +36,28 @@ describe('parseRiotId', () => {
 	it('rejects a segment without a hyphen', () => {
 		expect(parseRiotId('Hideonbush')).toBeUndefined();
 	});
+
+	// Dots are not encoded in a riot-proxy path: `..` would reach another route.
+	it('rejects a name or tag of . or ..', () => {
+		expect(parseRiotId('..-x')).toBeUndefined();
+		expect(parseRiotId('.-x')).toBeUndefined();
+		expect(parseRiotId('x-..')).toBeUndefined();
+		expect(parseRiotIdInput('.. #x')).toBeUndefined();
+		expect(parseRiotId('...-x')).toEqual({ gameName: '...', tagLine: 'x' });
+	});
+
+	it("holds the parts to the spec's lengths, in characters", () => {
+		expect(parseRiotId(`${'a'.repeat(16)}-12345`)).toEqual({
+			gameName: 'a'.repeat(16),
+			tagLine: '12345'
+		});
+		expect(parseRiotId(`${'a'.repeat(17)}-OCE`)).toBeUndefined();
+		expect(parseRiotId('Name-123456')).toBeUndefined();
+		expect(parseRiotId(`${'ñ'.repeat(16)}-OCE`)).toEqual({
+			gameName: 'ñ'.repeat(16),
+			tagLine: 'OCE'
+		});
+	});
 });
 
 describe('profilePath', () => {
@@ -52,5 +80,13 @@ describe('sameRiotId', () => {
 		expect(sameRiotId(me, { gameName: 'ninjagoldfinch', tagLine: 'ocenz' })).toBe(true);
 		expect(sameRiotId(me, { gameName: 'NinjaGoldfinch', tagLine: 'OCE' })).toBe(false);
 		expect(sameRiotId(me, { gameName: 'Ninja', tagLine: 'GoldfinchOCENZ' })).toBe(false);
+	});
+});
+
+describe('riotIdKey', () => {
+	it('is name#tag in lower case', () => {
+		expect(riotIdKey({ gameName: 'NinjaGoldfinch', tagLine: 'OCENZ' })).toBe(
+			'ninjagoldfinch#ocenz'
+		);
 	});
 });

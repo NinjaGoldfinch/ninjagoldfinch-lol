@@ -77,6 +77,17 @@ describe('findChampionPage', () => {
 		expect(isHttpError(failure) && failure.status).toBe(503);
 		expect(isRedirect(failure)).toBe(false);
 	});
+
+	it('stays rate limited, with the wait, when the lookups are', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { proxy } = client((path) =>
+			path.startsWith('/v1/static/champion')
+				? json(429, { error: { code: 'QUOTA_EXCEEDED', message: 'slow down', retryAfter: 7 } })
+				: undefined
+		);
+		const failure = await findChampionPage('ahri', { client: proxy }).catch((e: unknown) => e);
+		expect(isHttpError(failure, 429) && failure.body).toMatchObject({ retryAfter: 7 });
+	});
 });
 
 describe('loadChampionPage', () => {
@@ -156,7 +167,7 @@ describe('loadChampionPage', () => {
 		);
 		expect(asked.filter((path) => path.includes('opponentId='))).toHaveLength(1);
 		expect(page.vs).toEqual(SYNDRA);
-		expect(page.setBuilds).toMatchObject({ role: 'MIDDLE', opponentId: 134 });
+		expect(page.setBuilds).toMatchObject({ role: 'MIDDLE' });
 		// The matchups follow the lane riot-proxy chose against the opponent.
 		expect(page.matchupRole).toBe('MIDDLE');
 		expect(page.vsChoices[0]).toMatchObject({ name: 'Sylas', games: 129 });
@@ -184,7 +195,7 @@ describe('loadChampionPage', () => {
 			name: 'Yuumi',
 			lane: null
 		});
-		expect(page.setBuilds).toEqual({ role: null, opponentId: 350, totalGames: 0, builds: [] });
+		expect(page.setBuilds).toEqual({ role: null, totalGames: 0, builds: [] });
 		expect(page.vsChoices.at(-1)).toEqual({
 			opponentId: 350,
 			slug: 'yuumi',
@@ -212,6 +223,11 @@ describe('loadChampionPage', () => {
 		expect(page.matchups).toHaveLength(116);
 	});
 
+	it('is complete when every part loaded', async () => {
+		const { page } = await load();
+		expect(page.complete).toBe(true);
+	});
+
 	it('uses the role asked for', async () => {
 		const { page, asked } = await load(undefined, { role: 'mid', patch: 'all', rank: null });
 		expect(asked).toContain(
@@ -227,6 +243,7 @@ describe('loadChampionPage', () => {
 		expect(page.popular.items.length).toBeGreaterThan(0);
 		expect(page.matchupRole).toBeNull();
 		expect(page.matchups?.some((m) => m.role !== 'MIDDLE')).toBe(true);
+		expect(page.complete).toBe(false);
 	});
 
 	it('still loads when the matchups or the patch list fail', async () => {
@@ -237,6 +254,7 @@ describe('loadChampionPage', () => {
 		expect(page.matchups).toBeNull();
 		expect(page.patches).toEqual([]);
 		expect(page.setBuilds?.builds).toHaveLength(3);
+		expect(page.complete).toBe(false);
 	});
 
 	it('still loads when the builds, matchups and patch list calls throw', async () => {

@@ -125,7 +125,9 @@ test.describe('without JavaScript', () => {
 	test('a malformed Riot ID says how to write one', async ({ page }) => {
 		await page.goto('/');
 		await search(page, 'NinjaGoldfinch#');
-		await expect(page.getByRole('main')).toContainText('A Riot ID is Game name#TAG.');
+		await expect(page.getByRole('main')).toContainText(
+			'A Riot ID is Game name#TAG: up to 16 characters before the #, up to 5 after.'
+		);
 	});
 });
 
@@ -141,6 +143,11 @@ test('an unknown player shows not found', async ({ page }) => {
 	const response = await page.goto('/summoner/NoSuchPlayer000-XXXX');
 	expect(response?.status()).toBe(404);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
+});
+
+test('a Riot ID of .. is not found, not another riot-proxy route', async ({ request }) => {
+	expect((await request.get('/summoner/..-x')).status()).toBe(404);
+	expect((await request.get(`/summoner/${'a'.repeat(17)}-OCE`)).status()).toBe(404);
 });
 
 test('an unknown region shows not found', async ({ page }) => {
@@ -171,6 +178,19 @@ test('opened profiles appear under recent searches', async ({ page }) => {
 		'href',
 		'/summoner/NinjaGoldfinch-OCENZ'
 	);
+});
+
+test('a profile reached from another profile is remembered too', async ({ page }) => {
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
+	// The header search navigates in the page, keeping the profile component.
+	await search(page, 'Synthetic#TEST');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Synthetic#TEST');
+	await page.goto('/');
+
+	const recent = page.getByRole('region', { name: 'Recent searches' });
+	await expect(recent.getByRole('link', { name: /Synthetic#TEST/ })).toBeVisible();
+	await expect(recent.getByRole('link', { name: /NinjaGoldfinch#OCENZ/ })).toBeVisible();
 });
 
 test('/about shows what the site is and the legal notice', async ({ page }) => {
@@ -315,4 +335,32 @@ test('error pages are not cached, except briefly for not found', async ({ reques
 	const broken = await request.get('/summoner/kr/Somebody-KR1');
 	expect(broken.status()).toBe(503);
 	expect(broken.headers()['cache-control']).toBe('no-store');
+});
+
+test('redirects and failed data requests are never cached', async ({ request }) => {
+	const old = await request.get('/summoner/oce/NinjaGoldfinch-OCENZ', { maxRedirects: 0 });
+	expect(old.status()).toBe(308);
+	expect(old.headers()['cache-control']).toBe('no-store');
+
+	const messy = await request.get('/champions?junk=1', { maxRedirects: 0 });
+	expect(messy.status()).toBe(307);
+	expect(messy.headers()['cache-control']).toBe('no-store');
+
+	// SvelteKit answers a data request whose load threw 200, with the error
+	// inside, and marks it uncached itself.
+	const data = await request.get('/summoner/Somebody-KR1/__data.json');
+	expect(data.status()).toBe(200);
+	expect(await data.text()).toContain('"type":"error"');
+	expect(data.headers()['cache-control']).toBe('private, no-store');
+});
+
+test("a champion's name moves for good, its query only for now", async ({ request }) => {
+	const name = await request.get('/champions/Ahri?role=mid', { maxRedirects: 0 });
+	expect(name.status()).toBe(308);
+	expect(name.headers()['location']).toBe('/champions/ahri?role=mid');
+
+	const query = await request.get('/champions/ahri?role=mid&junk=1', { maxRedirects: 0 });
+	expect(query.status()).toBe(307);
+	expect(query.headers()['location']).toBe('/champions/ahri?role=mid');
+	expect(query.headers()['cache-control']).toBe('no-store');
 });

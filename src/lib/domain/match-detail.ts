@@ -11,6 +11,7 @@ import { playerBuild, toRunePage, toTimelineBuild, type Build } from './builds.t
 import type { Region } from './regions.ts';
 import { sameRiotId, type RiotId } from './riot-id.ts';
 import { loadoutOf, patchOf, type MatchRow } from './matches.ts';
+import { championName, queueName } from './names.ts';
 import { objectiveKills, type GoldFrame, type ObjectiveKill } from './timeline.ts';
 
 /** One player's scoreboard line: only what the page renders. */
@@ -53,7 +54,6 @@ export interface TeamScoreboard {
 export interface MatchDetail {
 	matchId: string;
 	region: { slug: string; label: string };
-	queueId: number | null;
 	/** Short queue name, e.g. `Ranked Solo`. */
 	queue: string;
 	/** Epoch milliseconds. */
@@ -83,8 +83,8 @@ const NO_OBJECTIVES = Object.fromEntries(OBJECTIVES.map((key) => [key, 0])) as R
 /**
  * Shapes a match into one scoreboard per team, players in Riot's order, plus
  * each team's gold over time and the objectives taken from the timeline when
- * there is one. Every
- * team's result reads `remake` when the game ended in an early surrender.
+ * there is one. Every team's result reads `remake` when the game ended in an
+ * early surrender.
  */
 export function toMatchDetail(
 	match: Match,
@@ -107,11 +107,7 @@ export function toMatchDetail(
 	return {
 		matchId: match.matchId,
 		region: { slug: region.slug, label: region.label },
-		queueId: match.queueId,
-		queue:
-			match.queueId === null
-				? 'Unknown queue'
-				: (names.queues[match.queueId] ?? `Queue ${match.queueId}`),
+		queue: queueName(names, match.queueId),
 		startedAt: match.gameCreation,
 		duration: match.gameDuration,
 		patch: patchOf(match.gameVersion),
@@ -134,7 +130,7 @@ export function toMatchDetail(
 				bans: (team?.bans ?? []).map((id) => ({
 					id,
 					key: names.champions[id]?.id ?? null,
-					name: names.champions[id]?.name ?? `Champion ${id}`
+					name: championName(names, id)
 				})),
 				players: players.map((p) => toLine(p, names))
 			};
@@ -161,7 +157,7 @@ function toLine(p: Participant, names: StaticNames): ScoreboardLine {
 		champion: {
 			id: p.championId,
 			key: names.champions[p.championId]?.id ?? null,
-			name: names.champions[p.championId]?.name ?? p.championName ?? `Champion ${p.championId}`,
+			name: championName(names, p.championId, p.championName),
 			level: p.champLevel
 		},
 		position: p.teamPosition,
@@ -234,7 +230,7 @@ export function openBuildId(
 }
 
 /** The match page's tabs; the scoreboard is the default and has no `?tab=`. */
-export const MATCH_TABS = ['scoreboard', 'timeline'] as const;
+const MATCH_TABS = ['scoreboard', 'timeline'] as const;
 export type MatchTab = (typeof MATCH_TABS)[number];
 
 /** The tab `?tab=` asks for; anything unknown is the scoreboard. */
@@ -275,6 +271,23 @@ export function formatMatchDate(epochMs: number): string {
 		timeZone: 'UTC'
 	});
 	return `${day}, ${time} UTC`;
+}
+
+/** A game's result as the scoreboards word and colour it. */
+export const RESULTS = {
+	win: { label: 'Victory', text: 'text-win' },
+	loss: { label: 'Defeat', text: 'text-loss' },
+	remake: { label: 'Remake', text: 'text-muted' }
+} as const satisfies Record<TeamScoreboard['result'], { label: string; text: string }>;
+
+/** `12,345`: gold and damage, grouped. */
+export function formatNumber(n: number): string {
+	return n.toLocaleString('en-GB');
+}
+
+/** The match's highest damage to champions, for the damage bars; 0 for none. */
+export function mostDamage(teams: Pick<TeamScoreboard, 'players'>[]): number {
+	return Math.max(0, ...teams.flatMap((t) => t.players.map((p) => p.damage)));
 }
 
 /**

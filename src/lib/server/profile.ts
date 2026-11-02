@@ -11,10 +11,8 @@ import { regionForPlatform } from '#lib/domain/regions.ts';
 import type { RiotId } from '#lib/domain/riot-id.ts';
 import { classifyProxyError, optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
-import { proxy } from './proxy.ts';
-import { NO_NAMES, staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
+import { proxy, type ProxyClient } from './proxy.ts';
+import { namesOrFallback } from './static-data.ts';
 
 /** Everything the profile page renders, and nothing more: it is embedded in the HTML. */
 export interface ProfileData {
@@ -67,7 +65,7 @@ export interface ProfileData {
  *
  * `refresh` asks riot-proxy to re-read both from Riot, spending quota; it
  * allows that once a minute per player and otherwise answers from cache.
- * `filter` picks the match page: a queue, and which page of ten.
+ * `filter` picks the match page: a queue, a champion, and which page of ten.
  */
 export async function loadProfile(
 	id: RiotId,
@@ -80,7 +78,7 @@ export async function loadProfile(
 	});
 	if (!profile.response.ok || !profile.data) toHttpError(profile.response, profile.error);
 	const body = profile.data;
-	const region = body.platform ? regionForPlatform(body.platform) : undefined;
+	const region = regionForPlatform(body.platform);
 	if (!region) {
 		console.error(`profile ${id.gameName}#${id.tagLine}: unknown platform ${body.platform}`);
 		error(503, 'Temporarily unavailable');
@@ -105,10 +103,7 @@ export async function loadProfile(
 		currentPatch(client)
 	]);
 
-	const names = await staticNames(patch, client).catch((e: unknown) => {
-		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
-		return NO_NAMES;
-	});
+	const { names } = await namesOrFallback(patch, client);
 
 	const label = `${region.slug}/${id.gameName}#${id.tagLine}`;
 	const matches = page.response.ok && page.data ? page.data : null;

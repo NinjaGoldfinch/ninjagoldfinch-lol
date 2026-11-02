@@ -6,7 +6,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-# The site's public origin (e.g. http://192.168.68.47:3000), baked in at build
+# The site's public origin (e.g. http://<vm-ip>:3000), baked in at build
 # time for form CSRF checks; adapter-node 6 does not read it at runtime.
 ARG ORIGIN
 RUN pnpm build && pnpm prune --prod
@@ -19,5 +19,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
+# PORT from deploy/.env if it sets one; the server's own default otherwise.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+	CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/healthz" || exit 1
 CMD ["node", "build"]

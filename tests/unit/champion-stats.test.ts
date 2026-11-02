@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { components } from '#lib/api/schema.d.ts';
 import {
 	DEFAULT_PATCH,
+	LANES,
 	LOW_SAMPLE_GAMES,
 	MIN_GAMES,
 	isLowSample,
@@ -12,6 +13,7 @@ import {
 	filterFields,
 	RANK_OPTIONS,
 	rankLabel,
+	rateScope,
 	patchLabel,
 	patchOptions,
 	pickerPatches,
@@ -82,6 +84,14 @@ describe('parseChampionFilter', () => {
 		for (const query of ['', 'rank=', 'rank=DIAMOND', 'rank=unknown', 'rank=diamond++', 'rank=+']) {
 			expect(parseChampionFilter(params(query)).rank).toBeNull();
 		}
+	});
+});
+
+describe('rateScope', () => {
+	it('is every tier, or the tier picked', () => {
+		expect(rateScope(null)).toBe('every tier');
+		expect(rateScope({ tier: 'diamond', andAbove: true })).toBe('Diamond+');
+		expect(rateScope({ tier: 'gold', andAbove: false })).toBe('Gold');
 	});
 });
 
@@ -358,5 +368,17 @@ describe('sample size', () => {
 		expect(isLowSample(99)).toBe(true);
 		expect(isLowSample(100)).toBe(false);
 		expect(isLowSample(0)).toBe(true);
+	});
+});
+
+describe('LANES', () => {
+	it("names Riot's teamPosition values as the role tabs do", () => {
+		expect(LANES).toEqual({
+			TOP: 'Top',
+			JUNGLE: 'Jungle',
+			MIDDLE: 'Mid',
+			BOTTOM: 'Bot',
+			UTILITY: 'Support'
+		});
 	});
 });

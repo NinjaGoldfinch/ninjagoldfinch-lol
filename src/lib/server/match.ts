@@ -6,16 +6,20 @@ import type { Region } from '#lib/domain/regions.ts';
 import { statShards } from './cdragon.ts';
 import { optional, toHttpError } from './errors.ts';
 import { ddragonVersionFor, patchVersions } from './patch.ts';
-import { proxy } from './proxy.ts';
-import { NO_NAMES, staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
+import { proxy, type ProxyClient } from './proxy.ts';
+import { namesOrFallback } from './static-data.ts';
 
 interface Sources {
 	client?: ProxyClient;
 	/** For CommunityDragon's stat shard names; tests pass their own. */
 	cdragon?: (patch: string) => ReturnType<typeof statShards>;
 }
+
+/** A match page, and whether every optional part loaded. */
+export type LoadedMatch = MatchDetail & {
+	/** false when the timeline, the Data Dragon lookups or the stat shards fell back. */
+	complete: boolean;
+};
 
 /**
  * The match and its timeline, fetched in parallel with the patch list.
@@ -30,7 +34,7 @@ export async function loadMatch(
 	region: Region,
 	matchId: string,
 	{ client = proxy, cdragon = (patch) => statShards(patch) }: Sources = {}
-): Promise<MatchDetail> {
+): Promise<LoadedMatch> {
 	if (!isMatchIdFor(region, matchId)) error(404, 'Not found');
 
 	const path = { region: region.route, matchId };
@@ -53,21 +57,22 @@ export async function loadMatch(
 		console.error(`match ${matchId}: unexpected timeline payload`);
 	}
 
-	const [names, shards] = await Promise.all([
-		staticNames(versions.current, client).catch((e: unknown) => {
-			console.error('Data Dragon lookups unavailable; using fallbacks:', e);
-			return NO_NAMES;
-		}),
+	let complete = timeline !== undefined;
+	const [{ names, fellBack }, shards] = await Promise.all([
+		namesOrFallback(versions.current, client),
 		cdragon(versions.current).catch((e: unknown) => {
 			console.error('CommunityDragon stat shards unavailable:', e);
+			complete = false;
 			return {};
 		})
 	]);
+	if (fellBack) complete = false;
 
-	return toMatchDetail(match, names, {
+	const detail = toMatchDetail(match, names, {
 		region,
 		ddragonVersion: ddragonVersionFor(versions.versions, match.gameVersion) ?? versions.current,
 		timeline,
 		shards
 	});
+	return { ...detail, complete };
 }

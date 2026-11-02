@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import ChampionSummary from '#lib/components/ChampionSummary.svelte';
 	import MatchFilters from '#lib/components/MatchFilters.svelte';
@@ -26,7 +25,9 @@
 	);
 	const queueName = $derived(profile.queueOptions.find((q) => q.id === profile.filter.queue)?.name);
 
-	onMount(() => {
+	// Runs again when one profile leads to another: SvelteKit keeps this
+	// component and only its data changes.
+	$effect(() => {
 		rememberSearch(data.riotId);
 	});
 </script>

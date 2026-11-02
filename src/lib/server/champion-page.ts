@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
 import type { Named } from '#lib/api/ddragon.ts';
 import {
 	toChampionStats,
@@ -25,10 +25,8 @@ import {
 } from '#lib/domain/champion-stats.ts';
 import { optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
-import { proxy } from './proxy.ts';
+import { proxy, type ProxyClient } from './proxy.ts';
 import { staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
 
 export interface ChampionPage {
 	championId: number;
@@ -54,6 +52,8 @@ export interface ChampionPage {
 	ddragonVersion: string;
 	/** For the header search's suggestions. */
 	championNames: string[];
+	/** false when the set builds, the matchups or the patch list failed. */
+	complete: boolean;
 }
 
 /**
@@ -90,6 +90,8 @@ export async function findChampionPage(
 }> {
 	const ddragonVersion = await currentPatch(client);
 	const names = await staticNames(ddragonVersion, client).catch((e: unknown) => {
+		// Rate limited stays rate limited, with its wait; anything else is unavailable.
+		if (isHttpError(e, 429)) throw e;
 		console.error('Data Dragon lookups unavailable:', e);
 		error(503, 'Temporarily unavailable');
 	});
@@ -167,7 +169,8 @@ export async function loadChampionPage(
 		matchupRole,
 		patches: patchOptions(patches.response.ok ? patches.data : undefined),
 		ddragonVersion,
-		championNames: championNames(names.champions)
+		championNames: championNames(names.champions),
+		complete: builds.response.ok && matchups.response.ok && patches.response.ok
 	};
 }
 

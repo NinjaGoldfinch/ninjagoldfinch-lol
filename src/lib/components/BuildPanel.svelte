@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { itemIconUrl, runeIconUrl, statShardIconUrl } from '#lib/assets.ts';
-	import { SKILL_KEYS, skillColumns, type Build, type StackedItem } from '#lib/domain/builds.ts';
+	import { runeIconUrl, statShardIconUrl } from '#lib/assets.ts';
+	import { SKILL_KEYS, formatSkillOrder, skillColumns, type Build } from '#lib/domain/builds.ts';
 	import type { ScoreboardLine } from '#lib/domain/match-detail.ts';
 	import { formatDuration } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
+	import ItemIcon from './ItemIcon.svelte';
 
 	/**
 	 * One player's build: starter, boots, skill order and finished items, the
@@ -36,29 +37,6 @@
 
 	const label = 'text-xs font-medium tracking-wide text-muted uppercase';
 </script>
-
-{#snippet icon(item: StackedItem)}
-	{@const name = `${item.count > 1 ? `${item.count} × ` : ''}${item.name}`}
-	<!-- Repeat buys stack, with the count on the icon's corner. -->
-	<span class="relative block">
-		<img
-			src={itemIconUrl(version, item.id)}
-			alt={name}
-			title={name}
-			width="28"
-			height="28"
-			loading="lazy"
-			class="rounded-sm"
-		/>
-		{#if item.count > 1}
-			<span
-				aria-hidden="true"
-				class="absolute -right-1 -bottom-1 min-w-4 rounded-full border border-border bg-bg px-0.5 text-center text-[10px] leading-[14px] font-semibold"
-				>{item.count}</span
-			>
-		{/if}
-	</span>
-{/snippet}
 
 <section aria-labelledby="build-heading" class="rounded border border-border bg-surface">
 	<div class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
@@ -100,7 +78,7 @@
 								{#if core.starter.length > 0}
 									<ul class="flex gap-0.5">
 										{#each core.starter as item (item.id)}
-											<li>{@render icon(item)}</li>
+											<li><ItemIcon {version} {item} count={item.count} bare /></li>
 										{/each}
 									</ul>
 								{:else}<span class="text-muted">–</span>{/if}
@@ -109,14 +87,18 @@
 						<div>
 							<dt class={label}>Boots</dt>
 							<dd class="mt-1">
-								{#if core.boots}{@render icon(core.boots)}{:else}<span class="text-muted">–</span
-									>{/if}
+								{#if core.boots}<ItemIcon
+										{version}
+										item={core.boots}
+										count={core.boots.count}
+										bare
+									/>{:else}<span class="text-muted">–</span>{/if}
 							</dd>
 						</div>
 						<div>
 							<dt class={label}>Skills</dt>
 							<dd class="mt-1 text-sm font-semibold">
-								{skillOrder ? [...skillOrder].join(' › ') : '–'}
+								{skillOrder ? formatSkillOrder(skillOrder) : '–'}
 							</dd>
 						</div>
 						<div>
@@ -126,7 +108,7 @@
 									<ol class="flex flex-wrap gap-x-1.5 gap-y-2" aria-label="Finished items">
 										{#each core.items as item, i (i)}
 											<li class="text-center">
-												{@render icon({ ...item, count: 1 })}
+												<ItemIcon {version} {item} bare />
 												<p class="text-[11px] text-muted">{formatDuration(item.at)}</p>
 											</li>
 										{/each}
@@ -140,7 +122,7 @@
 				<div>
 					<h3 class={label}>
 						Skill order{#if skillOrder}<span class="normal-case"
-								>{` · ${[...skillOrder].join(' › ')}`}</span
+								>{` · ${formatSkillOrder(skillOrder)}`}</span
 							>{/if}
 					</h3>
 					<!-- Narrow screens scroll the grid inside its box, not the page. -->
@@ -190,7 +172,7 @@
 									<div>
 										<ul class="flex gap-0.5">
 											{#each visit.items as item (item.id)}
-												<li>{@render icon(item)}</li>
+												<li><ItemIcon {version} {item} count={item.count} bare /></li>
 											{/each}
 										</ul>
 										<p class="mt-0.5 text-[11px] text-muted">{formatDuration(visit.at)}</p>

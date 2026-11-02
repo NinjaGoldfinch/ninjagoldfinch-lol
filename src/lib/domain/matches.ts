@@ -1,21 +1,19 @@
 import type { Named, Rune, StaticNames } from '#lib/api/ddragon.ts';
 import type { components } from '#lib/api/schema.d.ts';
 import { formatAge } from './age.ts';
+import { championName, itemName, queueName } from './names.ts';
 
 type MatchSummary = components['schemas']['MatchSummary'];
 
 /** One row of a player's match history: only what the page renders. */
 export interface MatchRow {
 	matchId: string;
-	queueId: number | null;
 	/** Short queue name, e.g. `Ranked Solo`. */
 	queue: string;
 	/** When the game started, in words, as of when the page was built. */
 	playedAgo: string | null;
 	/** Seconds. */
 	duration: number | null;
-	/** `major.minor` of the game build, e.g. `16.20`. */
-	patch: string | null;
 	/** The Data Dragon version for this game's patch, for its icons; null if riot-proxy lacks it. */
 	ddragonVersion: string | null;
 	result: 'win' | 'loss' | 'remake';
@@ -58,17 +56,15 @@ export function toMatchRows(
 		return [
 			{
 				matchId: m.matchId,
-				queueId,
-				queue: queueId === null ? 'Unknown queue' : (names.queues[queueId] ?? `Queue ${queueId}`),
+				queue: queueName(names, queueId),
 				playedAgo: m.gameCreation == null ? null : formatAge((now - m.gameCreation) / 1000),
 				duration: m.gameDuration ?? null,
-				patch: patchOf(m.gameVersion),
 				ddragonVersion: m.ddragonVersion ?? null,
 				result: p.gameEndedInEarlySurrender ? 'remake' : p.win ? 'win' : 'loss',
 				champion: {
 					id: p.championId,
 					key: names.champions[p.championId]?.id ?? null,
-					name: names.champions[p.championId]?.name ?? p.championName,
+					name: championName(names, p.championId, p.championName),
 					level: p.champLevel ?? null
 				},
 				kills: p.kills ?? 0,
@@ -103,7 +99,7 @@ export function loadoutOf(
 	p: LoadoutFields,
 	names: StaticNames
 ): Pick<MatchRow, 'items' | 'roleBoundItem' | 'spells' | 'runes'> {
-	const item = (id: number) => ({ id, name: names.items[id] ?? `Item ${id}` });
+	const item = (id: number) => ({ id, name: itemName(names, id) });
 	return {
 		items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6].map((id) =>
 			id ? item(id) : null
@@ -179,7 +175,7 @@ export function kdaRatio(kills: number, deaths: number, assists: number): string
 	return deaths === 0 ? 'Perfect' : ((kills + assists) / deaths).toFixed(2);
 }
 
-/** CS per minute to one place. */
+/** CS per minute to one place; a dash without a duration, rather than a rate of 0. */
 export function csPerMinute(cs: number, seconds: number): string {
-	return seconds > 0 ? ((cs * 60) / seconds).toFixed(1) : '0.0';
+	return seconds > 0 ? ((cs * 60) / seconds).toFixed(1) : '–';
 }

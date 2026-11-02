@@ -8,10 +8,8 @@ import type { ChampionFilter, ChampionTable } from '#lib/domain/champion-stats.t
 import { championNames } from '#lib/domain/champion-search.ts';
 import { optional, toHttpError } from './errors.ts';
 import { currentPatch } from './patch.ts';
-import { proxy } from './proxy.ts';
-import { NO_NAMES, staticNames } from './static-data.ts';
-
-type ProxyClient = typeof proxy;
+import { proxy, type ProxyClient } from './proxy.ts';
+import { namesOrFallback } from './static-data.ts';
 
 export interface ChampionsPage {
 	table: ChampionTable;
@@ -21,6 +19,8 @@ export interface ChampionsPage {
 	ddragonVersion: string;
 	/** For the header search's suggestions. */
 	championNames: string[];
+	/** false when the patch list or the Data Dragon lookups fell back. */
+	complete: boolean;
 }
 
 /**
@@ -45,15 +45,14 @@ export async function loadChampions(
 	if (!patches.response.ok)
 		console.error('analytics patches unavailable:', patches.response.status);
 
-	const names = await staticNames(ddragonVersion, client).catch((e: unknown) => {
-		console.error('Data Dragon lookups unavailable; using fallbacks:', e);
-		return NO_NAMES;
-	});
+	const { names, fellBack } = await namesOrFallback(ddragonVersion, client);
+	const complete = patches.response.ok && !fellBack;
 
 	return {
 		table: toChampionTable(champions.data, names),
 		patches: patchOptions(patches.response.ok ? patches.data : undefined),
 		ddragonVersion,
-		championNames: championNames(names.champions)
+		championNames: championNames(names.champions),
+		complete
 	};
 }

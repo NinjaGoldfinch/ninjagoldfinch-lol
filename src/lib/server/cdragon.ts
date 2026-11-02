@@ -8,6 +8,9 @@ import { parseStatShards, type Shard } from '#lib/api/cdragon.ts';
 // (ADR-013), the reduced table for one patch is held in memory.
 let latest: { patch: string; shards: Promise<Record<number, Shard>> } | undefined;
 
+/** How long perks.json may take, body included. Every match page of the patch waits on it. */
+export const CDRAGON_BUDGET_MS = 5_000;
+
 export function statShards(
 	patch: string,
 	fetcher: typeof fetch = fetch,
@@ -15,10 +18,18 @@ export function statShards(
 ): Promise<Record<number, Shard>> {
 	if (latest?.patch === patch) return latest.shards;
 
-	const shards = fetcher(`${cdragonGameData(patch, base)}/perks.json`).then(async (response) => {
-		if (!response.ok) throw new Error(`CommunityDragon perks.json: ${response.status}`);
-		return parseStatShards(await response.json());
-	});
+	const deadline = new AbortController();
+	const timer = setTimeout(
+		() =>
+			deadline.abort(new Error(`CommunityDragon perks.json: no answer in ${CDRAGON_BUDGET_MS} ms`)),
+		CDRAGON_BUDGET_MS
+	);
+	const shards = fetcher(`${cdragonGameData(patch, base)}/perks.json`, { signal: deadline.signal })
+		.then(async (response) => {
+			if (!response.ok) throw new Error(`CommunityDragon perks.json: ${response.status}`);
+			return parseStatShards(await response.json());
+		})
+		.finally(() => clearTimeout(timer));
 	latest = { patch, shards };
 	// A failed fetch is not kept, so the next page tries again.
 	shards.catch(() => {

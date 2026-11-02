@@ -512,6 +512,8 @@ Date: 2026-10-10 · Task: P5-04
 
 **Consequences.** Node 22.18 or later and pnpm must be installed on the server; Ubuntu 26.04's packaged Node is new enough. Deploying is five commands, listed in the README, and none of them is in the repo as a script or unit file yet. The plan's deployment section and P5-01's compose-with-`cloudflared` item describe a setup production does not use.
 
+Note, 2026-11-03: production has since moved to an Onidel ONI-4, ngf-prod-syd1 (6 vCPU, 12 GB, 120 GB).
+
 ## ADR-039: Champion pages don't stream; cold slices are riot-proxy's to warm
 
 Date: 2026-10-15 · Task: SPD-01
@@ -595,3 +597,34 @@ Date: 2026-10-19 · Task: VS-03
 - **Marking.** Builds against an opponent are marked "Low sample" under 100 games, as every rate is (ADR-035). `winRateLow` is not used (VS-04 dropped).
 
 **Consequences.** Against an opponent most builds are marked, which is the honest reading of 10 to 50 games. Each pick is a riot-proxy MISS on its first view after a rebuild (2–3 ms per champion read). Opponent builds are empty in production until a builds rebuild has run since 2.7.0 started; until then the card says there are none. Tests use synthetic opponent bodies until real ones are recorded.
+
+## ADR-044: Deadlines race the call; every riot-proxy outage is a 503
+
+Date: 2026-11-03 · Task: RV-03
+
+**Context.** ADR-040's deadline sometimes never fired: a page against a riot-proxy that accepted connections and never answered did not finish, and the unit test for it timed out in about one full run in three. `new Request(…, { signal })` follows the given signal through a weak reference, so a call that nothing else held could be garbage collected before the abort reached it. Collecting garbage while ten deadlines ran, the old wrapper hung every time and the new one never. A refused connection was also a 500, though ADR-040 calls every riot-proxy outage a 503, and CommunityDragon's `perks.json`, which every match page of a patch waits on, had no deadline.
+
+**Decision.**
+
+- **The call races the deadline.** `withTimeout` races the fetch, and then the body read, against a promise that its timer or the caller's abort rejects; the timer holds that promise, so it settles whatever else is collected. The fetch's own controller is still aborted, so a real request is cancelled.
+- **Anything but the caller's own abort is a 503:** a spent budget, a refused connection, a DNS failure or a body that breaks off. `withTimeout` logs `proxy timeout <METHOD> <path> after <ms> ms` or `proxy unreachable <METHOD> <path>: <error>`; `logFailures` logs only error responses.
+- **CommunityDragon gets 5 s** (`CDRAGON_BUDGET_MS`); a failure is not held, as before.
+- **A 429 from the static lookups stays a 429** on a champion page, with its wait.
+- The unit tests run with `--expose-gc`, and a test collects garbage while hung calls wait on their deadlines.
+
+**Consequences.** A hung or stopped riot-proxy shows "Temporarily unavailable" with a 503 that the edge does not cache, in at most the call's budget. A 500 now means a bug.
+
+## ADR-045: No response leaves without a cache policy; a page with a part missing is not cached
+
+Date: 2026-11-03 · Task: RV-04
+
+**Context.** The `handle` hook replaced the policy only on errors and form posts. A redirect thrown before a load called `setHeaders` (the profile's and `/champions`' tidied queries, a champion's name, the two old-URL routes) went out with no `Cache-Control`, which Cloudflare's Cache Everything rule caches for its default TTL. A match page whose Data Dragon lookups or CommunityDragon shards fell back was cached for a day like a complete one, and a champions page without its patch list for 10 minutes. `/champions/[key]` tidied its query with a 308, which browsers keep for good, so a later change of default or a champion the lookups did not know yet could not undo it. SvelteKit's own data responses already carry `private, no-store`, failed loads included.
+
+**Decision.**
+
+- **A response without `Cache-Control` gets `no-store`** in the `handle` hook, after the error and form-post rules.
+- **The home page is prerendered**, like `/about`, so it is still served as a static file rather than falling under `no-store`.
+- **`complete`.** `loadMatch`, `loadChampions` and `loadChampionPage` return whether every optional part loaded: the timeline, lookups and shards on a match; the patch list and lookups on `/champions`; the set builds, matchups and patch list on a champion page. An incomplete page gets `none`, as the profile already did without its match history.
+- **308 for a champion's name, 307 for its query.**
+
+**Consequences.** A degraded page costs riot-proxy a request per view until it recovers, as an error page does. Redirects are not cached at the edge.

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { LANES } from '#lib/assets.ts';
-	import type { TeamScoreboard } from '#lib/domain/match-detail.ts';
+	import { LANES } from '#lib/domain/champion-stats.ts';
+	import { RESULTS, formatNumber, type TeamScoreboard } from '#lib/domain/match-detail.ts';
 	import { profilePath, sameRiotId, type RiotId } from '#lib/domain/riot-id.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 	import ItemList from './ItemList.svelte';
@@ -30,12 +30,7 @@
 		onbuild?: (participantId: number, event: MouseEvent) => void;
 	} = $props();
 
-	const RESULT = {
-		win: { label: 'Victory', text: 'text-win' },
-		loss: { label: 'Defeat', text: 'text-loss' },
-		remake: { label: 'Remake', text: 'text-muted' }
-	} as const;
-	const result = $derived(RESULT[team.result]);
+	const result = $derived(RESULTS[team.result]);
 	const OBJECTIVE_NAMES = [
 		['tower', 'Towers'],
 		['inhibitor', 'Inhibitors'],
@@ -44,7 +39,6 @@
 		['riftHerald', 'Herald'],
 		['horde', 'Voidgrubs']
 	] as const;
-	const number = (n: number) => n.toLocaleString('en-GB');
 	const headingId = $derived(`team-${team.teamId}`);
 </script>
 
@@ -56,7 +50,7 @@
 		</h2>
 		<p class="text-sm">
 			{team.kills} / {team.deaths} / {team.assists}
-			<span class="text-muted">· {number(team.gold)} gold</span>
+			<span class="text-muted">· {formatNumber(team.gold)} gold</span>
 		</p>
 		<ul class="flex flex-wrap gap-x-3 text-xs text-muted" aria-label="Objectives">
 			{#each OBJECTIVE_NAMES as [key, label] (key)}
@@ -154,7 +148,7 @@
 							{player.kills} / <span class="text-loss">{player.deaths}</span> / {player.assists}
 						</td>
 						<td class="px-2 py-2">
-							<p>{number(player.damage)}</p>
+							<p>{formatNumber(player.damage)}</p>
 							<div class="mt-1 h-1 w-16 rounded-full bg-bg" aria-hidden="true">
 								<div
 									class="h-1 rounded-full bg-muted"
@@ -162,7 +156,7 @@
 								></div>
 							</div>
 						</td>
-						<td class="px-2 py-2 text-right">{number(player.gold)}</td>
+						<td class="px-2 py-2 text-right">{formatNumber(player.gold)}</td>
 						<td class="px-2 py-2 text-right">{player.cs}</td>
 						<td class="px-2 py-2 text-right">{player.vision}</td>
 						<td class="px-4 py-2">

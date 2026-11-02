@@ -1,6 +1,6 @@
-# The site on a LAN VM, published on port 3000. riot-proxy runs elsewhere;
-# PROXY_URL in deploy/.env points at it. P5 adds cloudflared and stops
-# publishing the port.
+# The site on a LAN preview VM, published on port 3000. riot-proxy runs
+# elsewhere; PROXY_URL in deploy/.env points at it. Dormant: production runs
+# without Docker (ADR-010, ADR-038).
 services:
   web:
     build:

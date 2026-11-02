@@ -1,5 +1,7 @@
 # ninjagoldfinch.lol — Implementation Plan
 
+> This is the original plan of 2026-10-09. Where an ADR in [DECISIONS.md](DECISIONS.md) or a later task supersedes it, the ADR wins. What is built now is in [PROGRESS.md](PROGRESS.md) and the docs set ([docs/README.md](README.md)).
+
 Oct 9, 2026 · @Sam
 
 ## Overview and scope
@@ -50,13 +52,13 @@ Each secret lives in exactly one place: `PROXY_KEY` in the web container, `RIOT_
 
 ## Stack and versions
 
-Start on the stable SvelteKit 2.x line. SvelteKit 3 was still in pre-release in August 2026; check its status before scaffolding and take 3.x only if it is stable.
+Start on the stable SvelteKit 2.x line. SvelteKit 3 was still in pre-release in August 2026; check its status before scaffolding and take 3.x only if it is stable. (Superseded: scaffolded on SvelteKit 3, ADR-001.)
 
 | Layer | Choice | Notes |
 | --- | --- | --- |
 | Runtime | Node 22 LTS | Required by SvelteKit 3, so it avoids a second upgrade later |
 | Package manager | pnpm | Pin with `packageManager` in `package.json` |
-| Framework | SvelteKit 2.x, Svelte 5, TypeScript strict | Runes only; no Svelte 4 syntax |
+| Framework | SvelteKit 2.x, Svelte 5, TypeScript strict | Runes only; no Svelte 4 syntax. (Superseded: SvelteKit 3, ADR-001) |
 | Adapter | `@sveltejs/adapter-node` | Plain Node server in a container |
 | Data loading | `+page.server.ts` and `+server.ts` | No remote functions until they leave experimental |
 | API client | `openapi-typescript` (dev) + `openapi-fetch` | Types generated from riot-proxy's OpenAPI spec |
@@ -66,7 +68,7 @@ Start on the stable SvelteKit 2.x line. SvelteKit 3 was still in pre-release in 
 | Browser tests | Playwright | A handful of smoke tests against a mock proxy |
 | Lint and format | ESLint + Prettier with the Svelte plugins | Installed by the `sv` scaffolder |
 | Task runner | `just` | Same as riot-proxy |
-| Reverse proxy | Caddy | Only if you open ports instead of using the Tunnel |
+| Reverse proxy | Caddy | Only if you open ports instead of using the Tunnel. (Superseded: Tunnel only, no Caddy, ADR-038) |
 | Edge | Cloudflare DNS, cache and Tunnel | No inbound ports on the home network |
 
 **Dependency rule:** a new runtime dependency needs a line in `docs/DECISIONS.md` saying why hand-written code was not enough.
@@ -144,7 +146,7 @@ pnpm add -D openapi-typescript
 │   └── PROGRESS.md          task ticks
 ├── deploy/
 │   ├── compose.yaml         web + cloudflared (+ riot-proxy)
-│   └── Caddyfile
+│   └── Caddyfile            (superseded: none, ADR-038)
 ├── openapi/
 │   └── riot-proxy.json      committed copy of the proxy's spec
 ├── src/
@@ -158,7 +160,7 @@ pnpm add -D openapi-typescript
 │   │   │   └── cache.ts     Cache-Control helpers
 │   │   ├── api/             generated types (schema.d.ts)
 │   │   ├── domain/          pure functions: KDA, queue names, patch parsing
-│   │   ├── components/      MatchRow, RankBadge, ChampionIcon, StatBar
+│   │   ├── components/      MatchRow, RankBadge, ChampionIcon, StatBar (never built)
 │   │   └── assets.ts        Data Dragon and CommunityDragon URL builders
 │   └── routes/              see Routes and pages
 └── tests/
@@ -177,7 +179,7 @@ The site holds one secret, its riot-proxy consumer key, and reads it only on the
 | --- | --- | --- |
 | `PROXY_URL` | `http://riot-proxy:8080` | Base URL of riot-proxy on the private network |
 | `PROXY_KEY` | `rpx_...` | Read-scope consumer key. Secret |
-| `ORIGIN` | `https://ninjagoldfinch.lol` | Needed by adapter-node for correct URLs and form checks |
+| `ORIGIN` | `https://ninjagoldfinch.lol` | Needed by adapter-node for correct URLs and form checks. (Superseded: read at build time, ADR-014) |
 | `PORT` | `3000` | Listen port inside the container |
 | `PUBLIC_SITE_NAME` | `ninjagoldfinch.lol` | The only client-visible variable |
 
@@ -187,11 +189,13 @@ The site holds one secret, its riot-proxy consumer key, and reads it only on the
 ./riot-proxy key create --name ninjagoldfinch-web     # read scope is the default
 ```
 
+(Superseded: production's key is named `ninjagoldfinch-lol-prod`; see [docs/integration/authentication.md](integration/authentication.md).)
+
 Use a separate key for local development (`--name ninjagoldfinch-dev`) so either can be revoked alone.
 
 **Rules**
 
-- Import secrets from `$env/dynamic/private` inside `src/lib/server/env.ts` and nowhere else. That file throws at start-up if a variable is missing.
+- Import secrets from `$env/dynamic/private` inside `src/lib/server/env.ts` and nowhere else. That file throws at start-up if a variable is missing. (Superseded: `src/env.ts` and `$app/env/private`, ADR-004.)
 - Never prefix a secret with `PUBLIC_`. SvelteKit ships `PUBLIC_` values to the browser.
 - `.env` exists only on your machine and on the VM. It is never committed and never baked into the image.
 - The site never holds the Riot API key or a riot-proxy admin key.
@@ -234,7 +238,7 @@ export const load = async ({ params, setHeaders }) => {
 
 **Errors**
 
-- Map riot-proxy's `ApiError` codes to three user-facing states: not found, rate limited (show retry time from `X-RateLimit-*`), and upstream unavailable.
+- Map riot-proxy's `ApiError` codes to three user-facing states: not found, rate limited (show retry time from `X-RateLimit-*`; superseded: `retryAfter` and `Retry-After`, ADR-007), and upstream unavailable.
 - Log the proxy's `X-Request-Id` with every failure so a page error can be traced in riot-proxy's logs.
 - Never show raw proxy error bodies to visitors.
 
@@ -242,7 +246,7 @@ export const load = async ({ params, setHeaders }) => {
 
 - riot-proxy already caches Riot responses and reports it in `X-Cache` and `X-Cache-Age`. The site adds no cache of its own.
 - Pages set `Cache-Control` with `s-maxage` and `stale-while-revalidate` so Cloudflare serves repeat views. Starting values: profile 60 s, finished match 1 day, champion analytics 10 min, live game no cache.
-- Show data age on profile pages using `X-Cache-Age`, with a refresh button on a cooldown.
+- Show data age on profile pages using `X-Cache-Age`, with a refresh button on a cooldown. (Superseded: riot-proxy's `fetchedAgeSeconds`, ADR-019.)
 
 **Live data**
 
@@ -268,7 +272,7 @@ v1 is seven routes. Every page renders on the server and works without client Ja
 
 **URL conventions**
 
-- Riot IDs are written `GameName-TAG` in the path, URL-encoded: `/summoner/kr/Hide%20on%20bush-KR1`. `parseRiotId` splits on the last hyphen.
+- Riot IDs are written `GameName-TAG` in the path, URL-encoded: `/summoner/kr/Hide%20on%20bush-KR1` (superseded: no region in the URL, `/summoner/Hide%20on%20bush-KR1`, ADR-037). `parseRiotId` splits on the last hyphen.
 - Region is the platform slug in lower case (`euw`, `na`, `kr`, `oce`). One table in `src/lib/domain/regions.ts` maps slugs to whatever riot-proxy expects.
 - Filters such as queue and champion live in query parameters, so every view is linkable and cacheable.
 
@@ -284,7 +288,7 @@ Local development needs Node 22, pnpm, `just`, and a riot-proxy to talk to.
 
 **Pick a proxy for development**
 
-- The Proxmox dev VM, reached over the LAN: set `PROXY_URL=http://<vm-ip>:8080`. Simplest, and uses real data.
+- The Proxmox dev VM, reached over the LAN: set `PROXY_URL=http://<vm-ip>:8080`. Simplest, and uses real data. (Superseded: there is no LAN dev instance, ADR-039.)
 - A local riot-proxy from its Docker image, with your development Riot key. Use this when working offline from the VM.
 - Recorded fixtures for tests: Playwright runs against a small mock server that replays `tests/fixtures/`, so tests never spend Riot rate limit.
 
@@ -326,7 +330,7 @@ image:      # build the production image locally
 
 ## Deployment by hand
 
-Deploying is `git pull`, build the image on the VM, restart one container. No registry and no pipeline are involved.
+Deploying is `git pull`, build the image on the VM, restart one container. No registry and no pipeline are involved. (Superseded: production runs `node build` under systemd, not in Docker, ADR-038.)
 
 **Dockerfile**
 
@@ -388,7 +392,7 @@ No service publishes a port. The Tunnel's public hostname `ninjagoldfinch.lol` p
 - Set `ADDRESS_HEADER=CF-Connecting-IP` in the web `.env` so adapter-node sees the real client address.
 - Turn on Cloudflare Web Analytics if you want page counts without adding a script dependency.
 
-**Caddy** is needed only if you forward ports 80 and 443 instead of using the Tunnel. In that case add a `caddy` service, publish its ports, and reverse-proxy to `web:3000`; keep `deploy/Caddyfile` out of the repo until then.
+**Caddy** (superseded: not used, ADR-038) is needed only if you forward ports 80 and 443 instead of using the Tunnel. In that case add a `caddy` service, publish its ports, and reverse-proxy to `web:3000`; keep `deploy/Caddyfile` out of the repo until then.
 
 **Release steps**
 
@@ -403,84 +407,7 @@ When you build your own pipeline, it replaces steps 2 to 4 and nothing else in t
 
 ## CLAUDE.md
 
-Copy this into `CLAUDE.md` at the repo root. It mirrors the working rules in riot-proxy so both repos behave the same way.
-
-```text
-# CLAUDE.md — ninjagoldfinch.lol
-
-Server-rendered SvelteKit site in front of riot-proxy. The plan and task list
-live in docs/IMPLEMENTATION.md. Read it before doing anything.
-
-## Non-negotiables
-
-- One task -> one branch -> one PR -> squash-merge. Never commit to main.
-  Never batch tasks.
-- Every PR ships tests for the behaviour it adds or changes.
-- `just check` passes before a task is done. There is no CI; this command
-  is the gate. Do not add GitHub Actions workflows or any CI/CD config.
-- No secrets. PROXY_KEY lives only in .env. Fixtures are redacted: no
-  `rpx_` and no `RGAPI-` strings anywhere in the repo.
-- The proxy key never reaches the browser. Anything that reads it lives
-  under src/lib/server/. Never import src/lib/server/ from client code,
-  and never put a secret in a PUBLIC_ variable.
-- Never call Riot directly. All data comes from riot-proxy through
-  src/lib/server/proxy.ts. If the proxy lacks something, stop and ask;
-  do not work around it.
-- Never invent proxy semantics. Routes, fields, headers and error codes
-  come from openapi/riot-proxy.json. Unknown -> ask.
-- Never hand-edit src/lib/api/schema.d.ts. Run `just gen`.
-- Riot policy: no MMR or ELO estimates, no custom-queue match history,
-  legal boilerplate stays in the footer of every page.
-- Stop and ask on ambiguity, unmet acceptance criteria, or a new runtime
-  dependency.
-- Log decisions in docs/DECISIONS.md (ADR-nnn). Tick tasks in
-  docs/PROGRESS.md with the PR number.
-
-## Layout
-
-src/lib/server/      proxy client, env, cache helpers (server only)
-src/lib/api/         generated OpenAPI types
-src/lib/domain/      pure functions, each with a unit test
-src/lib/components/  Svelte components
-src/routes/          pages; +page.server.ts loads, +page.svelte renders
-tests/unit/          Vitest
-tests/e2e/           Playwright against the mock proxy
-tests/fixtures/      redacted proxy responses
-openapi/             committed copy of the riot-proxy spec
-deploy/              compose file for the VM
-
-## Commands
-
-just setup    install, enable git hooks, create .env
-just dev      dev server
-just gen      regenerate API types from openapi/riot-proxy.json
-just check    format, lint, svelte-check, unit tests, build
-just e2e      Playwright smoke tests
-just image    build the production image
-
-## Conventions
-
-- Svelte 5 runes only ($state, $derived, $props, $effect). No Svelte 4
-  syntax: no `export let`, no `$:`, no stores for component state.
-- Data loads in +page.server.ts. No client-side fetching of proxy data,
-  no remote functions.
-- Pages work without client JavaScript; enhance on top.
-- TypeScript strict. No `any`; no non-null `!` on proxy data.
-- Tailwind utilities with tokens from src/app.css. No inline hex colours.
-- Every load sets Cache-Control through src/lib/server/cache.ts.
-- Asset URLs only through src/lib/assets.ts.
-- Conventional Commits, scoped: `feat(profile): ...`, footer `Task: P2-03`.
-- Branch: <type>/<task-id>-<slug>.
-- Commit messages and PR descriptions describe the change only. No AI
-  attribution of any kind: no generated-with lines, no co-author
-  trailers, no session links.
-
-## Phase gates
-
-After a phase's exit check passes: paste the result into
-docs/PROGRESS.md, tag phase-P<n>, and pause for owner review before the
-next phase.
-```
+The working rules are in [CLAUDE.md](../CLAUDE.md) at the repo root, which is the authority. This section once held a copy of it; the copy is gone so the two cannot drift apart.
 
 ## Phased task list
 
@@ -569,7 +496,7 @@ SPD-07 to SPD-11 come from the plan approved on 2026-10-20, with the owner's ans
 
 ### VS — tier ranges and builds against a lane opponent (after riot-proxy v2.7.0)
 
-riot-proxy v2.7.0 adds `minTier` (a tier and every tier above it, summed) on the four champion analytics routes, `opponentId` on set builds (the champion's builds in a lane against one opponent), and `winRateLow` on every build. This series brings them to the champion pages. The plan, with the owner's answers, is `docs/notes/VS-plan.md`.
+riot-proxy v2.7.0 adds `minTier` (a tier and every tier above it, summed) on the four champion analytics routes, `opponentId` on set builds (the champion's builds in a lane against one opponent), and `winRateLow` on every build. This series brings them to the champion pages. The plan, with the owner's answers, is [docs/notes/archive/VS-plan.md](notes/archive/VS-plan.md).
 
 - [ ] VS-01 riot-proxy spec refreshed to v2.7.0 from the release binary; fixtures carry every field the spec requires; behaviour unchanged
 - [ ] VS-02 A tier filter on `/champions` and `/champions/[key]`: one tier (`?rank=diamond`) or a tier and above (`?rank=diamond+`), Iron to Challenger; all tiers by default
@@ -577,6 +504,26 @@ riot-proxy v2.7.0 adds `minTier` (a tier and every tier above it, summed) on the
 - [ ] VS-04 Dropped: `winRateLow` is not shown, sorted on or used for marking (owner, 2026-10-19)
 
 **Exit check:** with JavaScript disabled, `/champions/ahri?rank=diamond+&vs=galio` renders the range and the builds against Galio from the server.
+
+### RV — fixes from the code review of 2026-11-03
+
+The owner's review of the code and docs on 2026-11-03 found security, caching and display bugs, dead code and stale docs. The findings, task by task, are in `docs/notes/RV-plan.md`.
+
+- [ ] RV-01 The deploy test cannot touch the real repo: every `GIT_*` location variable unset
+- [ ] RV-02 Riot IDs checked before they reach riot-proxy: no `.` or `..`, the spec's lengths; the proxy client refuses a rewritten path
+- [ ] RV-03 Every outbound call has a deadline that fires; anything but the caller's abort is a 503; a deadline on CommunityDragon; a 429 kept as a 429
+- [ ] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query
+- [ ] RV-05 Lower-case match ids redirect to upper case
+- [ ] RV-06 Match tabs keep the scroll; recent searches recorded on every profile
+- [ ] RV-07 Match and profile edge cases: a zero-length timeline, CS/min without a duration, remakes in the summary count, whole seconds to wait; the skill order kept, as riot-proxy ranks a skill never levelled last
+- [ ] RV-08 Champion pages: the tier in their wording, `?vs=` without regard to case
+- [ ] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint
+- [ ] RV-10 One definition each for duplicated helpers and labels
+- [ ] RV-11 Docs brought up to date with the ADRs; finished notes archived
+- [ ] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example`
+- [ ] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers
+
+**Exit check:** none beyond each task's own.
 
 ## Riot policy checklist
 

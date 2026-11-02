@@ -1,6 +1,8 @@
 # Preview VM on Proxmox
 
-A Debian 13 VM that builds and runs the site in Docker, on plain HTTP on your LAN at port 3000. It talks to riot-proxy at `PROXY_URL` (by default the dev instance at `http://192.168.68.46:8080`). Adapted from riot-proxy's `deploy/proxmox`, minus the image registry and auto-update timer: the VM builds from a git checkout, and you deploy by hand with `ninjagoldfinch-update`. ADR-010.
+> **Dormant.** The preview VM (VM 104) no longer exists (owner, 2026-10-19). Production runs without Docker, as `node build` under systemd on `ngf-prod-syd1` (ADR-038). These scripts are kept, and `just check` still tests them, in case the VM is made again. See [docs/deployment/preview-vm.md](../../docs/deployment/preview-vm.md).
+
+A Debian 13 VM that builds and runs the site in Docker, on plain HTTP on your LAN at port 3000. It talks to riot-proxy at `PROXY_URL`, set in `deploy/.env`. There is no LAN dev riot-proxy any more (SPD-01), so point it at one you run yourself. Adapted from riot-proxy's `deploy/proxmox`, minus the image registry and auto-update timer: the VM builds from a git checkout, and you deploy by hand with `ninjagoldfinch-update`. ADR-010.
 
 Needs Proxmox VE 8 or later, and the `local` storage set to hold snippets once (Datacenter → Storage → local → Content → add "Snippets").
 
@@ -52,7 +54,7 @@ curl -s http://localhost:3000/healthz      # {"ok":true}
 
 `ORIGIN` is baked into the image at build time (ADR-014). If the VM's address changes, edit it and run `ninjagoldfinch-update` to rebuild; otherwise the Refresh button is refused as a cross-site request.
 
-The image runs with `NODE_ENV=production`, so the site refuses to start without `PROXY_KEY`. The dev riot-proxy runs with auth disabled and ignores the key, so any value works against it. Production needs a real read key: `riot-proxy key create --name ninjagoldfinch-web`.
+The image runs with `NODE_ENV=production`, so the site refuses to start without `PROXY_KEY`. A riot-proxy run with auth disabled ignores the key, so any value works against it. Against one with auth on, use a read key of its own: `riot-proxy key create --name <key-name>`. Production's key, `ninjagoldfinch-lol-prod`, stays on the production host.
 
 Open `http://<vm-ip>:3000`.
 

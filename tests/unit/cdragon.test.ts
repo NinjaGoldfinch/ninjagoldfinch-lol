@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseStatShards } from '#lib/api/cdragon.ts';
-import { clearStatShards, statShards } from '#lib/server/cdragon.ts';
+import { CDRAGON_BUDGET_MS, clearStatShards, statShards } from '#lib/server/cdragon.ts';
 import { fixtureBody } from './fixtures.ts';
 
 const PERKS = '/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perks.json';
@@ -43,7 +43,26 @@ describe('statShards', () => {
 
 		expect(shards[5001].name).toBe('Health Scaling');
 		expect(fetcher).toHaveBeenCalledTimes(1);
-		expect(fetcher).toHaveBeenCalledWith(`http://mirror${PERKS}`);
+		expect(fetcher).toHaveBeenCalledWith(`http://mirror${PERKS}`, expect.anything());
+	});
+
+	it('gives up on a CommunityDragon that never answers, and tries again next time', async () => {
+		vi.useFakeTimers();
+		const hang = vi.fn(
+			(_: string | URL | Request, init?: RequestInit) =>
+				new Promise<Response>((_, reject) => {
+					init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+				})
+		);
+		const call = statShards('16.20.1', hang, 'http://mirror').catch((e: unknown) => e);
+		await vi.advanceTimersByTimeAsync(CDRAGON_BUDGET_MS);
+		const failure = await call;
+		vi.useRealTimers();
+
+		expect(String(failure)).toContain('no answer in 5000 ms');
+		const fetcher = ok();
+		await statShards('16.20.1', fetcher, 'http://mirror');
+		expect(fetcher).toHaveBeenCalledTimes(1);
 	});
 
 	it('does not keep a failure', async () => {

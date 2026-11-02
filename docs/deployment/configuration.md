@@ -1,0 +1,85 @@
+# Configuration
+
+Every setting ninjagoldfinch.lol reads, when it is read (build time or start-up), its default, and where in the code it is read. The site has no config file of its own: settings are environment variables, from `.env` in development and `/etc/ninjagoldfinch-lol/env` in production.
+
+## How settings are read
+
+- **App settings** are declared in `src/env.ts` with SvelteKit 3's `defineEnvVars`. SvelteKit runs each validator when the server starts and refuses to start if one throws (`src/env.ts:12-31`, ADR-004). Validation is skipped during `vite build` (`src/env.ts:5-10`). Server code reads the validated values from `$app/env/private`, a server-only module, and only under `src/lib/server/` (`src/lib/server/proxy.ts:3`, `CLAUDE.md:15-17`).
+- **Build-time settings** are baked into `build/`: `ORIGIN` and `PUBLIC_SITE_NAME`. Changing one means rebuilding, not restarting.
+- **Server settings** (`HOST`, `PORT`, timeouts) are read by adapter-node's generated server when `node build` starts; this repo does not declare them.
+- **Where values come from.** In development Vite loads `.env` (created from `.env.example` by `just setup`), and variables set on the command line win over it (observed 2026-10-20). In production systemd loads `/etc/ninjagoldfinch-lol/env` through `EnvironmentFile=` (owner-supplied unit, [inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo)).
+
+## Application settings
+
+| Name               | Type                 | Default                                          | Required                   | Read                        | Description                                                                                                                                                                                                   | Example                         |
+| ------------------ | -------------------- | ------------------------------------------------ | -------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `PROXY_URL`        | absolute http(s) URL | none                                             | Yes, at start-up           | start-up                    | Base URL of riot-proxy. Rejected if missing, relative or not http/https (`src/lib/server/env.ts:10-15,27-40`; declared `src/env.ts:13-16`)                                                                    | `http://127.0.0.1:8080`         |
+| `PROXY_KEY`        | string (secret)      | unset                                            | When `NODE_ENV=production` | start-up                    | The riot-proxy consumer key, sent as `Authorization: Bearer`. Trimmed; empty counts as unset (`src/lib/server/env.ts:47-55`; `src/env.ts:27-30`; sent at `src/lib/server/proxy.ts:136-147`)                   | see [secrets](#secrets)         |
+| `CDRAGON_URL`      | absolute http(s) URL | `https://raw.communitydragon.org`                | No                         | start-up                    | Base URL of CommunityDragon for stat shard names; a mirror can stand in. Trailing slashes are stripped (`src/lib/server/env.ts:17-25`; `src/env.ts:23-26`)                                                    | `http://127.0.0.1:8787` (tests) |
+| `PUBLIC_SITE_NAME` | string               | `ninjagoldfinch.lol`                             | No                         | build time (`static: true`) | Site name in the header and the legal notice. Public: sent to the browser. Never put a secret in a `PUBLIC_` variable (`src/env.ts:17-22`, `src/lib/legal.ts:1-4`, `src/routes/+layout.svelte:4,30`)          | `ninjagoldfinch.lol`            |
+| `NODE_ENV`         | string               | unset                                            | `production` in production | start-up                    | Only effect in the app: `production` makes `PROXY_KEY` required (`src/env.ts:29`)                                                                                                                             | `production`                    |
+| `ORIGIN`           | absolute URL         | none (origin guessed from `Host`, assumed https) | Yes for production builds  | build time                  | The site's public origin, baked in as `paths.origin`; form posts (Refresh) are accepted only from it (`vite.config.ts:16-19`, ADR-014). Given on the build command, not in the env file (`README.md:110,114`) | `https://ninjagoldfinch.lol`    |
+
+## Server settings (adapter-node)
+
+Read by the generated server in `build/server/` (adapter-node 6.0.0). None is set by this repo except `HOST` and `PORT` in production. Line numbers refer to the build output at `e7c395c`, not to tracked source.
+
+| Name                                                              | Default   | Description                                                                    | Read at                                        |
+| ----------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------ | ---------------------------------------------- |
+| `HOST`                                                            | `0.0.0.0` | Listen address. Production sets `127.0.0.1` (ADR-038, `docs/DECISIONS.md:509`) | `build/server/adapter-index.js:9`              |
+| `PORT`                                                            | `3000`    | Listen port                                                                    | `build/server/adapter-index.js:10`             |
+| `SOCKET_PATH`                                                     | unset     | Listen on a Unix socket instead of `HOST`/`PORT`                               | `build/server/adapter-index.js:8`              |
+| `SHUTDOWN_TIMEOUT`                                                | `30`      | Seconds to finish requests after SIGTERM                                       | `build/server/adapter-index.js:11`             |
+| `IDLE_TIMEOUT`                                                    | `0`       | Idle seconds before exiting (socket activation)                                | `build/server/adapter-index.js:12`             |
+| `KEEP_ALIVE_TIMEOUT`, `HEADERS_TIMEOUT`                           | Node's    | HTTP server timeouts                                                           | `build/server/adapter-index.js:25,27`          |
+| `LISTEN_PID`, `LISTEN_FDS`                                        | `0`       | systemd socket activation (not used)                                           | `build/server/adapter-index.js:13-14`          |
+| `BODY_SIZE_LIMIT`                                                 | `512K`    | Largest request body                                                           | `build/server/adapter-node-handler.js:489`     |
+| `XFF_DEPTH`                                                       | `1`       | Which `X-Forwarded-For` entry is the client, with `ADDRESS_HEADER`             | `build/server/adapter-node-handler.js:484`     |
+| `ADDRESS_HEADER`, `PROTOCOL_HEADER`, `HOST_HEADER`, `PORT_HEADER` | unset     | Trust these headers for client address, protocol, host and port                | `build/server/adapter-node-handler.js:485-488` |
+
+The full list adapter-node accepts is at `build/server/adapter-node-env.js:4-19`. `ADDRESS_HEADER` is unset in production, so the client address SvelteKit sees is `cloudflared` on loopback; nothing in the site reads the client address today (see the gap in [integration/service-communication.md](../integration/service-communication.md)).
+
+## Secrets
+
+| Secret      | Where it lives                                                                                                     | How it is provisioned                                                                                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROXY_KEY` | `/etc/ninjagoldfinch-lol/env` (production, root-only, created with `umask 077`); `.env` (development, git-ignored) | Minted on riot-proxy as a `read`-scope consumer (production: `ninjagoldfinch-lol-prod`), pasted into the env file, then `systemctl restart ninjagoldfinch-lol`. Issue, rotate and revoke: [integration/authentication.md](../integration/authentication.md) |
+| Deploy key  | the `ninjagoldfinch-lol` user's SSH directory under `/opt/ninjagoldfinch-lol-home`                                 | Generated on the host, public half added as a read-only GitHub deploy key ([install.md](./install.md#4-deploy-key))                                                                                                                                         |
+
+The site holds no Riot API key, no object-storage credentials and no Cloudflare credentials. `PROXY_KEY` never reaches the browser: it is private, read only on the server, and the pre-commit hook refuses a staged `rpx_` key (`CLAUDE.md:13-17`, `.githooks/pre-commit:12-23`).
+
+## Production values
+
+| Name                              | Value in production                              | Source                                                             |
+| --------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| `NODE_ENV`                        | `production`                                     | owner-supplied names; required for the key check                   |
+| `HOST`                            | `127.0.0.1`                                      | `docs/DECISIONS.md:509`                                            |
+| `PORT`                            | `3000` (the Tunnel targets `:3000`)              | `README.md:100`, `riot-proxy:docs/design/13-admin-dashboard.md:66` |
+| `PROXY_URL`                       | `http://127.0.0.1:8080`                          | `riot-proxy:docs/design/12-object-storage-and-hosting.md:630`      |
+| `PROXY_KEY`                       | the `ninjagoldfinch-lol-prod` key                | owner answer, 2026-10-19                                           |
+| `ORIGIN`                          | `https://ninjagoldfinch.lol`, build command only | `README.md:110`                                                    |
+| `CDRAGON_URL`, `PUBLIC_SITE_NAME` | unset, so defaults                               | owner-supplied names (inventory section 14)                        |
+
+`PORT=3000` in the env file is inferred from the Tunnel target and the README; the value itself was not shown (gap listed in [integration/environments.md](../integration/environments.md)).
+
+## Tooling and preview settings
+
+Not read by the site at runtime.
+
+| Name                              | Read by                                       | Default                                                                                                                               | Purpose                                                            |
+| --------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `PROXY_URL`, `PROXY_KEY`          | `tests/record-fixture.ts:37-48` (from `.env`) | none                                                                                                                                  | Where `just fixture` records from; the key goes only to riot-proxy |
+| Playwright `webServer.env`        | `playwright.config.ts:21-29`                  | `ORIGIN=http://localhost:4173`, `PORT=4173`, `NODE_ENV=production`, `PROXY_URL` and `CDRAGON_URL` = mock, `PROXY_KEY=e2e-placeholder` | e2e runs                                                           |
+| `NINJAGOLDFINCH_REPO`             | `deploy/proxmox/ninjagoldfinch-update:12`     | `git@github.com:NinjaGoldfinch/ninjagoldfinch-lol.git`                                                                                | Preview VM (dormant)                                               |
+| `NINJAGOLDFINCH_DIR`              | `deploy/proxmox/ninjagoldfinch-update:13`     | `/opt/ninjagoldfinch`                                                                                                                 | Preview VM checkout                                                |
+| `NINJAGOLDFINCH_DEPLOY_KEY`       | `deploy/proxmox/ninjagoldfinch-update:14`     | `~/.ssh/ninjagoldfinch-deploy`                                                                                                        | Preview VM deploy key                                              |
+| `ORIGIN` build arg, `deploy/.env` | `Dockerfile:9-12`, `deploy/compose.yaml:8-13` | none; compose refuses to build without it                                                                                             | Preview VM image                                                   |
+| `COREPACK_ENABLE_DOWNLOAD_PROMPT` | `Dockerfile:4`                                | `0` in the image                                                                                                                      | Lets corepack fetch pnpm without a prompt                          |
+| `create-vm.sh` flags              | `deploy/proxmox/create-vm.sh:38-85`           | see [preview-vm.md](./preview-vm.md)                                                                                                  | Creating the preview VM                                            |
+
+`.env.example` also lists `ORIGIN=http://localhost:3000`, `HOST=0.0.0.0` and `PORT=3000`, which `just dev` does not use (`.env.example:13-22`). `ORIGIN` is read from the environment by `vite build` only, never from `.env` (ADR-014); `HOST` and `PORT` are read by `node build`, and production sets `HOST=127.0.0.1` (ADR-038). The file is also the template `ninjagoldfinch-update` copies to the preview VM's `deploy/.env`, whose `ORIGIN` compose passes to the Docker build (`deploy/proxmox/ninjagoldfinch-update:37-39`, `deploy/compose.yaml:8-13`). `tests/unit/env-example.test.ts` fails if `.env.example` lists anything other than the variables `src/env.ts` declares plus `HOST`, `ORIGIN` and `PORT`, or misses one of them.
+
+---
+
+**Sources:** `src/env.ts:L1-L31`, `src/lib/server/env.ts:L1-L55`, `src/lib/server/proxy.ts:L3,L136-L147`, `src/lib/legal.ts:L1-L4`, `src/routes/+layout.svelte:L4,L30`, `vite.config.ts:L16-L19`, `.env.example:L1-L25`, `README.md:L95-L114`, `docs/DECISIONS.md:L41-L55,L171-L184,L509`, `build/server/adapter-index.js:L8-L27` (generated), `build/server/adapter-node-handler.js:L484-L490` (generated), `build/server/adapter-node-env.js:L4-L19` (generated), `node_modules/@sveltejs/kit/types/index.d.ts:L1159-L1173`, `tests/record-fixture.ts:L37-L48`, `playwright.config.ts:L18-L31`, `deploy/proxmox/ninjagoldfinch-update:L12-L14,L37-L39`, `tests/unit/env-example.test.ts:L1-L19`, `Dockerfile:L4-L12`, `deploy/compose.yaml:L8-L13`, `.githooks/pre-commit:L12-L23`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L630`, owner-supplied unit and env names (inventory section 14)
+**Last verified:** 2026-11-03 against commit `23a4f41`

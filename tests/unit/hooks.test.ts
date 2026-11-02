@@ -46,6 +46,16 @@ describe('handle', () => {
 		expect((await run('POST', 200)).headers.get('cache-control')).toBe('no-store');
 	});
 
+	it('gives a response without a policy none, such as a redirect', async () => {
+		for (const status of [200, 303, 307, 308]) {
+			const response = await handle({
+				event: { ...event, request: new Request('http://localhost/x') } as RequestEvent,
+				resolve: async () => new Response(null, { status })
+			});
+			expect(response.headers.get('cache-control')).toBe('no-store');
+		}
+	});
+
 	it("keeps a successful GET's own policy", async () => {
 		expect((await run('GET', 200)).headers.get('cache-control')).toBe('public, s-maxage=60');
 	});

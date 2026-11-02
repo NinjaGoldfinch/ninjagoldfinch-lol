@@ -3,6 +3,8 @@
 // `unknown`. The fields the site reads are typed here from Riot's MatchDto and
 // TimelineDto and checked when parsed. ADR-006, ADR-023.
 
+import { record } from './json.ts';
+
 /** One player's line in a match: the fields the site reads. */
 export interface Participant {
 	participantId: number;
@@ -390,12 +392,6 @@ function parseParticipant(value: unknown): Participant | undefined {
 		win: p.win === true,
 		gameEndedInEarlySurrender: p.gameEndedInEarlySurrender === true
 	};
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-	return typeof value === 'object' && value !== null && !Array.isArray(value)
-		? (value as Record<string, unknown>)
-		: undefined;
 }
 
 function number(value: unknown): number | null {

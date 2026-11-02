@@ -8,6 +8,7 @@
 		formatMatchDate,
 		matchPath,
 		matchTab,
+		mostDamage,
 		openBuildId,
 		selectBuild,
 		type MatchTab
@@ -118,9 +119,7 @@
 		if (event.target === dialog) dialog?.close();
 	}
 
-	const maxDamage = $derived(
-		Math.max(0, ...data.teams.flatMap((t) => t.players.map((p) => p.damage)))
-	);
+	const maxDamage = $derived(mostDamage(data.teams));
 </script>
 
 <svelte:head>
@@ -156,7 +155,7 @@
 			href={tabHref(t.id)}
 			aria-current={tab === t.id ? 'page' : undefined}
 			data-sveltekit-replacestate
-			data-sveltekit-noscroll
+			data-sveltekit-reset="false"
 			class="-mb-px border-b-2 px-3 py-2 text-sm {tab === t.id
 				? 'border-accent text-text'
 				: 'border-transparent text-muted hover:text-text'}">{t.label}</a

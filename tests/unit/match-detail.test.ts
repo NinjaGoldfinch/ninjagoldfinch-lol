@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { parseMatch, parseTimeline, type Match, type Timeline } from '#lib/api/match.ts';
 import {
+	RESULTS,
 	asMatchDetail,
 	formatMatchDate,
+	formatNumber,
 	isMatchIdFor,
 	matchPath,
 	matchTab,
+	mostDamage,
 	openBuildId,
 	selectBuild,
 	teamGold,
@@ -30,7 +33,6 @@ describe('toMatchDetail', () => {
 		expect(detail).toMatchObject({
 			matchId: 'OC1_712351051',
 			region: { slug: 'oce', label: 'Oceania' },
-			queueId: 420,
 			queue: 'Ranked Solo',
 			startedAt: match.gameCreation,
 			duration: 1952,
@@ -237,5 +239,30 @@ describe('asMatchDetail', () => {
 describe('formatMatchDate', () => {
 	it('writes the start time in UTC', () => {
 		expect(formatMatchDate(Date.UTC(2026, 9, 9, 4, 11, 30))).toBe('9 Oct 2026, 04:11 UTC');
+	});
+});
+
+describe('RESULTS', () => {
+	it('words and colours each result', () => {
+		expect(RESULTS.win).toEqual({ label: 'Victory', text: 'text-win' });
+		expect(RESULTS.loss).toEqual({ label: 'Defeat', text: 'text-loss' });
+		expect(RESULTS.remake).toEqual({ label: 'Remake', text: 'text-muted' });
+	});
+});
+
+describe('formatNumber', () => {
+	it('groups thousands', () => {
+		expect(formatNumber(950)).toBe('950');
+		expect(formatNumber(12345)).toBe('12,345');
+	});
+});
+
+describe('mostDamage', () => {
+	it("is the match's highest damage, or 0 without any", () => {
+		expect(mostDamage(detail.teams)).toBe(
+			Math.max(...detail.teams.flatMap((t) => t.players.map((p) => p.damage)))
+		);
+		expect(mostDamage([{ players: [] }])).toBe(0);
+		expect(mostDamage([])).toBe(0);
 	});
 });
