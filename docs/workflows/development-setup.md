@@ -50,7 +50,7 @@ just check
 
 This is the only gate; there is no CI (`CLAUDE.md:11-12`). It runs, in order: `prettier --check .`, a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and `deploy/proxmox/test.sh` (`justfile:19-28`). On a fresh clone at `e7c395c` it passed (exit 0); the suite has 34 test files and 332 tests. One test is flaky under load; see [testing.md](./testing.md#known-flaky-test).
 
-Do not run `just check` (or push) from a linked `git worktree`: `deploy/proxmox/test.sh` runs `git init/commit/tag` in a temporary directory, and inside a hook in a worktree git exports `GIT_DIR`, so those commands land in the real repository. A separate full clone is safe.
+`just check` and pushes are safe from a linked `git worktree`. `deploy/proxmox/test.sh` runs `git init/commit/tag` in a temporary directory; git exports `GIT_DIR` and its other location variables to hooks, so the script unsets them first (`deploy/proxmox/test.sh:7-10`, RV-01). Before RV-01 those commands landed in the real repository.
 
 ## 3. Browser tests (optional)
 
@@ -201,4 +201,4 @@ $ riot-proxy v2.7.0 (placeholder key, AUTH_DISABLED) + just dev
 ---
 
 **Sources:** `package.json:L5-L8`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L66`, `.env.example:L1-L21`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/errors.ts:L36-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L16-L19`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L295`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L80-L83,L158-L159`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-11-03 against commit `8cc2076`

@@ -67,7 +67,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 ## RV — fixes from the code review of 2026-11-03
 
-- [ ] RV-01 The deploy test cannot touch the real repo: every `GIT_*` location variable unset
+- [x] RV-01 The deploy test cannot touch the real repo: every `GIT_*` location variable unset — #73
 - [ ] RV-02 Riot IDs checked before they reach riot-proxy: no `.` or `..`, the spec's lengths; the proxy client refuses a rewritten path
 - [ ] RV-03 Every outbound call has a deadline that fires; anything but the caller's abort is a 503; a deadline on CommunityDragon; a 429 kept as a 429
 - [ ] RV-04 Cache-Control on every response: `no-store` when none is set, degraded pages not cached, 307 for a tidied query
