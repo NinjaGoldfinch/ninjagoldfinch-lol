@@ -4,7 +4,7 @@ How to deploy a new version of ninjagoldfinch.lol to production and how to go ba
 
 ## What a version is
 
-A version is a commit of `main`. There are no release tags or artefacts; production builds from its checkout at `/opt/ninjagoldfinch-lol` (ADR-038, `docs/DECISIONS.md:500-514`). There is no CI and no GitHub Actions step anywhere in this path: every action below is manual (`CLAUDE.md:11-12`).
+A version is a commit of `main`. There are no release tags or artefacts; production builds from its checkout at `/opt/ninjagoldfinch-lol` (ADR-038, `docs/DECISIONS.md:500-516`). There is no CI and no GitHub Actions step anywhere in this path: every action below is manual (`CLAUDE.md:11-12`).
 
 ## Before upgrading
 
@@ -21,11 +21,11 @@ A version is a commit of `main`. There are no release tags or artefacts; product
    curl -s http://127.0.0.1:8080/openapi.json | sha256sum
    ```
 
-   The second hash should equal `sha256sum openapi/riot-proxy.json` of the commit you are deploying; the committed file is kept byte-identical to what riot-proxy serves (`README.md:46-66`). Checked on 2026-10-20: a riot-proxy v2.7.0 binary serves `aafca901…088b8`, the same as the committed file. Upgrade riot-proxy first if they differ; riot-proxy upgrades by replacing its binary and restarting, with its migrations applied on boot (`riot-proxy:README.md:122`).
+   The second hash should equal `sha256sum openapi/riot-proxy.json` of the commit you are deploying; the committed file is kept byte-identical to what riot-proxy serves (`README.md:47-67`). Checked on 2026-10-20: a riot-proxy v2.7.0 binary serves `aafca901…088b8`, the same as the committed file. Upgrade riot-proxy first if they differ; riot-proxy upgrades by replacing its binary and restarting, with its migrations applied on boot (`riot-proxy:README.md:122`).
 
 ## Upgrade
 
-Run on `ngf-prod-syd1` (`README.md:103-111`):
+Run on `ngf-prod-syd1` (`README.md:104-112`):
 
 ```sh
 cd /opt/ninjagoldfinch-lol
@@ -105,5 +105,5 @@ The site depends on riot-proxy's routes and fields at the committed spec's versi
 
 ---
 
-**Sources:** `README.md:L46-L66,L103-L115`, `CLAUDE.md:L11-L12`, `docs/DECISIONS.md:L500-L514`, `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/lib/recent-storage.ts:L6-L22`, `node_modules/@sveltejs/adapter-node/index.js:L17`, `riot-proxy:README.md:L122`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:.github/workflows/release.yml`
+**Sources:** `README.md:L47-L67,L104-L114`, `CLAUDE.md:L11-L12`, `docs/DECISIONS.md:L500-L516`, `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/lib/recent-storage.ts:L6-L22`, `node_modules/@sveltejs/adapter-node/index.js:L17`, `riot-proxy:README.md:L122`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:.github/workflows/release.yml`
 **Last verified:** 2026-11-03 against commit `99cb82c`

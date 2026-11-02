@@ -4,7 +4,7 @@ Every third-party package ninjagoldfinch.lol uses, what it is for, the version i
 
 ## How versions are pinned
 
-- `package.json` declares caret ranges (`^x.y.z`); `pnpm-lock.yaml` pins exact versions, and every install uses `--frozen-lockfile`, so local, preview and production installs get identical trees (`README.md:108`, `Dockerfile:7`).
+- `package.json` declares caret ranges (`^x.y.z`); `pnpm-lock.yaml` pins exact versions, and every install uses `--frozen-lockfile`, so local, preview and production installs get identical trees (`README.md:109`, `Dockerfile:7`).
 - The package manager is pinned with `"packageManager": "pnpm@12.10.1"` (`package.json:6`). pnpm's own entry is kept out of the lockfile with `pmOnFail: ignore`, so GitHub's dependency graph (and Dependabot alerts) sees the app's packages; corepack, not pnpm, enforces the pin (ADR-005, `pnpm-workspace.yaml:3-7`). Production installs pnpm 12.10.1 with `npm install -g` and does not use corepack ([deployment/install.md](../deployment/install.md#2-pnpm)).
 - Node is pinned by range, `>=22.18`, enforced by `engine-strict=true` (`package.json:7-9`, `.npmrc:1`).
 - `allowBuilds: esbuild: true` lets esbuild's install script run; others are not allowed to (`pnpm-workspace.yaml:1-2`).
@@ -70,8 +70,8 @@ Everything else, Svelte and SvelteKit included, is bundled into `build/` at buil
 | pnpm                      | 12.10.1                                                    | Package manager                                                                |
 | just                      | 1.58.0                                                     | Task runner (`justfile`)                                                       |
 | Docker                    | not pinned                                                 | `just image` and the dormant preview VM (`Dockerfile`)                         |
-| shellcheck                | optional                                                   | Run by `deploy/proxmox/test.sh` when installed (`deploy/proxmox/README.md:96`) |
-| riot-proxy release binary | 2.7.0                                                      | Source of `openapi/riot-proxy.json` (`README.md:55-64`)                        |
+| shellcheck                | optional                                                   | Run by `deploy/proxmox/test.sh` when installed (`deploy/proxmox/README.md:98`) |
+| riot-proxy release binary | 2.7.0                                                      | Source of `openapi/riot-proxy.json` (`README.md:56-65`)                        |
 
 ## Updating dependencies
 
@@ -79,5 +79,5 @@ There is no Dependabot configuration and no CI, so updates are ordinary tasks: c
 
 ---
 
-**Sources:** `package.json:L6-L50`, `pnpm-workspace.yaml:L1-L12`, `.npmrc:L1`, `Dockerfile:L7,L12`, `vite.config.ts:L1-L37`, `justfile:L15-L25`, `tsconfig.json:L4`, `README.md:L16-L17,L55-L64,L108`, `CLAUDE.md:L26-L27`, `deploy/proxmox/README.md:L96`, `docs/DECISIONS.md:L5-L79` (ADR-001, ADR-004, ADR-005, ADR-006), `node_modules/*/package.json` (installed versions), `build/server/chunks/static-data.js` (runtime import)
+**Sources:** `package.json:L6-L50`, `pnpm-workspace.yaml:L1-L12`, `.npmrc:L1`, `Dockerfile:L7,L12`, `vite.config.ts:L1-L37`, `justfile:L15-L25`, `tsconfig.json:L4`, `README.md:L16-L17,L56-L65,L109`, `CLAUDE.md:L26-L27`, `deploy/proxmox/README.md:L98`, `docs/DECISIONS.md:L5-L79` (ADR-001, ADR-004, ADR-005, ADR-006), `node_modules/*/package.json` (installed versions), `build/server/chunks/static-data.js` (runtime import)
 **Last verified:** 2026-11-03 against commit `6d46c74`

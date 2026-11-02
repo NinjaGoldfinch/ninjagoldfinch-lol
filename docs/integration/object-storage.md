@@ -10,7 +10,7 @@ A search of `src/`, `tests/` and `deploy/` for S3, R2, bucket, Onidel and object
 - receives archived match and timeline bodies only through riot-proxy's HTTP routes;
 - serves no files from a bucket to the Browser; images come from the Data Dragon CDN and CommunityDragon (`src/lib/assets.ts:1-10`).
 
-Build artefacts are built on the host and not uploaded anywhere (`README.md:103-111`).
+Build artefacts are built on the host and not uploaded anywhere (`README.md:104-112`).
 
 ## riot-proxy's storage topology
 
@@ -66,5 +66,5 @@ Matches already rendered stay at the edge for a day (`src/lib/server/cache.ts:8-
 
 ---
 
-**Sources:** `package.json:L48-L50`, `src/lib/assets.ts:L1-L10`, `src/lib/server/match.ts:L43`, `src/lib/server/cache.ts:L8-L9`, `README.md:L103-L111`, `riot-proxy:src/archive/pack.rs:L1-L133`, `riot-proxy:src/archive/recovery.rs:L5-L8`, `riot-proxy:src/archive/objects.rs:L1-L42`, `riot-proxy:src/archive/matches.rs:L242-L293`, `riot-proxy:src/config.rs:L736`, `riot-proxy:deploy/README.md:L14-L46`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L20`, `riot-proxy:deploy/riot-proxy-replica.timer`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L810-L820`, owner-supplied env names (2026-10-19)
+**Sources:** `package.json:L48-L50`, `src/lib/assets.ts:L1-L10`, `src/lib/server/match.ts:L43`, `src/lib/server/cache.ts:L8-L9`, `README.md:L104-L112`, `riot-proxy:src/archive/pack.rs:L1-L133`, `riot-proxy:src/archive/recovery.rs:L5-L8`, `riot-proxy:src/archive/objects.rs:L1-L42`, `riot-proxy:src/archive/matches.rs:L242-L293`, `riot-proxy:src/config.rs:L736`, `riot-proxy:deploy/README.md:L14-L46`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L20`, `riot-proxy:deploy/riot-proxy-replica.timer`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L810-L820`, owner-supplied env names (2026-10-19)
 **Last verified:** 2026-11-03 against commit `03faa33`

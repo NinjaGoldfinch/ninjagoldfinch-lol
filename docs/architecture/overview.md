@@ -12,7 +12,7 @@ Three services make up the platform:
 | riot-proxy         | Holds the Riot API key, rate-limits and caches Riot calls, archives matches and timelines, computes champion analytics, and issues consumer keys. |
 | ninja-monitor      | Watches each service's CPU, memory and liveness and the host's disk, and alerts on Discord.                                                       |
 
-The split is deliberate. riot-proxy authenticates every caller with a bearer key, so the Browser cannot call it directly without exposing a key; ninjagoldfinch.lol exists to hold that key on a server and turn riot-proxy's JSON into HTML (`docs/IMPLEMENTATION.md:49`). The site adds no API of its own and keeps no player data: its only state is a few lookups held in memory (see [../data/caching.md](../data/caching.md)).
+The split is deliberate. riot-proxy authenticates every caller with a bearer key, so the Browser cannot call it directly without exposing a key; ninjagoldfinch.lol exists to hold that key on a server and turn riot-proxy's JSON into HTML (`docs/IMPLEMENTATION.md:51`). The site adds no API of its own and keeps no player data: its only state is a few lookups held in memory (see [../data/caching.md](../data/caching.md)).
 
 ## System context
 
@@ -62,7 +62,7 @@ Read left to right: a visitor reaches Cloudflare over HTTPS, and Cloudflare eith
 | Size               | 6 vCPU, 12 GB RAM, 120 GB NVMe, 6 TB a month                                                             | same                                                                                                      |
 | Public listeners   | SSH only                                                                                                 | same                                                                                                      |
 | Site process       | `ninjagoldfinch-lol.service`: `/usr/bin/node build` in `/opt/ninjagoldfinch-lol` as `ninjagoldfinch-lol` | owner: `systemctl cat`, see [inventory](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo) |
-| Site address       | `127.0.0.1:3000`                                                                                         | `README.md:99`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:531-533`                         |
+| Site address       | `127.0.0.1:3000`                                                                                         | `README.md:100`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:531-533`                        |
 | riot-proxy address | `127.0.0.1:8080`, reached by the site as `PROXY_URL=http://127.0.0.1:8080`                               | `riot-proxy:docs/design/12-object-storage-and-hosting.md:630`                                             |
 | Tunnel routes      | `ninjagoldfinch.lol` → `:3000`; `api.ninjagoldfinch.lol` and `admin.ninjagoldfinch.lol` → `:8080`        | `riot-proxy:docs/design/13-admin-dashboard.md:61-65`                                                      |
 
@@ -78,16 +78,16 @@ The site and riot-proxy start in order: the unit has `After=network-online.targe
 | LAN dev proxy `192.168.68.46` | A riot-proxy with auth off, used for site development until SPD-01                                 | dormant             |
 | preview VM `192.168.68.47`    | A Proxmox VM that built and ran the site in Docker (`deploy/proxmox/`)                             | deleted, may return |
 
-Sources for the table: `riot-proxy:docs/DECISIONS.md:1512`, `docs/DECISIONS.md:536`, `docs/PROGRESS.md:71`, owner answer of 2026-10-19. Development no longer depends on any of them: see [../integration/environments.md](../integration/environments.md).
+Sources for the table: `riot-proxy:docs/DECISIONS.md:1512`, `docs/DECISIONS.md:538`, `docs/PROGRESS.md:71`, owner answer of 2026-10-19. Development no longer depends on any of them: see [../integration/environments.md](../integration/environments.md).
 
 ## What the site does not do
 
 - It never calls the Riot API (`CLAUDE.md:18-20`). A missing riot-proxy feature is raised with riot-proxy, not worked around.
 - It has no database, no object storage, no background jobs and no client-side fetching of riot-proxy data (`CLAUDE.md:57-58`; inventory section 6).
 - It does not compute MMR or ELO, and it hides custom games (`CLAUDE.md:24-25`, `src/lib/domain/matches.ts`, ADR-017).
-- It does not send security headers or a Content Security Policy yet (P5-03 is open in `docs/IMPLEMENTATION.md:544`; `src/hooks.server.ts:6-15` sets only `cache-control`).
+- It does not send security headers or a Content Security Policy yet (P5-03 is open in `docs/IMPLEMENTATION.md:471`; `src/hooks.server.ts:6-15` sets only `cache-control`).
 
 ---
 
-**Sources:** `src/lib/assets.ts:L1-L10`, `src/hooks.server.ts:L6-L15`, `README.md:L90-L101`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L49,L544`, `docs/DECISIONS.md:L504,L536`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
+**Sources:** `src/lib/assets.ts:L1-L10`, `src/hooks.server.ts:L6-L15`, `README.md:L91-L102`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L51,L471`, `docs/DECISIONS.md:L504,L538`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
 **Last verified:** 2026-11-03 against commit `03faa33`

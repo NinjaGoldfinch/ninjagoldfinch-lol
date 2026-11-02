@@ -4,7 +4,7 @@ Repeat views are served by Cloudflare's edge cache, driven by `Cache-Control` he
 
 ## Context
 
-riot-proxy's capacity and the Riot rate budget are the scarce resources; most page views repeat recent ones. The plan set starting values: profile 60 s, finished match 1 day, analytics 10 min (`docs/IMPLEMENTATION.md:244`).
+riot-proxy's capacity and the Riot rate budget are the scarce resources; most page views repeat recent ones. The plan set starting values: profile 60 s, finished match 1 day, analytics 10 min (`docs/IMPLEMENTATION.md:248`).
 
 ## Decision
 
@@ -20,7 +20,7 @@ riot-proxy's capacity and the Riot rate budget are the scarce resources; most pa
 
 - "Updated N minutes ago" can be up to the cache age older than it says (`docs/DECISIONS.md:233`).
 - Refresh is a POST so it is never cached (ADR-012).
-- Cloudflare's cache key includes the query string, checked from outside on 2026-10-19 (`docs/DECISIONS.md:577`).
+- Cloudflare's cache key includes the query string, checked from outside on 2026-10-19 (`docs/DECISIONS.md:579`).
 - `/` and `/about` are prerendered, so they are static files outside `handle` and its `no-store` default (`src/routes/+page.ts:3`, ADR-045).
 - A degraded page costs riot-proxy a request per view until it recovers, as an error page does.
 - SvelteKit sends `__data.json` with `private, no-store` unless the load set a policy, which then replaces it (checked in SvelteKit 3.0.1's source and against `node build` on 2026-11-03).
@@ -35,5 +35,5 @@ Accepted; extended by ADR-045. Whether Cloudflare caches `__data.json` with a `p
 
 ---
 
-**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/routes/+page.ts:L3`, `CLAUDE.md:L62`, `docs/IMPLEMENTATION.md:L244`, `docs/DECISIONS.md:L145-L157,L206-L215,L233,L577,L615-L628`
+**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L6-L15`, `src/routes/+page.ts:L3`, `CLAUDE.md:L62`, `docs/IMPLEMENTATION.md:L248`, `docs/DECISIONS.md:L145-L157,L206-L215,L233,L579,L617-L630`
 **Last verified:** 2026-11-03 against commit `99cb82c`

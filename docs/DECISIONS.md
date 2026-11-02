@@ -512,6 +512,8 @@ Date: 2026-10-10 · Task: P5-04
 
 **Consequences.** Node 22.18 or later and pnpm must be installed on the server; Ubuntu 26.04's packaged Node is new enough. Deploying is five commands, listed in the README, and none of them is in the repo as a script or unit file yet. The plan's deployment section and P5-01's compose-with-`cloudflared` item describe a setup production does not use.
 
+Note, 2026-11-03: production has since moved to an Onidel ONI-4, ngf-prod-syd1 (6 vCPU, 12 GB, 120 GB).
+
 ## ADR-039: Champion pages don't stream; cold slices are riot-proxy's to warm
 
 Date: 2026-10-15 · Task: SPD-01

@@ -42,7 +42,7 @@ Node serves requests on one thread, so the site uses at most about one of the si
 | 1           | 177 req/s  | profile 3.1 / 4.3 ms, match 10.8 / 13.5 ms, champions 4.0 / 5.9 ms, champion 3.7 / 5.8 ms |
 | 16          | 234 req/s  | 64–70 ms p50, 85–92 ms p95 (queued on one thread)                                         |
 
-**Measured on production** (ADR-039, 2026-10-15): `/champions` and `/champions/ahri` 8–15 ms with riot-proxy warm; a champion page's first view after an analytics rebuild about 200 ms; through Cloudflare `MISS` 55–69 ms, `HIT` 25–30 ms (`docs/DECISIONS.md:521-527`).
+**Measured on production** (ADR-039, 2026-10-15): `/champions` and `/champions/ahri` 8–15 ms with riot-proxy warm; a champion page's first view after an analytics rebuild about 200 ms; through Cloudflare `MISS` 55–69 ms, `HIT` 25–30 ms (`docs/DECISIONS.md:523-529`).
 
 Cached pages never reach the host: the edge serves them for `s-maxage` and `stale-while-revalidate` ([data/caching.md](../data/caching.md)). The host's CPU alert is above 90 % for 20 minutes (`riot-proxy:docs/design/12-object-storage-and-hosting.md:836-837`); riot-proxy's background jobs, not the site, are what would trigger it.
 
@@ -63,7 +63,7 @@ An uncached profile page or Refresh can make riot-proxy call Riot. The productio
 | `build/`                                                       | 2.9 MB                                                           |
 | `.git`                                                         | 8.7 MB                                                           |
 
-So the site needs about 200–400 MB, constant over time, plus the journal. It writes nothing else. Production installs dev dependencies too, because it builds on the host (`README.md:108-109`).
+So the site needs about 200–400 MB, constant over time, plus the journal. It writes nothing else. Production installs dev dependencies too, because it builds on the host (`README.md:109-110`).
 
 The shared 120 GB is riot-proxy's problem to manage: its database was 22 GB at the move and had doubled in a day, which is why raw bodies moved to object storage (`riot-proxy:docs/DECISIONS.md:1510,1513`). ninja-monitor alerts at 70 % and 85 % disk (`riot-proxy:docs/design/12-object-storage-and-hosting.md:836`).
 
@@ -98,5 +98,5 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 
 ---
 
-**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L515-L539`, `README.md:L103-L111`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
+**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
 **Last verified:** 2026-11-03 against commit `03faa33`

@@ -77,13 +77,13 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-08 Champion pages: the tier in their wording, `?vs=` without regard to case — #80
 - [x] RV-09 Dead code, unused page data and stale comments removed; no non-null assertions, by lint — #81
 - [x] RV-10 One definition each for duplicated helpers and labels — #82
-- [ ] RV-11 Docs brought up to date with the ADRs; finished notes archived
+- [x] RV-11 Docs brought up to date with the ADRs; finished notes archived — #83
 - [ ] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example`
 - [ ] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers
 
 ## Brought forward
 
-- [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Remaining for P5-01: `cloudflared`, no published port, and the 200 MB image check.
+- [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Production runs without Docker (ADR-038), so the rest of P5-01 (`cloudflared`, no published port, and the 200 MB image check) applies only if the Docker preview path comes back. The preview VM is dormant: VM 104 no longer exists (owner, 2026-10-19).
   - Checked on the Proxmox node, 2026-10-09: `create-vm.sh` made VM 104 (`ninjagoldfinch-web`, 192.168.68.47), cloud-init finished, `ninjagoldfinch-update` built the image on the VM, and `http://192.168.68.47:3000` served a profile (NinjaGoldfinch#OCENZ, Oceania) from the dev riot-proxy. Follow-up: `--generate-key`, and README steps using `gh`.
   - `ninjagoldfinch-update` stopped silently on VM 104 after `phase-P2` was moved: `git fetch --tags` refused to clobber the old tag and `-q` hid the message. It now forces and prunes tags, and says when the fetch fails — #37.
 

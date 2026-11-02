@@ -4,7 +4,7 @@ How the site's URLs carry pages and filters, why every view has exactly one cano
 
 ## Principles
 
-- **Filters live in the query string**, so every view is linkable and cacheable (`docs/IMPLEMENTATION.md:273`).
+- **Filters live in the query string**, so every view is linkable and cacheable (`docs/IMPLEMENTATION.md:277`).
 - **One URL per view.** A load that receives defaults, empty values or unknown values redirects to the clean URL, so the edge cache holds one copy per view (ADR-033, `docs/DECISIONS.md:423`).
 - **Presentation-only parameters are read by the page, not the load**, so changing them with JavaScript needs no request: `sort` on `/champions`, `build` on champion pages, `player`, `tab` and `build` on match pages.
 
@@ -39,7 +39,7 @@ Shared by `/champions` and `/champions/{key}` (`src/lib/domain/champion-stats.ts
 
 Order in the canonical query: `role`, `rank`, `patch`, `sort` (`src/lib/domain/champion-stats.ts:160-176`).
 
-Rank encoding (ADR-042, `docs/DECISIONS.md:572`): `?rank=diamond+`, `?rank=diamond%2B` and `?rank=diamond%20` (a bare `+` decoded as a space) all mean Diamond and above, and the page redirects to the bare `+`. `challenger+` becomes `challenger`. An unknown rank means every tier, never an error.
+Rank encoding (ADR-042, `docs/DECISIONS.md:574`): `?rank=diamond+`, `?rank=diamond%2B` and `?rank=diamond%20` (a bare `+` decoded as a space) all mean Diamond and above, and the page redirects to the bare `+`. `challenger+` becomes `challenger`. An unknown rank means every tier, never an error.
 
 Champion page extras: `vs=<champion key>` and `lane=<role>` pick builds against a lane opponent; `vs` is read without regard to case and written lower case, an unknown `vs` drops the pick, an unknown `lane` only the lane, and `lane` is dropped when `role` is set (`src/lib/domain/champion-page.ts:212-244`). `build=<n>` (1-based) picks a build tab and is kept in the canonical URL but not read by the load (`src/routes/champions/[key]/+page.server.ts:15-26`).
 
@@ -65,9 +65,9 @@ An old URL whose region slug the site never knew is `404`.
 
 ## riot-proxy versioning
 
-riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by committing its spec (`openapi/riot-proxy.json`, 2.7.0) and generating types from it; `just check` fails when they drift (`README.md:51-66`, `justfile:20-22`). Upgrading means refreshing the spec from the release binary, fixing any type errors, and updating fixtures that the spec now requires fields for (`tests/unit/fixtures-spec.test.ts`, VS-01).
+riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by committing its spec (`openapi/riot-proxy.json`, 2.7.0) and generating types from it; `just check` fails when they drift (`README.md:52-67`, `justfile:20-22`). Upgrading means refreshing the spec from the release binary, fixing any type errors, and updating fixtures that the spec now requires fields for (`tests/unit/fixtures-spec.test.ts`, VS-01).
 
 ---
 
-**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L89-L99`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L8-L13`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `docs/IMPLEMENTATION.md:L273`, `docs/DECISIONS.md:L423,L493,L572,L615-L628`, `README.md:L51-L66`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
+**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L89-L99`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L8-L13`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
 **Last verified:** 2026-11-03 against commit `03faa33`

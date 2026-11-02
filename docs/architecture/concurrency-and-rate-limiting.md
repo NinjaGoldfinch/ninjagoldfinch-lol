@@ -18,7 +18,7 @@ Within one page, independent calls run together with `Promise.all`:
 | champion page     | detail + builds + matchups + patch list (after resolving the champion) | —                                                               | `src/lib/server/champion-page.ts:121-140` |
 | Data Dragon names | `champion`, `item`, `summoner`, `runesReforged`, `queues`              | —                                                               | `src/lib/server/static-data.ts:43-49`     |
 
-ADR-039 measured a cold champion page at about the sum of its four riot-proxy reads rather than the slowest one, which suggests riot-proxy serialises them or they compete for CPU; it was not confirmed (`docs/DECISIONS.md:529`).
+ADR-039 measured a cold champion page at about the sum of its four riot-proxy reads rather than the slowest one, which suggests riot-proxy serialises them or they compete for CPU; it was not confirmed (`docs/DECISIONS.md:531`).
 
 ## Shared fetches
 
@@ -30,7 +30,7 @@ Three lookups are held in process memory and shared by concurrent requests. Each
 | `staticNames`   | patch | until the patch changes | `src/lib/server/static-data.ts:25-37` |
 | `statShards`    | patch | until the patch changes | `src/lib/server/cdragon.ts:9-39`      |
 
-Riot player data and analytics are never held by the site (`docs/DECISIONS.md:560`, ADR-041).
+Riot player data and analytics are never held by the site (`docs/DECISIONS.md:562`, ADR-041).
 
 ## Deadlines and failures
 
@@ -84,7 +84,7 @@ How the site reacts, from `classifyProxyError` (`src/lib/server/errors.ts:16-33`
 - The Refresh button is disabled while `refreshAvailableIn` is above zero (`docs/DECISIONS.md:155`).
 - Error and form-post responses are never cached at the edge, so a passing rate limit is not served to later visitors (`src/lib/server/cache.ts:24-34`).
 
-At the edge, the plan calls for a Cloudflare rate-limiting rule on `/summoner/*` and `/match/*` (`docs/IMPLEMENTATION.md:387`, P5-02).
+At the edge, the plan calls for a Cloudflare rate-limiting rule on `/summoner/*` and `/match/*` (`docs/IMPLEMENTATION.md:391`, P5-02).
 
 > **TODO (unverified):** whether that Cloudflare rate-limiting rule exists in production. P5-02 is not ticked in `docs/PROGRESS.md`; check the Cloudflare dashboard.
 
@@ -94,5 +94,5 @@ There is none in the site beyond the deadlines: a slow riot-proxy holds each aff
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L68-L153`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/static-data.ts:L25-L49`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/profile.ts:L76-L119`, `src/lib/server/match.ts:L41-L69`, `src/lib/server/champions.ts:L37-L49`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L20-L25`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L529,L560`, `docs/IMPLEMENTATION.md:L387`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
+**Sources:** `src/lib/server/proxy.ts:L68-L153`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/static-data.ts:L25-L49`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/profile.ts:L76-L119`, `src/lib/server/match.ts:L41-L69`, `src/lib/server/champions.ts:L37-L49`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L20-L25`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L531,L562`, `docs/IMPLEMENTATION.md:L391`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
 **Last verified:** 2026-11-03 against commit `03faa33`

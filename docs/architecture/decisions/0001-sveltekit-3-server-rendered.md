@@ -4,7 +4,7 @@ The site is a SvelteKit 3 app on adapter-node that renders every page on the ser
 
 ## Context
 
-riot-proxy authenticates every caller with a consumer key (`Authorization: Bearer`), so a Browser calling it directly would expose the key (`docs/IMPLEMENTATION.md:49`). The plan asked for SvelteKit 2.x unless 3.x was stable; on 2026-10-09 `@sveltejs/kit` 3.0.1 was npm `latest` (`docs/DECISIONS.md:9`).
+riot-proxy authenticates every caller with a consumer key (`Authorization: Bearer`), so a Browser calling it directly would expose the key (`docs/IMPLEMENTATION.md:51`). The plan asked for SvelteKit 2.x unless 3.x was stable; on 2026-10-09 `@sveltejs/kit` 3.0.1 was npm `latest` (`docs/DECISIONS.md:9`).
 
 ## Decision
 
@@ -29,5 +29,5 @@ Accepted, in force.
 
 ---
 
-**Sources:** `docs/IMPLEMENTATION.md:L49`, `docs/DECISIONS.md:L5-L19,L372`, `CLAUDE.md:L15-L17,L57-L59`, `package.json:L7-L9,L24-L25,L45-L47`, `vite.config.ts:L1-L37`
+**Sources:** `docs/IMPLEMENTATION.md:L51`, `docs/DECISIONS.md:L5-L19,L372`, `CLAUDE.md:L15-L17,L57-L59`, `package.json:L7-L9,L24-L25,L45-L47`, `vite.config.ts:L1-L37`
 **Last verified:** 2026-11-03 against commit `6d46c74`

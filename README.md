@@ -9,7 +9,7 @@ A server-rendered League of Legends stats site. It is a SvelteKit app that sits 
 
 ## Requirements
 
-- Node 22.17 or later
+- Node 22.18 or later (`engines` in `package.json`)
 - pnpm (version pinned in `package.json`; `corepack enable` provides it)
 - [just](https://github.com/casey/just)
 - A riot-proxy to talk to (see below)
@@ -27,14 +27,15 @@ just dev     # dev server
 
 ## Commands
 
-| Command      | Does                                                                |
-| ------------ | ------------------------------------------------------------------- |
-| `just setup` | Install dependencies, enable git hooks, create `.env`               |
-| `just dev`   | Dev server with hot reload                                          |
-| `just gen`   | Regenerate `src/lib/api/schema.d.ts` from `openapi/riot-proxy.json` |
-| `just check` | Format check, lint, svelte-check, unit tests, build. The only gate. |
-| `just e2e`   | Playwright smoke tests against the mock proxy                       |
-| `just image` | Build the production Docker image                                   |
+| Command        | Does                                                                                                                                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `just setup`   | Install dependencies, enable git hooks, create `.env`                                                                                                                                                      |
+| `just dev`     | Dev server with hot reload                                                                                                                                                                                 |
+| `just gen`     | Regenerate `src/lib/api/schema.d.ts` from `openapi/riot-proxy.json`                                                                                                                                        |
+| `just check`   | The only gate: Prettier check, spec drift check (`schema.d.ts` against the spec), ESLint, `svelte-kit sync`, svelte-check, Vitest unit tests, build, and the deploy script test (`deploy/proxmox/test.sh`) |
+| `just e2e`     | Playwright smoke tests against the mock proxy                                                                                                                                                              |
+| `just fixture` | Record one riot-proxy response as a test fixture (spends Riot rate limit)                                                                                                                                  |
+| `just image`   | Build the Docker image (for the dormant preview VM; production runs without Docker)                                                                                                                        |
 
 There is no CI. The pre-push hook runs `just check`, and the pre-commit hook refuses commits on `main` and staged content that looks like a riot-proxy or Riot API key.
 
@@ -72,7 +73,7 @@ Unit tests (`tests/unit/`) run in `just check`. Browser tests (`tests/e2e/`) run
 To record a new fixture from `PROXY_URL` (one live call, so it spends Riot rate limit). This needs a riot-proxy you can reach; there is no shared dev instance, so without one write a synthetic fixture instead:
 
 ```sh
-just fixture account-hide-on-bush '/v1/riot/accounts/by-riot-id/asia/Hide%20on%20bush/KR1'
+just fixture profile-hide-on-bush '/v1/players/by-riot-id/Hide%20on%20bush/KR1/profile'
 ```
 
 Failure states that can't be recorded on demand use hand-written `tests/fixtures/synthetic-*.json` files, each with a `_note` saying so (ADR-017).
@@ -83,9 +84,9 @@ A full URL records from CommunityDragon instead. The fixture is keyed by the URL
 
 ## Deploying
 
-### Preview VM
+### Preview VM (dormant)
 
-The LAN preview runs as one Docker container built from the `Dockerfile`, with `deploy/compose.yaml`. To run it on a VM on your Proxmox node, see [deploy/proxmox/README.md](deploy/proxmox/README.md).
+The LAN preview ran as one Docker container built from the `Dockerfile`, with `deploy/compose.yaml`. The VM (VM 104) no longer exists (owner, 2026-10-19). The scripts are kept, and `just check` still tests them, in case it is made again: see [deploy/proxmox/README.md](deploy/proxmox/README.md) and [docs/deployment/preview-vm.md](docs/deployment/preview-vm.md).
 
 ### Production
 

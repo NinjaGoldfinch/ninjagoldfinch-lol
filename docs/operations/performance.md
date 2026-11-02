@@ -19,7 +19,7 @@ The Data Dragon `item.json` alone is about 700 kB, which is why the reduced look
 
 ## Measured numbers
 
-**Production** (ADR-039, measured 2026-10-15 on the production server, `docs/DECISIONS.md:521-527`):
+**Production** (ADR-039, measured 2026-10-15 on the production server, `docs/DECISIONS.md:523-529`):
 
 | What                                                                                   | Time                                 |
 | -------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -29,7 +29,7 @@ The Data Dragon `item.json` alone is about 700 kB, which is why the reduced look
 | Site: a champion page's first view after a rebuild                                     | about 200 ms                         |
 | Through Cloudflare                                                                     | `MISS` 55–69 ms, `HIT` 25–30 ms      |
 
-Before ADR-039's riot-proxy changes, production's `/champions/__data.json` took 3.9 s (`docs/DECISIONS.md:519`).
+Before ADR-039's riot-proxy changes, production's `/champions/__data.json` took 3.9 s (`docs/DECISIONS.md:521`).
 
 **Local** (2026-10-20, 4-core development machine, Node 22.23.3, production build against the mock proxy, so riot-proxy time is near zero and this is the site's own cost):
 
@@ -74,5 +74,5 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L76`, `src/lib/server/champions.ts:L37-L57`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L36-L77`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L515-L563`; local measurements 2026-10-20
+**Sources:** `src/lib/server/profile.ts:L74-L111`, `src/lib/server/match.ts:L40-L76`, `src/lib/server/champions.ts:L37-L57`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L36-L77`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565`; local measurements 2026-10-20
 **Last verified:** 2026-11-03 against commit `03faa33`

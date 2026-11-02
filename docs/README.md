@@ -116,7 +116,7 @@ Not written: `reference/riot-api-usage.md` (the site never calls Riot; see riot-
 
 Scripts: `_meta/check-docs.py` (links, H1, footers, TODO coverage, Mermaid rendering) and `_meta/check-openapi-paths.py` (openapi.yaml paths against the routes).
 
-Older project documents stay where they are: [IMPLEMENTATION.md](./IMPLEMENTATION.md) (the original plan, partly superseded), [DECISIONS.md](./DECISIONS.md) (ADR-001 to ADR-043) and [PROGRESS.md](./PROGRESS.md) (task ticks).
+Older project documents stay where they are: [IMPLEMENTATION.md](./IMPLEMENTATION.md) (the original plan, partly superseded), [DECISIONS.md](./DECISIONS.md) (ADR-001 to ADR-045) and [PROGRESS.md](./PROGRESS.md) (task ticks).
 
 ## Conventions in these docs
 
@@ -128,5 +128,5 @@ Older project documents stay where they are: [IMPLEMENTATION.md](./IMPLEMENTATIO
 
 ---
 
-**Sources:** `README.md:L1-L115`, `CLAUDE.md`, `docs/_meta/inventory.md`, the files listed above
+**Sources:** `README.md:L1-L114`, `CLAUDE.md`, `docs/_meta/inventory.md`, the files listed above
 **Last verified:** 2026-11-03 against commit `2948c82`
