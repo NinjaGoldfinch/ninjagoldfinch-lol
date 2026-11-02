@@ -25,9 +25,9 @@ Accepted. The committed spec is riot-proxy 2.7.0 (`README.md:66`).
 
 ## Evidence
 
-`src/lib/server/proxy.ts:136-153`, `justfile:16-22`, `src/lib/api/riot.ts:1-9`, `src/lib/api/match.ts:157-215`.
+`src/lib/server/proxy.ts:136-153`, `justfile:16-22`, `src/lib/api/riot.ts:1-9`, `src/lib/api/match.ts:159-217`.
 
 ---
 
 **Sources:** `docs/DECISIONS.md:L67-L78,L217-L225,L261-L281,L536`, `docs/IMPLEMENTATION.md:L72`, `README.md:L51-L66`, `justfile:L16-L22`, `pnpm-workspace.yaml:L8-L12`, `src/lib/server/proxy.ts:L136-L153`, `src/lib/api/riot.ts:L1-L9`
-**Last verified:** 2026-11-03 against commit `2948c82`
+**Last verified:** 2026-11-03 against commit `03faa33`

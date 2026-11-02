@@ -1,5 +1,6 @@
 import type { components } from '#lib/api/schema.d.ts';
 import type { StaticNames } from '#lib/api/ddragon.ts';
+import { championName } from './names.ts';
 
 type ChampionStatsResponse = components['schemas']['ChampionStatsResponse'];
 type AnalyticsPatchesResponse = components['schemas']['AnalyticsPatchesResponse'];
@@ -39,6 +40,11 @@ export const ROLES = [
 ] as const;
 
 export type RoleSlug = (typeof ROLES)[number]['slug'];
+
+/** Riot's teamPosition values, as the site names them: `MIDDLE` → `Mid`. */
+export const LANES: Record<string, string> = Object.fromEntries(
+	ROLES.map((r) => [r.proxy, r.label])
+);
 
 /** Riot's tiers by URL value, highest first, with riot-proxy's name and the label shown. */
 export const TIERS = [
@@ -225,7 +231,7 @@ export function toChampionTable(body: ChampionStatsResponse, names: StaticNames)
 			.map((c) => ({
 				id: c.championId,
 				key: names.champions[c.championId]?.id ?? null,
-				name: names.champions[c.championId]?.name ?? c.championName ?? `Champion ${c.championId}`,
+				name: championName(names, c.championId, c.championName),
 				games: c.games,
 				winRate: c.winRate,
 				pickRate: c.pickRate ?? null,

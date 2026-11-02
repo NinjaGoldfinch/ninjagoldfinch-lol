@@ -1,6 +1,8 @@
 // CommunityDragon's copy of the client's perks.json, reduced to the stat
 // shards: the only perks Data Dragon's runesReforged.json leaves out.
 
+import { record } from './json.ts';
+
 export interface Shard {
 	name: string;
 	/** Path inside CommunityDragon's game data, for `statShardIconUrl`. */
@@ -16,7 +18,7 @@ const ASSETS = '/lol-game-data/assets/v1/';
 export function parseStatShards(body: unknown): Record<number, Shard> {
 	const out: Record<number, Shard> = {};
 	for (const perk of Array.isArray(body) ? body : []) {
-		const { id, name, iconPath } = (perk ?? {}) as Record<string, unknown>;
+		const { id, name, iconPath } = record(perk) ?? {};
 		if (
 			typeof id === 'number' &&
 			id >= 5000 &&

@@ -18,7 +18,7 @@ Failed riot-proxy responses are logged as `proxy <status> <method> <path> reques
 
 ## Profile page
 
-`GET /summoner/{GameName-TAG}`, loaded by `loadProfile` (`src/lib/server/profile.ts:72-152`).
+`GET /summoner/{GameName-TAG}`, loaded by `loadProfile` (`src/lib/server/profile.ts:70-147`).
 
 ```mermaid
 sequenceDiagram
@@ -57,11 +57,11 @@ sequenceDiagram
 
 Notes, each from the code:
 
-- The profile call names no platform; riot-proxy finds the player's platform and returns it. The site maps it to one of its 15 regions; a platform it does not know is a 503 (`src/lib/server/profile.ts:78-87`, ADR-037).
-- The match page call needs the profile's `puuid`, so a cold profile is two round trips (`src/lib/server/profile.ts:56-57`).
-- The match page is optional. If it fails or throws, the page still renders the header and rank, shows a notice, and is sent with `no-store` so the gap is not kept at the edge (`src/lib/server/profile.ts:89-124`, `src/routes/summoner/[riotId]/+page.server.ts:25-26`).
-- Data Dragon names are optional too; on failure the page uses fallbacks such as `Item 1234` (`src/lib/server/profile.ts:108-111`).
-- Custom games are removed before rendering (`src/lib/server/profile.ts:119`).
+- The profile call names no platform; riot-proxy finds the player's platform and returns it. The site maps it to one of its 15 regions; a platform it does not know is a 503 (`src/lib/server/profile.ts:76-85`, ADR-037).
+- The match page call needs the profile's `puuid`, so a cold profile is two round trips (`src/lib/server/profile.ts:54-55`).
+- The match page is optional. If it fails or throws, the page still renders the header and rank, shows a notice, and is sent with `no-store` so the gap is not kept at the edge (`src/lib/server/profile.ts:87-119`, `src/routes/summoner/[riotId]/+page.server.ts:25-26`).
+- Data Dragon names are optional too; on failure the page uses fallbacks such as `Item 1234` (`src/lib/server/profile.ts:106`, `src/lib/server/static-data.ts:64-78`).
+- Custom games are removed before rendering (`src/lib/server/profile.ts:114`).
 - riot-proxy may wait for its Riot rate limiter: up to 2 s for an interactive request (`riot-proxy:src/config.rs:716`). If the wait budget runs out it serves a cached copy as `STALE` when it has one, else `RATE_LIMITED` (`riot-proxy:src/fetcher.rs:455-466`). Its Riot client allows 25 s per request and retries a 5xx twice after 250 ms and 750 ms (`riot-proxy:src/riot/client.rs:19-24`, `riot-proxy:src/fetcher.rs:26-27`). The site's 30 s budget is sized for that.
 
 ### Refresh
@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## Match page
 
-`GET /match/{matchId}`, loaded by `loadMatch` (`src/lib/server/match.ts:35-83`).
+`GET /match/{matchId}`, loaded by `loadMatch` (`src/lib/server/match.ts:33-78`).
 
 ```mermaid
 sequenceDiagram
@@ -139,13 +139,13 @@ sequenceDiagram
 ```
 
 - The region comes from the match id's prefix (`OC1_…` → Oceania, route `sea`); an id with no known prefix is a 404 without calling riot-proxy (`src/routes/match/[matchId]/+page.server.ts:9-11`, `src/lib/domain/regions.ts:46-50`).
-- A custom game is a 404 (`src/lib/server/match.ts:55`).
-- A page without its timeline, Data Dragon lookups or stat shards is sent with `no-store`, so the gap is not cached for a day. `loadMatch` returns `complete` for this (`src/lib/server/match.ts:62-82`, `src/routes/match/[matchId]/+page.server.ts:17-19`, ADR-045).
+- A custom game is a 404 (`src/lib/server/match.ts:53`).
+- A page without its timeline, Data Dragon lookups or stat shards is sent with `no-store`, so the gap is not cached for a day. `loadMatch` returns `complete` for this (`src/lib/server/match.ts:60-77`, `src/routes/match/[matchId]/+page.server.ts:17-19`, ADR-045).
 - riot-proxy treats match and timeline as immutable and serves them from its archive once fetched (`riot-proxy:src/riot/endpoints.rs:185-204`, `riot-proxy:src/fetcher.rs:305-317`).
 
 ## Champion page
 
-`GET /champions/{key}`, loaded by `findChampionPage` then `loadChampionPage` (`src/lib/server/champion-page.ts:84-177`).
+`GET /champions/{key}`, loaded by `findChampionPage` then `loadChampionPage` (`src/lib/server/champion-page.ts:82-175`).
 
 ```mermaid
 sequenceDiagram
@@ -184,9 +184,9 @@ sequenceDiagram
 
 - Analytics never reach Riot: riot-proxy answers from its own tables, with an in-memory copy until the next rebuild (`riot-proxy:src/routes/analytics.rs:3`, `riot-proxy:src/routes/analytics/cache.rs:1-19`).
 - Measured on production (ADR-039, `docs/DECISIONS.md:521-527`): 8–15 ms for a champion page when riot-proxy is warm; about 200 ms on a champion's first view after a rebuild; 55–69 ms for a Cloudflare `MISS` and 25–30 ms for a `HIT` from outside.
-- An unknown champion is a 404; without the Data Dragon names the URL cannot be resolved and the page is a 503, or a 429 if riot-proxy rate limited the lookups (`src/lib/server/champion-page.ts:94-102`).
+- An unknown champion is a 404; without the Data Dragon names the URL cannot be resolved and the page is a 503, or a 429 if riot-proxy rate limited the lookups (`src/lib/server/champion-page.ts:92-100`).
 - The name redirect is a 308, since a champion's slug does not change; the query redirect is a 307, since a default or a champion the lookups do not know yet can change (`src/routes/champions/[key]/+page.server.ts:21-26`, ADR-045).
-- A page without its set builds, matchups or patch list is sent with `no-store` (`src/lib/server/champion-page.ts:175`, `src/routes/champions/[key]/+page.server.ts:29-30`).
+- A page without its set builds, matchups or patch list is sent with `no-store` (`src/lib/server/champion-page.ts:173`, `src/routes/champions/[key]/+page.server.ts:29-30`).
 
 ## Other routes
 
@@ -201,5 +201,5 @@ With JavaScript, SvelteKit fetches a page's `__data.json` instead of its HTML on
 
 ---
 
-**Sources:** `src/hooks.server.ts:L6-L25`, `src/lib/server/cache.ts:L5-L34`, `src/lib/server/proxy.ts:L11-L153`, `src/lib/server/profile.ts:L56-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champion-page.ts:L84-L177`, `src/routes/summoner/[riotId]/+page.server.ts:L14-L38`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/domain/regions.ts:L46-L50`, `vite.config.ts:L16-L19`, `docs/DECISIONS.md:L153-L157,L521-L527,L577,L615-L628`, `docs/PROGRESS.md:L55`, `riot-proxy:src/routes/players/refresh.rs:L1-L71`, `riot-proxy:src/fetcher.rs:L9-L44,L305-L317,L455-L466`, `riot-proxy:src/riot/client.rs:L19-L24`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/riot/endpoints.rs:L185-L204`, `riot-proxy:src/routes/analytics.rs:L3`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
-**Last verified:** 2026-11-03 against commit `c092968`
+**Sources:** `src/hooks.server.ts:L6-L25`, `src/lib/server/cache.ts:L5-L34`, `src/lib/server/proxy.ts:L11-L153`, `src/lib/server/profile.ts:L54-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/summoner/[riotId]/+page.server.ts:L14-L38`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/domain/regions.ts:L46-L50`, `vite.config.ts:L16-L19`, `docs/DECISIONS.md:L153-L157,L521-L527,L577,L615-L628`, `docs/PROGRESS.md:L55`, `riot-proxy:src/routes/players/refresh.rs:L1-L71`, `riot-proxy:src/fetcher.rs:L9-L44,L305-L317,L455-L466`, `riot-proxy:src/riot/client.rs:L19-L24`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/riot/endpoints.rs:L185-L204`, `riot-proxy:src/routes/analytics.rs:L3`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`
+**Last verified:** 2026-11-03 against commit `03faa33`

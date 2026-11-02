@@ -11,6 +11,7 @@ import { playerBuild, toRunePage, toTimelineBuild, type Build } from './builds.t
 import type { Region } from './regions.ts';
 import { sameRiotId, type RiotId } from './riot-id.ts';
 import { loadoutOf, patchOf, type MatchRow } from './matches.ts';
+import { championName, queueName } from './names.ts';
 import { objectiveKills, type GoldFrame, type ObjectiveKill } from './timeline.ts';
 
 /** One player's scoreboard line: only what the page renders. */
@@ -106,10 +107,7 @@ export function toMatchDetail(
 	return {
 		matchId: match.matchId,
 		region: { slug: region.slug, label: region.label },
-		queue:
-			match.queueId === null
-				? 'Unknown queue'
-				: (names.queues[match.queueId] ?? `Queue ${match.queueId}`),
+		queue: queueName(names, match.queueId),
 		startedAt: match.gameCreation,
 		duration: match.gameDuration,
 		patch: patchOf(match.gameVersion),
@@ -132,7 +130,7 @@ export function toMatchDetail(
 				bans: (team?.bans ?? []).map((id) => ({
 					id,
 					key: names.champions[id]?.id ?? null,
-					name: names.champions[id]?.name ?? `Champion ${id}`
+					name: championName(names, id)
 				})),
 				players: players.map((p) => toLine(p, names))
 			};
@@ -159,7 +157,7 @@ function toLine(p: Participant, names: StaticNames): ScoreboardLine {
 		champion: {
 			id: p.championId,
 			key: names.champions[p.championId]?.id ?? null,
-			name: names.champions[p.championId]?.name ?? p.championName ?? `Champion ${p.championId}`,
+			name: championName(names, p.championId, p.championName),
 			level: p.champLevel
 		},
 		position: p.teamPosition,
@@ -273,6 +271,23 @@ export function formatMatchDate(epochMs: number): string {
 		timeZone: 'UTC'
 	});
 	return `${day}, ${time} UTC`;
+}
+
+/** A game's result as the scoreboards word and colour it. */
+export const RESULTS = {
+	win: { label: 'Victory', text: 'text-win' },
+	loss: { label: 'Defeat', text: 'text-loss' },
+	remake: { label: 'Remake', text: 'text-muted' }
+} as const satisfies Record<TeamScoreboard['result'], { label: string; text: string }>;
+
+/** `12,345`: gold and damage, grouped. */
+export function formatNumber(n: number): string {
+	return n.toLocaleString('en-GB');
+}
+
+/** The match's highest damage to champions, for the damage bars; 0 for none. */
+export function mostDamage(teams: Pick<TeamScoreboard, 'players'>[]): number {
+	return Math.max(0, ...teams.flatMap((t) => t.players.map((p) => p.damage)));
 }
 
 /**

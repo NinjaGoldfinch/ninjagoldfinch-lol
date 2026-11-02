@@ -50,7 +50,7 @@ flowchart LR
   Monitor -.->|watches process| Proxy
 ```
 
-Read left to right: a visitor reaches Cloudflare over HTTPS, and Cloudflare either answers from its cache or forwards the request through the Tunnel to `cloudflared` on the production host, which passes it to the site on `127.0.0.1:3000`. The site calls riot-proxy over loopback. Images never pass through the host: the Browser loads them from the Data Dragon CDN and CommunityDragon (`src/lib/assets.ts:1-8`). Only riot-proxy talks to Riot and to the object stores. The R2 copy is made by an `rclone` job on the host, not by riot-proxy (`riot-proxy:deploy/README.md:14-18`). The `X-Riot-Token` label is the Riot API's standard header and is riot-proxy's concern; this repo does not show it.
+Read left to right: a visitor reaches Cloudflare over HTTPS, and Cloudflare either answers from its cache or forwards the request through the Tunnel to `cloudflared` on the production host, which passes it to the site on `127.0.0.1:3000`. The site calls riot-proxy over loopback. Images never pass through the host: the Browser loads them from the Data Dragon CDN and CommunityDragon (`src/lib/assets.ts:1-10`). Only riot-proxy talks to Riot and to the object stores. The R2 copy is made by an `rclone` job on the host, not by riot-proxy (`riot-proxy:deploy/README.md:14-18`). The `X-Riot-Token` label is the Riot API's standard header and is riot-proxy's concern; this repo does not show it.
 
 > **TODO (unverified):** how ninja-monitor checks ninjagoldfinch.lol (process state only, or also an HTTP probe of `/healthz`). Source seen: `riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`; ninja-monitor's repo was not available.
 
@@ -89,5 +89,5 @@ Sources for the table: `riot-proxy:docs/DECISIONS.md:1512`, `docs/DECISIONS.md:5
 
 ---
 
-**Sources:** `src/lib/assets.ts:L1-L8`, `src/hooks.server.ts:L6-L15`, `README.md:L90-L101`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L49,L544`, `docs/DECISIONS.md:L504,L536`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/lib/assets.ts:L1-L10`, `src/hooks.server.ts:L6-L15`, `README.md:L90-L101`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L49,L544`, `docs/DECISIONS.md:L504,L536`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
+**Last verified:** 2026-11-03 against commit `03faa33`

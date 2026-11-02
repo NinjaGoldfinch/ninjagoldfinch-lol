@@ -1,9 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { patchOf } from '#lib/domain/matches.ts';
-import { proxy } from './proxy.ts';
+import { proxy, type ProxyClient } from './proxy.ts';
 import { toHttpError } from './errors.ts';
-
-type ProxyClient = typeof proxy;
 
 // Patch versions are dotted numbers (riot-proxy's own `version` pattern),
 // which also keeps them safe to put in asset URLs.

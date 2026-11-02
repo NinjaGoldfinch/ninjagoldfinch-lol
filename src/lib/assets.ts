@@ -4,6 +4,8 @@
 // CommunityDragon fills what Data Dragon lacks (lane icons, stat shards). A
 // CDN or path change is an edit to this file only. ADR-009, ADR-015, ADR-026.
 
+import { LANES } from '#lib/domain/champion-stats.ts';
+
 const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn';
 const CDRAGON = 'https://raw.communitydragon.org';
 
@@ -51,15 +53,6 @@ export function cdragonGameData(patch: string, base = CDRAGON): string {
 function majorMinor(patch: string): string {
 	return patch.split('.').slice(0, 2).join('.');
 }
-
-/** Riot's teamPosition values, as the site names them. */
-export const LANES: Record<string, string> = {
-	TOP: 'Top',
-	JUNGLE: 'Jungle',
-	MIDDLE: 'Mid',
-	BOTTOM: 'Bot',
-	UTILITY: 'Support'
-};
 
 /**
  * The client's lane icon, from CommunityDragon pinned to the patch's

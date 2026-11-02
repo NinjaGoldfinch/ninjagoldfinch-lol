@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { preloadData } from '$app/navigation';
-	import { LANES, laneIconUrl } from '#lib/assets.ts';
-	import { asMatchDetail, matchPath, type MatchDetail } from '#lib/domain/match-detail.ts';
+	import { laneIconUrl } from '#lib/assets.ts';
+	import { LANES } from '#lib/domain/champion-stats.ts';
+	import { RESULTS, asMatchDetail, matchPath, type MatchDetail } from '#lib/domain/match-detail.ts';
 	import { csPerMinute, formatDuration, kdaRatio, type MatchRow } from '#lib/domain/matches.ts';
 	import ChampionIcon from './ChampionIcon.svelte';
 	import ItemList from './ItemList.svelte';
@@ -17,12 +18,8 @@
 	 */
 	let { match, patch, player }: { match: MatchRow; patch: string; player: RiotId } = $props();
 
-	const RESULT = {
-		win: { label: 'Victory', border: 'border-l-win', text: 'text-win' },
-		loss: { label: 'Defeat', border: 'border-l-loss', text: 'text-loss' },
-		remake: { label: 'Remake', border: 'border-l-border', text: 'text-muted' }
-	} as const;
-	const result = $derived(RESULT[match.result]);
+	const BORDER = { win: 'border-l-win', loss: 'border-l-loss', remake: 'border-l-border' } as const;
+	const result = $derived(RESULTS[match.result]);
 	// Icons as of this game's patch, when riot-proxy knows its Data Dragon version.
 	const version = $derived(match.ddragonVersion ?? patch);
 	const lane = $derived(match.position ? laneIconUrl(version, match.position) : undefined);
@@ -59,7 +56,9 @@
 </script>
 
 <article
-	class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded border border-l-4 border-border bg-surface px-4 py-3 {result.border}"
+	class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded border border-l-4 border-border bg-surface px-4 py-3 {BORDER[
+		match.result
+	]}"
 	aria-label="{result.label} as {match.champion.name}"
 >
 	<div class="w-28 text-sm">

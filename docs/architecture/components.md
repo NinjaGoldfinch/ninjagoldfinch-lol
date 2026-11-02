@@ -76,35 +76,36 @@ The server-only boxes are route loads, hooks, loaders, static lookups, proxy cli
 
 Each page has one loader that owns its riot-proxy calls. Essential calls fail the page; optional calls are wrapped in `optional()` and degrade one section (`src/lib/server/errors.ts:41-58`).
 
-| Loader             | Page                 | Essential calls                                       | Optional calls                                      | Source                                    |
-| ------------------ | -------------------- | ----------------------------------------------------- | --------------------------------------------------- | ----------------------------------------- |
-| `loadProfile`      | `/summoner/{riotId}` | profile; current patch                                | match page; Data Dragon names (fallback `NO_NAMES`) | `src/lib/server/profile.ts:72-152`        |
-| `loadMatch`        | `/match/{matchId}`   | match; patch versions                                 | timeline; Data Dragon names; CommunityDragon shards | `src/lib/server/match.ts:35-83`           |
-| `loadChampions`    | `/champions`         | champion table; current patch                         | patch list; Data Dragon names                       | `src/lib/server/champions.ts:35-64`       |
-| `findChampionPage` | `/champions/{key}`   | current patch; Data Dragon names (to resolve the URL) | —                                                   | `src/lib/server/champion-page.ts:84-103`  |
-| `loadChampionPage` | `/champions/{key}`   | champion detail                                       | set builds; matchups; patch list                    | `src/lib/server/champion-page.ts:113-177` |
+| Loader             | Page                 | Essential calls                                       | Optional calls                                                         | Source                                    |
+| ------------------ | -------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------- |
+| `loadProfile`      | `/summoner/{riotId}` | profile; current patch                                | match page; Data Dragon names (`namesOrFallback`, fallback `NO_NAMES`) | `src/lib/server/profile.ts:70-147`        |
+| `loadMatch`        | `/match/{matchId}`   | match; patch versions                                 | timeline; Data Dragon names; CommunityDragon shards                    | `src/lib/server/match.ts:33-78`           |
+| `loadChampions`    | `/champions`         | champion table; current patch                         | patch list; Data Dragon names                                          | `src/lib/server/champions.ts:33-58`       |
+| `findChampionPage` | `/champions/{key}`   | current patch; Data Dragon names (to resolve the URL) | —                                                                      | `src/lib/server/champion-page.ts:82-101`  |
+| `loadChampionPage` | `/champions/{key}`   | champion detail                                       | set builds; matchups; patch list                                       | `src/lib/server/champion-page.ts:111-175` |
 
 The search page (`src/routes/search/+page.server.ts:18-47`) has no loader module: it redirects a Riot ID without calling riot-proxy, and for a champion name it uses the static lookups only.
 
 ## Domain modules
 
-| Module                | Main exports                                                                                                                   | Used by                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `riot-id.ts`          | `parseRiotIdInput`, `parseRiotId`, `profilePath`, `sameRiotId`                                                                 | search, profile, match pages                    |
-| `regions.ts`          | `REGIONS` (15 platforms), `regionForPlatform`, `regionForMatchId`, `findRegion`                                                | profile and match loaders, legacy redirects     |
-| `match-filters.ts`    | `FILTER_QUEUES`, `MATCHES_PER_PAGE` (10), `parseMatchFilter`, `filterQuery`                                                    | profile                                         |
-| `matches.ts`          | `toMatchRows`, `isCustomGame`, `patchOf`, `itemSlots`, `loadoutOf`                                                             | profile, match                                  |
-| `match-detail.ts`     | `toMatchDetail`, `isMatchIdFor`, `matchPath`, `selectBuild`, `asMatchDetail`                                                   | match page, profile rows                        |
-| `builds.ts`           | `playerBuild`, `skillOrder`, `skillColumns`, `shopVisits`                                                                      | match page (port of riot-proxy BLD-04, ADR-032) |
-| `timeline.ts`         | `objectiveKills`, `goldLead`, `goldAxis`, `nearestFrame`                                                                       | timeline chart                                  |
-| `champion-stats.ts`   | `DEFAULT_PATCH`, `MIN_GAMES`, `LOW_SAMPLE_GAMES`, `ROLES`, `TIERS`, `parseChampionFilter`, `analyticsQuery`, `toChampionTable` | champion pages                                  |
-| `champion-page.ts`    | `toChampionStats`, `toSetBuilds`, `toMatchups`, `parseVsPick`, `vsChoices`                                                     | champion page                                   |
-| `champion-search.ts`  | `champKey`, `findChampion`, `championPath`, `championNames`                                                                    | search, champion pages                          |
-| `champion-summary.ts` | `summariseChampions`                                                                                                           | profile side panel                              |
-| `ranks.ts`            | `describeRanks`                                                                                                                | profile                                         |
-| `error-view.ts`       | `describeError`                                                                                                                | error page, profile match-history notice        |
-| `recent.ts`           | `addRecent`, `parseRecent`, `MAX_RECENT` (8)                                                                                   | home page                                       |
-| `age.ts`              | `formatAge`                                                                                                                    | profile header                                  |
+| Module                | Main exports                                                                                                                            | Used by                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `riot-id.ts`          | `parseRiotIdInput`, `parseRiotId`, `profilePath`, `riotIdKey`, `sameRiotId`                                                             | search, profile, match pages                    |
+| `regions.ts`          | `REGIONS` (15 platforms), `regionForPlatform`, `regionForMatchId`, `findRegion`                                                         | profile and match loaders, legacy redirects     |
+| `match-filters.ts`    | `FILTER_QUEUES`, `MATCHES_PER_PAGE` (10), `parseMatchFilter`, `filterQuery`                                                             | profile                                         |
+| `matches.ts`          | `toMatchRows`, `isCustomGame`, `patchOf`, `itemSlots`, `loadoutOf`                                                                      | profile, match                                  |
+| `match-detail.ts`     | `toMatchDetail`, `isMatchIdFor`, `matchPath`, `selectBuild`, `asMatchDetail`                                                            | match page, profile rows                        |
+| `builds.ts`           | `playerBuild`, `skillOrder`, `skillColumns`, `shopVisits`                                                                               | match page (port of riot-proxy BLD-04, ADR-032) |
+| `timeline.ts`         | `objectiveKills`, `goldLead`, `goldAxis`, `nearestFrame`                                                                                | timeline chart                                  |
+| `champion-stats.ts`   | `DEFAULT_PATCH`, `MIN_GAMES`, `LOW_SAMPLE_GAMES`, `ROLES`, `LANES`, `TIERS`, `parseChampionFilter`, `analyticsQuery`, `toChampionTable` | champion pages                                  |
+| `champion-page.ts`    | `toChampionStats`, `toSetBuilds`, `toMatchups`, `parseVsPick`, `vsChoices`                                                              | champion page                                   |
+| `champion-search.ts`  | `champKey`, `findChampion`, `championPath`, `championNames`                                                                             | search, champion pages                          |
+| `champion-summary.ts` | `summariseChampions`                                                                                                                    | profile side panel                              |
+| `ranks.ts`            | `describeRanks`                                                                                                                         | profile                                         |
+| `error-view.ts`       | `describeError`                                                                                                                         | error page, profile match-history notice        |
+| `recent.ts`           | `addRecent`, `parseRecent`, `MAX_RECENT` (8)                                                                                            | home page                                       |
+| `age.ts`              | `formatAge`                                                                                                                             | profile header                                  |
+| `names.ts`            | `itemName`, `queueName`, `championName` (fallbacks when the lookups lack an id)                                                         | the domain modules above                        |
 
 Each has a test in `tests/unit/` with the same base name.
 
@@ -114,5 +115,5 @@ Each has a test in `tests/unit/` with the same base name.
 
 ---
 
-**Sources:** `src/hooks.server.ts:L6-L25`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L72-L152`, `src/lib/server/match.ts:L35-L83`, `src/lib/server/champions.ts:L35-L64`, `src/lib/server/champion-page.ts:L84-L177`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/hooks.server.ts:L6-L25`, `src/env.ts:L12-L31`, `src/lib/server/proxy.ts:L1-L153`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/profile.ts:L70-L147`, `src/lib/server/match.ts:L33-L78`, `src/lib/server/champions.ts:L33-L58`, `src/lib/server/champion-page.ts:L82-L175`, `src/routes/search/+page.server.ts:L18-L47`, `src/lib/domain/*.ts` (exports), `src/lib/components/*.svelte` (imports), `CLAUDE.md:L31-L42`, `docs/IMPLEMENTATION.md:L170`
+**Last verified:** 2026-11-03 against commit `03faa33`

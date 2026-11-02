@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LeagueEntry } from '#lib/api/riot.ts';
-import { describeRanks } from '#lib/domain/ranks.ts';
+import { describeRanks, titleCase } from '#lib/domain/ranks.ts';
 
 const entry = (over: Partial<LeagueEntry>): LeagueEntry => ({
 	queueType: 'RANKED_SOLO_5x5',
@@ -41,5 +41,12 @@ describe('describeRanks', () => {
 
 	it('gives 0% before any games', () => {
 		expect(describeRanks([entry({ wins: 0, losses: 0 })])[0].winRate).toBe(0);
+	});
+});
+
+describe('titleCase', () => {
+	it('keeps the first letter and lowers the rest', () => {
+		expect(titleCase('EMERALD')).toBe('Emerald');
+		expect(titleCase('GRANDMASTER')).toBe('Grandmaster');
 	});
 });

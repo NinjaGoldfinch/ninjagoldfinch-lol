@@ -12,11 +12,11 @@ Within one page, independent calls run together with `Promise.all`:
 
 | Page              | Calls in parallel                                                      | Then                                                            | Source                                    |
 | ----------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------- |
-| profile           | — (profile first, it supplies the `puuid` and platform)                | match page + current patch, in parallel; then Data Dragon names | `src/lib/server/profile.ts:78-111`        |
-| match             | match + timeline + patch versions                                      | Data Dragon names + CommunityDragon shards, in parallel         | `src/lib/server/match.ts:43-74`           |
-| champion table    | table + patch list + current patch                                     | Data Dragon names                                               | `src/lib/server/champions.ts:39-55`       |
-| champion page     | detail + builds + matchups + patch list (after resolving the champion) | —                                                               | `src/lib/server/champion-page.ts:123-142` |
-| Data Dragon names | `champion`, `item`, `summoner`, `runesReforged`, `queues`              | —                                                               | `src/lib/server/static-data.ts:45-51`     |
+| profile           | — (profile first, it supplies the `puuid` and platform)                | match page + current patch, in parallel; then Data Dragon names | `src/lib/server/profile.ts:76-106`        |
+| match             | match + timeline + patch versions                                      | Data Dragon names + CommunityDragon shards, in parallel         | `src/lib/server/match.ts:41-69`           |
+| champion table    | table + patch list + current patch                                     | Data Dragon names                                               | `src/lib/server/champions.ts:37-49`       |
+| champion page     | detail + builds + matchups + patch list (after resolving the champion) | —                                                               | `src/lib/server/champion-page.ts:121-140` |
+| Data Dragon names | `champion`, `item`, `summoner`, `runesReforged`, `queues`              | —                                                               | `src/lib/server/static-data.ts:43-49`     |
 
 ADR-039 measured a cold champion page at about the sum of its four riot-proxy reads rather than the slowest one, which suggests riot-proxy serialises them or they compete for CPU; it was not confirmed (`docs/DECISIONS.md:529`).
 
@@ -26,8 +26,8 @@ Three lookups are held in process memory and shared by concurrent requests. Each
 
 | Lookup          | Key   | Lifetime                | Source                                |
 | --------------- | ----- | ----------------------- | ------------------------------------- |
-| `patchVersions` | none  | `PATCH_TTL_MS` = 5 min  | `src/lib/server/patch.ts:47-68`       |
-| `staticNames`   | patch | until the patch changes | `src/lib/server/static-data.ts:27-39` |
+| `patchVersions` | none  | `PATCH_TTL_MS` = 5 min  | `src/lib/server/patch.ts:45-66`       |
+| `staticNames`   | patch | until the patch changes | `src/lib/server/static-data.ts:25-37` |
 | `statShards`    | patch | until the patch changes | `src/lib/server/cdragon.ts:9-39`      |
 
 Riot player data and analytics are never held by the site (`docs/DECISIONS.md:560`, ADR-041).
@@ -80,7 +80,7 @@ Each riot-proxy call counts against the quota, including static and analytics ca
 How the site reacts, from `classifyProxyError` (`src/lib/server/errors.ts:16-33`):
 
 - `QUOTA_EXCEEDED` and `RATE_LIMITED` (and any HTTP 429) become a **429** page, "Too many requests … Try again in N seconds". N comes from the error body's `retryAfter`, else the `Retry-After` header; without either the page says "a minute" (`src/lib/domain/error-view.ts:15-17`). riot-proxy sends `RATE_LIMITED` as HTTP 503, so the site goes by the code, not the status.
-- On the profile, a rate-limited match page shows the same message in the match-history section while the header still renders (`src/lib/server/profile.ts:119-124`).
+- On the profile, a rate-limited match page shows the same message in the match-history section while the header still renders (`src/lib/server/profile.ts:114-119`).
 - The Refresh button is disabled while `refreshAvailableIn` is above zero (`docs/DECISIONS.md:155`).
 - Error and form-post responses are never cached at the edge, so a passing rate limit is not served to later visitors (`src/lib/server/cache.ts:24-34`).
 
@@ -94,5 +94,5 @@ There is none in the site beyond the deadlines: a slow riot-proxy holds each aff
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L68-L153`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/patch.ts:L47-L68`, `src/lib/server/static-data.ts:L27-L51`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/profile.ts:L78-L124`, `src/lib/server/match.ts:L43-L74`, `src/lib/server/champions.ts:L39-L55`, `src/lib/server/champion-page.ts:L123-L142`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L20-L25`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L529,L560`, `docs/IMPLEMENTATION.md:L387`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
-**Last verified:** 2026-11-03 against commit `99cb82c`
+**Sources:** `src/lib/server/proxy.ts:L68-L153`, `src/lib/server/errors.ts:L16-L58`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/static-data.ts:L25-L49`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/profile.ts:L76-L119`, `src/lib/server/match.ts:L41-L69`, `src/lib/server/champions.ts:L37-L49`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L20-L25`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L529,L560`, `docs/IMPLEMENTATION.md:L387`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
+**Last verified:** 2026-11-03 against commit `03faa33`

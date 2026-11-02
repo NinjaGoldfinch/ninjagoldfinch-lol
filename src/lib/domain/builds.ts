@@ -1,6 +1,7 @@
 import type { Shard } from '#lib/api/cdragon.ts';
 import type { ItemCatalog, Rune, StaticNames } from '#lib/api/ddragon.ts';
 import type { RunePage, Timeline } from '#lib/api/match.ts';
+import { itemName } from './names.ts';
 
 // One player's build from the match timeline, by riot-proxy's definitions
 // (BLD-04; its showcase's `playerBuild`, held to the same golden fixture).
@@ -153,6 +154,11 @@ export function shopVisits(purchases: Purchase[]): { t: number; items: number[] 
 	return visits.map(({ t, items }) => ({ t, items }));
 }
 
+/** `Q › W › E`. */
+export function formatSkillOrder(order: string): string {
+	return [...order].join(' › ');
+}
+
 /** An item with its name; `count` of it in a row. */
 export interface StackedItem {
 	id: number;
@@ -161,12 +167,12 @@ export interface StackedItem {
 }
 
 /** Item ids named, the same item more than once a single entry with a count where it first appears. */
-export function stackItems(ids: number[], names: Record<number, string>): StackedItem[] {
+export function stackItems(ids: number[], names: Pick<StaticNames, 'items'>): StackedItem[] {
 	const out: StackedItem[] = [];
 	for (const id of ids) {
 		const same = out.find((item) => item.id === id);
 		if (same) same.count += 1;
-		else out.push({ id, name: names[id] ?? `Item ${id}`, count: 1 });
+		else out.push({ id, name: itemName(names, id), count: 1 });
 	}
 	return out;
 }
@@ -207,17 +213,18 @@ export interface Build {
 
 /** `playerBuild` named for the page, times in seconds. */
 export function toTimelineBuild(build: PlayerBuild, names: StaticNames): TimelineBuild {
-	const named = (id: number) => names.items[id] ?? `Item ${id}`;
 	return {
 		core:
 			build.starter && build.items
 				? {
-						starter: stackItems(build.starter, names.items),
+						starter: stackItems(build.starter, names),
 						boots:
-							build.boots === null ? null : { id: build.boots, name: named(build.boots), count: 1 },
+							build.boots === null
+								? null
+								: { id: build.boots, name: itemName(names, build.boots), count: 1 },
 						items: build.items.map((p) => ({
 							id: p.itemId,
-							name: named(p.itemId),
+							name: itemName(names, p.itemId),
 							at: seconds(p.t)
 						}))
 					}
@@ -226,7 +233,7 @@ export function toTimelineBuild(build: PlayerBuild, names: StaticNames): Timelin
 		skills: build.levelUps.map((l) => ({ slot: l.slot, at: seconds(l.t) })),
 		visits: shopVisits(build.purchases).map((v) => ({
 			at: seconds(v.t),
-			items: stackItems(v.items, names.items)
+			items: stackItems(v.items, names)
 		}))
 	};
 }

@@ -12,6 +12,7 @@ import {
 } from '#lib/api/match.ts';
 import {
 	SKILL_KEYS,
+	formatSkillOrder,
 	playerBuild,
 	shopVisits,
 	skillColumns,
@@ -191,7 +192,7 @@ describe('shopVisits', () => {
 
 describe('stackItems', () => {
 	it('names items and stacks repeats where they first appear', () => {
-		expect(stackItems([2003, 1055, 2003], { 2003: 'Health Potion' })).toEqual([
+		expect(stackItems([2003, 1055, 2003], { items: { 2003: 'Health Potion' } })).toEqual([
 			{ id: 2003, name: 'Health Potion', count: 2 },
 			{ id: 1055, name: 'Item 1055', count: 1 }
 		]);
@@ -257,5 +258,15 @@ describe('skillColumns', () => {
 		expect(skillColumns(0)).toHaveLength(18);
 		expect(skillColumns(18)).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
 		expect(skillColumns(19).at(-1)).toBe(19);
+	});
+});
+
+describe('formatSkillOrder', () => {
+	it('writes a skill order with arrows', () => {
+		expect(formatSkillOrder('QEW')).toBe('Q › E › W');
+	});
+
+	it("writes Udyr's four-skill order", () => {
+		expect(formatSkillOrder('RWEQ')).toBe('R › W › E › Q');
 	});
 });
