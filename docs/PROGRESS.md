@@ -53,6 +53,11 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [~] SPD-04 Dropped on measurement (ADR-039)
 - [x] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise, a 503 when spent; optional calls degrade on a throw as on an error response — #63 (ADR-040)
 - [ ] SPD-06 Cloudflare's cache of `__data.json`
+- [ ] SPD-07 Timing for each load, in the server log
+- [ ] SPD-08 Cold-path calls started sooner
+- [ ] SPD-09 Static data loaded at start-up; the patch refreshed in the background
+- [ ] SPD-10 Images fetched sooner
+- [ ] SPD-11 Smaller page data (only if SPD-07 shows it matters)
 
 ## VS — tier ranges and builds against a lane opponent
 
