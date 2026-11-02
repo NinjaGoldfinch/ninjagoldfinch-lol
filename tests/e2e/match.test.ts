@@ -517,3 +517,17 @@ for (const [width, oneLine] of [
 		expect(box.height < 100).toBe(oneLine);
 	});
 }
+
+test('switching tabs keeps the page where it was, not back at the top', async ({ page }) => {
+	await page.setViewportSize({ width: 1280, height: 500 });
+	await page.goto(`${MATCH}?player=NinjaGoldfinch-OCENZ`);
+	const tabs = page.getByRole('navigation', { name: 'Match views' });
+	await tabs.scrollIntoViewIfNeeded();
+	await page.evaluate(() => window.scrollBy(0, 150));
+	const scrolled = await page.evaluate(() => window.scrollY);
+	expect(scrolled).toBeGreaterThan(0);
+
+	await tabs.getByRole('link', { name: 'Timeline' }).click();
+	await expect(page.getByRole('region', { name: 'Gold difference' })).toBeVisible();
+	expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+});
