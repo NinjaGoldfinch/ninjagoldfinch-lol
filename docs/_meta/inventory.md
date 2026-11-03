@@ -166,7 +166,7 @@ Files: `.env` (local, from `.env.example`), `deploy/.env` (preview VM, `deploy/c
 | `README.md`                       | Current; production deploy and spec refresh steps                                                 |
 | `CLAUDE.md`                       | Working rules                                                                                     |
 | `docs/IMPLEMENTATION.md`          | Plan of 2026-10-09; its architecture, compose and deployment sections predate ADR-038 and ADR-037 |
-| `docs/DECISIONS.md`               | ADR-001 to ADR-043, the main evidence for design decisions                                        |
+| `docs/DECISIONS.md`               | ADR-001 to ADR-047, the main evidence for design decisions                                        |
 | `docs/PROGRESS.md`                | Task ticks and phase exit checks; SPD-06 and P5 open                                              |
 | `deploy/proxmox/README.md`        | Preview VM procedure; still names the dev proxy `http://192.168.68.46:8080` (line 3)              |
 | `tests/fixtures/builds/README.md` | Provenance of riot-proxy's golden build fixture                                                   |

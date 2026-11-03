@@ -1,6 +1,6 @@
 # Architecture decisions
 
-Short records of the design decisions that shape ninjagoldfinch.lol, each with its evidence. The full, dated log of all 46 decisions is [docs/DECISIONS.md](../../DECISIONS.md); these digests group and summarise the ones a newcomer needs.
+Short records of the design decisions that shape ninjagoldfinch.lol, each with its evidence. The full, dated log of all 47 decisions is [docs/DECISIONS.md](../../DECISIONS.md); these digests group and summarise the ones a newcomer needs.
 
 Each record has the sections Context, Decision, Consequences, Status and Evidence.
 

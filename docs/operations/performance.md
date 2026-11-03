@@ -37,7 +37,7 @@ Warm loads usually finish under the threshold and are not logged, so they are me
 
 Before ADR-039's riot-proxy changes, production's `/champions/__data.json` took 3.9 s (`docs/DECISIONS.md:521`).
 
-**Production cold loads before SPD-08** (from `slow load` lines): a cold profile took 204–222 ms, with the static lookups waiting for the profile and match calls; a cold match page took 149–167 ms. The times after SPD-08 are to be measured with the same `slow load` line once it is deployed.
+**Production cold loads, before and after SPD-08** (from `slow load` lines, ADR-047): a cold profile took 204–222 ms with the static lookups waiting for the profile and match calls, and 196 ms after, with them running alongside (riot-proxy's profile and match calls were slower on the second day, 51 and 75 ms against 37 and 39 ms). A cold match page took 149–167 ms, and 118–131 ms after, with the stat shards fetched alongside the match.
 
 **Local** (2026-10-20, 4-core development machine, Node 22.23.3, production build against the mock proxy, so riot-proxy time is near zero and this is the site's own cost):
 
@@ -84,4 +84,4 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 ---
 
 **Sources:** `src/lib/server/profile.ts:L76-L114`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L12`, `src/lib/server/static-data.ts:L22-L37`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L9-L11`, `src/lib/server/timing.ts:L10-L86`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L661`; local measurements 2026-10-20
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Last verified:** 2026-11-03 against commit `f691710`
