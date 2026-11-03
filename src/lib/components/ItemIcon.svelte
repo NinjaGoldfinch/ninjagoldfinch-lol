@@ -30,6 +30,7 @@
 		width={size}
 		height={size}
 		loading="lazy"
+		decoding="async"
 		class={bare ? 'rounded-sm' : 'rounded-sm bg-bg'}
 	/>
 	{#if count > 1}

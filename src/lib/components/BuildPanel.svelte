@@ -200,6 +200,7 @@
 										width={path.label === 'Primary' && i === 0 ? 28 : 22}
 										height={path.label === 'Primary' && i === 0 ? 28 : 22}
 										loading="lazy"
+										decoding="async"
 										class="rounded-full bg-bg"
 									/>
 									{rune.name}
@@ -221,6 +222,7 @@
 									width="22"
 									height="22"
 									loading="lazy"
+									decoding="async"
 									class="rounded-full bg-bg p-0.5"
 								/>
 							</li>

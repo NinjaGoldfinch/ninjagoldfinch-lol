@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DDRAGON_ORIGIN } from '#lib/assets.ts';
 	import '../app.css';
 	import { page } from '$app/state';
 	import { PUBLIC_SITE_NAME } from '$app/env/public';
@@ -19,6 +20,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<link rel="preconnect" href={DDRAGON_ORIGIN} />
 </svelte:head>
 
 <div class="flex min-h-screen flex-col">

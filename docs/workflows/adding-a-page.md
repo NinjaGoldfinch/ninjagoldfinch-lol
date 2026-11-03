@@ -14,7 +14,7 @@ These come from `CLAUDE.md` and are enforced by review, `just check` and the e2e
 | Asset URLs only through `src/lib/assets.ts`                            | `CLAUDE.md:63`                                       |
 | Svelte 5 runes only; Tailwind utilities with tokens from `src/app.css` | `CLAUDE.md:55-61`                                    |
 | Never import `src/lib/server/` from client code                        | `CLAUDE.md:15-17`                                    |
-| Legal boilerplate in the footer of every page (the layout does this)   | `CLAUDE.md:24-25`, `src/routes/+layout.svelte:43-48` |
+| Legal boilerplate in the footer of every page (the layout does this)   | `CLAUDE.md:24-25`, `src/routes/+layout.svelte:45-50` |
 | No MMR or ELO estimates; no custom-game history                        | `CLAUDE.md:24-25`                                    |
 | Every PR ships tests for what it adds                                  | `CLAUDE.md:10`                                       |
 
@@ -82,9 +82,9 @@ A path that only redirects uses `+server.ts` with a `GET` handler instead (for e
 
 ### 6. The view
 
-`+page.svelte` takes `data` with `$props()` and derives everything else with `$derived` (`src/routes/champions/+page.svelte:20-27`). Image URLs come from `src/lib/assets.ts` (`championIconUrl`, `itemIconUrl`, …). Colours come from the `--color-*` tokens in `src/app.css:6-16` through Tailwind classes such as `text-accent` or `border-border`. Filters are plain `<form method="GET">` so they work without JavaScript. The layout adds the header, the search and the legal footer (`src/routes/+layout.svelte:24-49`); do not repeat them.
+`+page.svelte` takes `data` with `$props()` and derives everything else with `$derived` (`src/routes/champions/+page.svelte:20-27`). Image URLs come from `src/lib/assets.ts` (`championIconUrl`, `itemIconUrl`, …). Colours come from the `--color-*` tokens in `src/app.css:6-16` through Tailwind classes such as `text-accent` or `border-border`. Filters are plain `<form method="GET">` so they work without JavaScript. The layout adds the header, the search and the legal footer (`src/routes/+layout.svelte:26-51`); do not repeat them.
 
-If the page has Data Dragon names, return `championNames` from the load and the header search suggests champions (`src/routes/+layout.svelte:12-17`).
+If the page has Data Dragon names, return `championNames` from the load and the header search suggests champions (`src/routes/+layout.svelte:13-18`).
 
 ### 7. End-to-end test
 
@@ -105,5 +105,5 @@ Then commit on a task branch (`<type>/<task-id>-<slug>`) with a scoped Conventio
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L20`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L62`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L18-L29`, `src/routes/+layout.svelte:L1-L49`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L20`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L62`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L18-L29`, `src/routes/+layout.svelte:L1-L51`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
+**Last verified:** 2026-11-03 against commit `ea998cb`

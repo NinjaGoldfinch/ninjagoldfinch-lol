@@ -24,6 +24,7 @@
 					width={size}
 					height={size}
 					loading="lazy"
+					decoding="async"
 					class="rounded-sm"
 				/>
 			{:else}

@@ -68,7 +68,7 @@ Optional calls do not produce an error page; they degrade one section (`src/lib/
 | `/champions`        | patch list                   | Picker offers only the default and the shown patch                  | `no-store` |
 | champion page       | builds, matchups, patch list | That card says it is unavailable                                    | `no-store` |
 
-Sources: `src/routes/summoner/[riotId]/+page.svelte:23-25,84-85`, `src/lib/server/profile.ts:78-83,116-127`, `src/lib/server/match.ts:44-56,71-76`, `src/routes/match/[matchId]/+page.server.ts:17-19`, `src/lib/server/champions.ts:44-53`, `src/routes/champions/+page.server.ts:17-18`, `src/lib/server/champion-page.ts:142-149,173`, `src/routes/champions/[key]/+page.server.ts:29-30` (ADR-045).
+Sources: `src/routes/summoner/[riotId]/+page.svelte:24-26,87-88`, `src/lib/server/profile.ts:78-83,116-127`, `src/lib/server/match.ts:44-56,71-76`, `src/routes/match/[matchId]/+page.server.ts:17-19`, `src/lib/server/champions.ts:44-53`, `src/routes/champions/+page.server.ts:17-18`, `src/lib/server/champion-page.ts:142-149,173`, `src/routes/champions/[key]/+page.server.ts:29-30` (ADR-045).
 
 ## What to do
 
@@ -78,5 +78,5 @@ Sources: `src/routes/summoner/[riotId]/+page.svelte:23-25,84-85`, `src/lib/serve
 
 ---
 
-**Sources:** `src/lib/server/errors.ts:L6-L84`, `src/lib/domain/error-view.ts:L7-L31`, `src/routes/+error.svelte:L6-L15`, `src/lib/server/cache.ts:L29-L34`, `src/hooks.server.ts:L34-L39`, `src/lib/server/proxy.ts:L95-L135`, `src/lib/server/profile.ts:L78-L127`, `src/lib/server/match.ts:L39-L76`, `src/lib/server/patch.ts:L165-L169`, `src/lib/server/champions.ts:L44-L53`, `src/lib/server/champion-page.ts:L92-L149`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L12`, `src/routes/summoner/[riotId]/+page.svelte:L23-L85`, `src/routes/match/[matchId]/+page.server.ts:L10-L19`, `src/routes/champions/+page.server.ts:L17-L18`, `src/routes/champions/[key]/+page.server.ts:L29-L30`, `src/lib/server/champion-page.ts:L173`, `src/routes/summoner/[region]/[riotId]/+server.ts:L11`, `src/routes/match/[region]/[matchId]/+server.ts:L9`, `riot-proxy:src/http/error.rs:L13-L67`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/lib/server/errors.ts:L6-L84`, `src/lib/domain/error-view.ts:L7-L31`, `src/routes/+error.svelte:L6-L15`, `src/lib/server/cache.ts:L29-L34`, `src/hooks.server.ts:L34-L39`, `src/lib/server/proxy.ts:L95-L135`, `src/lib/server/profile.ts:L78-L127`, `src/lib/server/match.ts:L39-L76`, `src/lib/server/patch.ts:L165-L169`, `src/lib/server/champions.ts:L44-L53`, `src/lib/server/champion-page.ts:L92-L149`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L12`, `src/routes/summoner/[riotId]/+page.svelte:L24-L88`, `src/routes/match/[matchId]/+page.server.ts:L10-L19`, `src/routes/champions/+page.server.ts:L17-L18`, `src/routes/champions/[key]/+page.server.ts:L29-L30`, `src/lib/server/champion-page.ts:L173`, `src/routes/summoner/[region]/[riotId]/+server.ts:L11`, `src/routes/match/[region]/[matchId]/+server.ts:L9`, `riot-proxy:src/http/error.rs:L13-L67`
+**Last verified:** 2026-11-03 against commit `ea998cb`

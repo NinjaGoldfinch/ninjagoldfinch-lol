@@ -110,7 +110,7 @@ sequenceDiagram
 
 ## 4. The Browser to the image CDNs
 
-Image URLs are built in `src/lib/assets.ts` and fetched by the Browser: Data Dragon CDN for champion, item, profile-icon, spell and rune images (`src/lib/assets.ts:9-35`), and CommunityDragon for lane icons and stat shard icons (`src/lib/assets.ts:37-64`). No credentials, no traffic through the host.
+Image URLs are built in `src/lib/assets.ts` and fetched by the Browser: Data Dragon CDN for champion, item, profile-icon, spell and rune images (`src/lib/assets.ts:9-44`), and CommunityDragon for lane icons and stat shard icons (`src/lib/assets.ts:46-73`). No credentials, no traffic through the host. Pages ask the Browser to open these connections early with `<link rel="preconnect">`: every page to Data Dragon CDN, the profile and match pages to CommunityDragon as well (`src/lib/assets.ts:12-19`, `src/routes/+layout.svelte:21-24`, SPD-10).
 
 ## 5. ninja-monitor
 
@@ -122,5 +122,5 @@ A deploy pulls `main` over SSH with a read-only deploy key belonging to the `nin
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L113-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L64`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L392`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L113-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L73`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L392`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
+**Last verified:** 2026-11-03 against commit `ea998cb`

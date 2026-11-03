@@ -24,7 +24,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Data Dragon version.** A full Data Dragon version, e.g. `16.20.1`, the "current patch" the site builds image URLs and loads names for. Held in memory, and refreshed in the background once older than 5 minutes (`src/lib/server/patch.ts:62-129`, ADR-048). A match from an older patch uses that patch's Data Dragon version for its icons (`src/lib/server/patch.ts:37-44`, `src/lib/server/match.ts:80`).
 
-**Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:9-64`, `src/lib/server/cdragon.ts:12-37`).
+**Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:9-73`, `src/lib/server/cdragon.ts:12-37`).
 
 **Stat shards.** The three small rune bonuses below the rune trees. Their names come from CommunityDragon because Data Dragon lacks them (ADR-015, ADR-026).
 
@@ -68,5 +68,5 @@ Definitions of the terms used across these docs and the code, with where each on
 
 ---
 
-**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L33,L80`, `src/lib/server/patch.ts:L37-L129`, `src/lib/server/profile.ts:L137-L138`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L33,L80`, `src/lib/server/patch.ts:L37-L129`, `src/lib/server/profile.ts:L137-L138`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/assets.ts:L9-L73`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
+**Last verified:** 2026-11-03 against commit `ea998cb`

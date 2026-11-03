@@ -9,6 +9,15 @@ import { LANES } from '#lib/domain/champion-stats.ts';
 const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn';
 const CDRAGON = 'https://raw.communitydragon.org';
 
+/**
+ * The image hosts, for `<link rel="preconnect">`: the browser opens the
+ * connection while it reads the page, before it reaches the first image
+ * (SPD-10). Data Dragon serves every page; CommunityDragon the lane badges
+ * on profiles and the stat shards on match pages.
+ */
+export const DDRAGON_ORIGIN = new URL(DDRAGON).origin;
+export const CDRAGON_ORIGIN = new URL(CDRAGON).origin;
+
 const segment = (value: string | number) => encodeURIComponent(String(value));
 
 /** `id` is Data Dragon's champion id (e.g. `MonkeyKing`), not the display name. */

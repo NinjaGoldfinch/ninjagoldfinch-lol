@@ -48,6 +48,8 @@
 			alt=""
 			width="64"
 			height="64"
+			fetchpriority="high"
+			decoding="async"
 			class="rounded-lg bg-surface"
 		/>
 	{/if}
