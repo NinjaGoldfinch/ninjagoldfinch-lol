@@ -27,6 +27,8 @@ The rest of the 12 GB is the kernel's page cache, which riot-proxy's SQLite reli
 | After about 26,000 requests                                            | 571 MB, still rising slowly; unchanged after 20 s idle |
 | Same load, 24,000 requests with `NODE_OPTIONS=--max-old-space-size=96` | 202–221 MB, flat; no errors                            |
 
+The in-memory lookups (current patch, Data Dragon names and CommunityDragon stat shards) are loaded at start-up, so "Just started" will now include them; that was not re-measured. Since ADR-048 they are held for two patches, the one in use and a new one loading before pages switch to it, which doubles their share for the days after a patch change: a few MB (`src/lib/server/static-data.ts:22-51`, `docs/DECISIONS.md:700`).
+
 The growth without a cap is V8 letting its heap grow, not a leak: with the old-space heap capped at 96 MB the same load ran with flat memory. Node's default heap limit on a 12 GB machine is well above ninja-monitor's 1 GiB alert, so under sustained traffic the process can approach that alert without being in trouble.
 
 > **TODO (unverified):** Production's actual RSS for `ninjagoldfinch-lol` over a day. Read it from ninja-monitor or `systemctl status ninjagoldfinch-lol` (Memory line). If it nears 1 GiB, setting `NODE_OPTIONS=--max-old-space-size=256` in `/etc/ninjagoldfinch-lol/env` would bound it (the 96 MB test above shows the site runs in far less); that is a configuration change to test first.
@@ -73,14 +75,14 @@ The shared 120 GB is riot-proxy's problem to manage: its database was 22 GB at t
 
 Traffic that counts against the host's 6 TB/month is what crosses its network interface:
 
-| Flow                                       | Crosses the host's link? | Notes                                                                                  |
-| ------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------- |
-| Browser ↔ Cloudflare                       | No                       | Cloudflare's edge                                                                      |
-| Cloudflare ↔ cloudflared (Tunnel)          | Yes                      | Every response the edge did not have cached                                            |
-| Site ↔ riot-proxy                          | No                       | Loopback                                                                               |
-| Site → CommunityDragon                     | Yes, small               | One `perks.json` per patch (`src/lib/server/cdragon.ts:11-39`)                         |
-| Browser → Data Dragon CDN, CommunityDragon | No                       | Images load from Riot's and CommunityDragon's CDNs directly (`src/lib/assets.ts:9-10`) |
-| riot-proxy ↔ Riot, Onidel, R2              | Yes                      | riot-proxy's; see its documentation                                                    |
+| Flow                                       | Crosses the host's link? | Notes                                                                                                                                               |
+| ------------------------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser ↔ Cloudflare                       | No                       | Cloudflare's edge                                                                                                                                   |
+| Cloudflare ↔ cloudflared (Tunnel)          | Yes                      | Every response the edge did not have cached                                                                                                         |
+| Site ↔ riot-proxy                          | No                       | Loopback                                                                                                                                            |
+| Site → CommunityDragon                     | Yes, small               | One `perks.json` per patch, at start-up or when a new patch is found; retried by each match page while it fails (`src/lib/server/cdragon.ts:12-37`) |
+| Browser → Data Dragon CDN, CommunityDragon | No                       | Images load from Riot's and CommunityDragon's CDNs directly (`src/lib/assets.ts:9-10`)                                                              |
+| riot-proxy ↔ Riot, Onidel, R2              | Yes                      | riot-proxy's; see its documentation                                                                                                                 |
 
 **Measured** page sizes from the production build, uncompressed HTML (2026-10-20, recorded fixtures): profile 62 KB, match 82 KB, `/champions` 140 KB, a champion page 132 KB, `/healthz` 11 B.
 
@@ -98,5 +100,5 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 
 ---
 
-**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541,L700`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
+**Last verified:** 2026-11-03 against commit `e183749`

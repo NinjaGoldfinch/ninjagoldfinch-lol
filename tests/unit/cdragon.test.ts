@@ -65,6 +65,18 @@ describe('statShards', () => {
 		expect(fetcher).toHaveBeenCalledTimes(1);
 	});
 
+	it('holds two patches; a third drops the oldest', async () => {
+		const fetcher = ok();
+		for (const patch of ['16.20.1', '16.21.1', '16.20.1', '16.21.1']) {
+			await statShards(patch, fetcher, 'http://mirror');
+		}
+		expect(fetcher).toHaveBeenCalledTimes(2);
+
+		await statShards('16.22.1', fetcher, 'http://mirror');
+		await statShards('16.20.1', fetcher, 'http://mirror');
+		expect(fetcher).toHaveBeenCalledTimes(4);
+	});
+
 	it('does not keep a failure', async () => {
 		const failing = vi.fn(async () => new Response(null, { status: 502 }));
 		await expect(statShards('16.20.1', failing, 'http://mirror')).rejects.toThrow('502');

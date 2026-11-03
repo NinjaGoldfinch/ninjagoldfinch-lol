@@ -19,7 +19,7 @@ Start from the symptom table, then read the entry.
 | 11  | Match page runes without stat shards                             | CommunityDragon unreachable                                   |
 | 12  | Champion pages 503, profile and match pages fine                 | Data Dragon lookups failing                                   |
 | 13  | First view of a champion page slow, `proxy slow … x-cache=MISS`  | Cold analytics slice in riot-proxy                            |
-| 14  | Old patch icons or names after a new patch                       | 5-minute patch hold                                           |
+| 14  | Old patch icons or names after a new patch                       | Patch refresh pending, or the new patch's lookups failing     |
 | 15  | Requests fail for a few seconds during a deploy                  | Building in the live checkout                                 |
 | 16  | e2e: elements "not visible"; text has zero height                | Chromium system fonts missing                                 |
 | 17  | e2e or local page 503/500; mock logs `no fixture for`            | Missing fixture                                               |
@@ -136,7 +136,7 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 11. Runes without stat shards
 
-**Cause.** CommunityDragon's `perks.json` could not be fetched; the page leaves the shards out and logs `CommunityDragon stat shards unavailable:` (`src/lib/server/match.ts:47-53`). The fetch has its own 5 s deadline, body included, so a hung CommunityDragon delays a match page by at most 5 s (`CDRAGON_BUDGET_MS`, `src/lib/server/cdragon.ts:11-32`).
+**Cause.** CommunityDragon's `perks.json` could not be fetched; the page leaves the shards out and logs `CommunityDragon stat shards unavailable:` (`src/lib/server/match.ts:47-53`). The fetch has its own 5 s deadline, body included, so a hung CommunityDragon delays a match page by at most 5 s (`CDRAGON_BUDGET_MS`, `src/lib/server/cdragon.ts:12-34`).
 
 **Confirm.** `curl -sI https://raw.communitydragon.org/<major.minor>/plugins/rcp-be-lol-game-data/global/default/v1/perks.json` from the host.
 
@@ -154,15 +154,19 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 **Cause.** riot-proxy computes a champion slice on first request after each analytics rebuild: about 200 ms on production, then about 1 ms (ADR-039, `docs/DECISIONS.md:523-529`). The site logs analytics calls over 250 ms as `proxy slow GET <path> x-cache=MISS <ms>ms` (`src/lib/server/proxy.ts:42-63`).
 
-**Confirm.** For this or any other slow page, `sudo journalctl -u ninjagoldfinch-lol | grep 'slow load'` lists each request over 100 ms with its route id and every riot-proxy call it made, by spec path and time, in the form `slow load /champions/[key] <total>ms: …, GET /v1/lol/analytics/champions/{championId} <ms>ms, …`; the slowest call is the one to look at in riot-proxy (`src/lib/server/timing.ts:58-86`, ADR-046).
+**Confirm.** For this or any other slow page, `sudo journalctl -u ninjagoldfinch-lol | grep 'slow load'` lists each request over 100 ms with its route id and every riot-proxy call it made, by spec path and time, in the form `slow load /champions/[key] <total>ms: …, GET /v1/lol/analytics/champions/{championId} <ms>ms, …`; the slowest call is the one to look at in riot-proxy (`src/lib/server/timing.ts:67-95`, ADR-046).
 
 **Fix.** None on the site. Warming is riot-proxy's (ADR-039).
 
 ## 14. Old patch icons after a new patch
 
-**Cause.** The current patch is held for 5 minutes (`PATCH_TTL_MS`, `src/lib/server/patch.ts:45-66`, ADR-041), and the edge may still serve pages rendered before.
+**Cause.** The site switches to a new patch in the background (ADR-048). Once the held patch is older than 5 minutes (`PATCH_TTL_MS`), the next request starts a refresh; if riot-proxy's mirror names a new patch, its Data Dragon lookups load first, and pages switch only when they have loaded (`src/lib/server/patch.ts:51-129`). Its CommunityDragon `perks.json` is fetched at the same time but does not hold back the switch; if it is missing, match pages on the new patch show no stat shards (entry 11). So a new patch shows up to 5 minutes, plus the time its lookups take, after riot-proxy mirrors it; riot-proxy itself syncs its mirror hourly. The edge may also still serve pages rendered before.
 
-**Fix.** Wait 5 minutes, or restart the site; purge the edge cache if needed ([runbook.md](./runbook.md#clearing-caches)).
+If the old patch stays well past that, the refresh is failing, and every request after the TTL logs `patch refresh failed; keeping <old patch>:` with the cause: riot-proxy failing `/v1/static/versions`, or failing the new patch's Data Dragon files (a `proxy <status> GET /v1/static/…` line beside it). A missing `perks.json` does not cause this.
+
+**Confirm.** `sudo journalctl -u ninjagoldfinch-lol --since '-30 min' | grep -E 'patch refresh failed|proxy [0-9]+ GET /v1/static'`; then the `curl` from entry 12 with the new version.
+
+**Fix.** For the ordinary delay, wait. For a failing refresh, fix riot-proxy's mirror or static routes; the next request after that switches. A restart moves pages to the new patch at once, because start-up holds the version list without waiting for the lookups; if the new patch's lookups still fail, pages then use plain fallback names, and champion pages fail (entry 12). Purge the edge cache if needed ([runbook.md](./runbook.md#clearing-caches)).
 
 ## 15. Errors during a deploy
 
@@ -196,5 +200,5 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ---
 
-**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L12-L135`, `src/lib/server/errors.ts:L16-L84`, `src/hooks.server.ts:L8-L29`, `src/lib/server/timing.ts:L58-L86`, `src/lib/server/profile.ts:L75-L119`, `src/lib/server/match.ts:L41-L74`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/cdragon.ts:L11-L32`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L44`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Sources:** `src/lib/server/env.ts:L10-L55`, `src/lib/server/proxy.ts:L12-L135`, `src/lib/server/errors.ts:L16-L84`, `src/hooks.server.ts:L11-L39`, `src/lib/server/timing.ts:L67-L95`, `src/lib/server/profile.ts:L75-L119`, `src/lib/server/match.ts:L41-L74`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/cdragon.ts:L12-L34`, `src/lib/server/cache.ts:L12-L13`, `src/lib/domain/riot-id.ts:L14-L44`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `vite.config.ts:L16-L19`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565,L684-L703`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
+**Last verified:** 2026-11-03 against commit `e183749`

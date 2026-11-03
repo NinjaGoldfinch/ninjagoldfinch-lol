@@ -78,12 +78,12 @@ Rotate in the Cloudflare dashboard and replace `/etc/cloudflared/token`, then `s
 
 ## Clearing caches
 
-| Cache                                                          | How to clear                                                         | When                                                                                          |
-| -------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Site in-memory holds (patch, Data Dragon lookups, stat shards) | `sudo systemctl restart ninjagoldfinch-lol`                          | Pages show an old patch's names more than 5 min after riot-proxy moved to a new patch         |
-| Cloudflare edge                                                | Dashboard → the zone → Caching → Purge Cache (by URL, or everything) | A bad deploy rendered pages that are still cached (match pages: up to a day plus a day stale) |
-| riot-proxy caches                                              | riot-proxy's documentation                                           | Stale player data; the site cannot clear these                                                |
-| A visitor's recent searches                                    | The visitor's browser (`localStorage` key `recent-searches`)         | Never needed by an operator                                                                   |
+| Cache                                                          | How to clear                                                         | When                                                                                                                                                                               |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Site in-memory holds (patch, Data Dragon lookups, stat shards) | `sudo systemctl restart ninjagoldfinch-lol`                          | Pages show an old patch's names well over 5 min after riot-proxy moved to a new patch; check [troubleshooting.md](./troubleshooting.md#14-old-patch-icons-after-a-new-patch) first |
+| Cloudflare edge                                                | Dashboard → the zone → Caching → Purge Cache (by URL, or everything) | A bad deploy rendered pages that are still cached (match pages: up to a day plus a day stale)                                                                                      |
+| riot-proxy caches                                              | riot-proxy's documentation                                           | Stale player data; the site cannot clear these                                                                                                                                     |
+| A visitor's recent searches                                    | The visitor's browser (`localStorage` key `recent-searches`)         | Never needed by an operator                                                                                                                                                        |
 
 TTLs: [data/caching.md](../data/caching.md).
 
@@ -103,7 +103,7 @@ Observed on 2026-10-20 with the production build, before RV-03; RV-03 changed th
 2. `sudo journalctl -u riot-proxy --since '-15 min'`.
 3. Fix or restart riot-proxy per its own runbook. The site needs no restart; it recovers on the next request.
 
-Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:8-19`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
+Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:18-29`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
 
 ## Riot outage or Riot key suspended
 
@@ -165,5 +165,5 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L8-L29`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
+**Last verified:** 2026-11-03 against commit `e183749`

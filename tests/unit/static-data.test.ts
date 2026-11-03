@@ -57,16 +57,23 @@ describe('staticNames', () => {
 		expect(a).toBe(b);
 	});
 
-	it('holds one patch: a new one replaces it, and the old one is fetched again', async () => {
+	it('holds two patches, so the old one serves while a new one loads; a third drops the oldest', async () => {
 		const { client, requests } = countingClient();
 		const old = await staticNames('16.20.1', client);
 		const next = await staticNames('16.21.1', client);
-		await staticNames('16.21.1', client);
-		expect(requests()).toBe(10);
 		expect(next).not.toBe(old);
+		expect(requests()).toBe(10);
 
-		await staticNames('16.20.1', client);
+		// Both held: no more requests.
+		expect(await staticNames('16.20.1', client)).toBe(old);
+		expect(await staticNames('16.21.1', client)).toBe(next);
+		expect(requests()).toBe(10);
+
+		await staticNames('16.22.1', client);
+		await staticNames('16.21.1', client);
 		expect(requests()).toBe(15);
+		await staticNames('16.20.1', client);
+		expect(requests()).toBe(20);
 	});
 
 	it('does not keep a failed fetch', async () => {

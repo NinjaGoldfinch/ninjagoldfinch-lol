@@ -10,8 +10,8 @@ riot-proxy's capacity and the Riot rate budget are the scarce resources; most pa
 
 - Five policies in `src/lib/server/cache.ts:5-16`: `profile` (`s-maxage=60, stale-while-revalidate=300`), `match` (`s-maxage=86400, stale-while-revalidate=86400`), `analytics` (`s-maxage=600, stale-while-revalidate=600`), `notFound` (`s-maxage=60`), `none` (`no-store`).
 - Every load sets one through `cacheControl()` (`CLAUDE.md:62`).
-- The `handle` hook overrides: non-GET/HEAD and errors are `no-store`, 404 is `notFound` (`src/hooks.server.ts:8-19`, `src/lib/server/cache.ts:29-34`, ADR-017).
-- After those rules, a response with no `Cache-Control` gets `no-store`. That covers redirects thrown before a load set a policy (`src/hooks.server.ts:12-17`, ADR-045).
+- The `handle` hook overrides: non-GET/HEAD and errors are `no-store`, 404 is `notFound` (`src/hooks.server.ts:18-29`, `src/lib/server/cache.ts:29-34`, ADR-017).
+- After those rules, a response with no `Cache-Control` gets `no-store`. That covers redirects thrown before a load set a policy (`src/hooks.server.ts:22-27`, ADR-045).
 - A page with a failed optional section is sent `no-store`: a profile without matches; a match without its timeline, lookups or stat shards; a champions page without its patch list or lookups; a champion page without its set builds, matchups or patch list. The match and champion loads return `complete` for this (ADR-045).
 - A champion's name redirects with 308; a tidied query with 307, so a later change of default is not stuck in browsers (ADR-045).
 - One URL per view: loads redirect to a canonical query so the edge holds one copy (ADR-033, ADR-037).
@@ -35,5 +35,5 @@ Accepted; extended by ADR-045. Whether Cloudflare caches `__data.json` with a `p
 
 ---
 
-**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L8-L19`, `src/routes/+page.ts:L3`, `CLAUDE.md:L62`, `docs/IMPLEMENTATION.md:L248`, `docs/DECISIONS.md:L145-L157,L206-L215,L233,L579,L617-L630`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L18-L29`, `src/routes/+page.ts:L3`, `CLAUDE.md:L62`, `docs/IMPLEMENTATION.md:L248`, `docs/DECISIONS.md:L145-L157,L206-L215,L233,L579,L617-L630`
+**Last verified:** 2026-11-03 against commit `e183749`

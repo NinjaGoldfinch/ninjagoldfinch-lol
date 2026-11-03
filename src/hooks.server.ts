@@ -1,6 +1,16 @@
-import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import { building } from '$app/env';
+import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
 import { CACHE_POLICIES, responseCachePolicy } from '#lib/server/cache.ts';
+import { warmPatch } from '#lib/server/patch.ts';
 import { timeLoad } from '#lib/server/timing.ts';
+
+// At start-up, load the current patch, its lookups and stat shards in the
+// background, so the first visitor after a deploy doesn't wait for them
+// (SPD-09). Not awaited: requests that arrive first share the same loads.
+// Skipped while `vite build` prerenders, which has no riot-proxy.
+export const init: ServerInit = () => {
+	if (!building) void warmPatch();
+};
 
 // Errors and form posts must never be cached at the edge, whatever a load set,
 // and a response no load gave a policy is not cached either. A slow request is

@@ -4,7 +4,7 @@ How ninjagoldfinch.lol runs riot-proxy calls in parallel, bounds how long they t
 
 ## Process model
 
-The site is one Node process (`/usr/bin/node build` under systemd, owner-supplied unit) with no worker pool, queue or background job. Concurrency is the Node event loop: each request's load awaits its riot-proxy calls, and many requests can be in flight at once. Nothing in the repo limits how many concurrent requests the site accepts; adapter-node's timeouts (`SHUTDOWN_TIMEOUT` 30 s, `IDLE_TIMEOUT` 0, and the unset `KEEP_ALIVE_TIMEOUT` and `HEADERS_TIMEOUT`) are left at their defaults (`build/server/adapter-node-env.js:4-19`, inventory section 7).
+The site is one Node process (`/usr/bin/node build` under systemd, owner-supplied unit) with no worker pool or queue. Its only background work is loading the current patch and its lookups: once at start-up from the `init` hook, and as a refresh after the patch has been held 5 minutes, neither awaited by a request (`src/hooks.server.ts:11-13`, `src/lib/server/patch.ts:113-146`, ADR-048). Concurrency is the Node event loop: each request's load awaits its riot-proxy calls, and many requests can be in flight at once. Nothing in the repo limits how many concurrent requests the site accepts; adapter-node's timeouts (`SHUTDOWN_TIMEOUT` 30 s, `IDLE_TIMEOUT` 0, and the unset `KEEP_ALIVE_TIMEOUT` and `HEADERS_TIMEOUT`) are left at their defaults (`build/server/adapter-node-env.js:4-19`, inventory section 7).
 
 ## Parallel calls per page
 
@@ -16,25 +16,27 @@ Within one page, independent calls run together with `Promise.all`. A call that 
 | match             | match + timeline + (patch versions, then Data Dragon names + CommunityDragon shards in parallel)    | —    | `src/lib/server/match.ts:42-61`           |
 | champion table    | table + patch list + (current patch, then Data Dragon names)                                        | —    | `src/lib/server/champions.ts:37-48`       |
 | champion page     | detail + builds + matchups + patch list (after resolving the champion)                              | —    | `src/lib/server/champion-page.ts:121-140` |
-| Data Dragon names | `champion`, `item`, `summoner`, `runesReforged`, `queues`                                           | —    | `src/lib/server/static-data.ts:43-49`     |
+| Data Dragon names | `champion`, `item`, `summoner`, `runesReforged`, `queues`                                           | —    | `src/lib/server/static-data.ts:57-63`     |
 
 ADR-039 measured a cold champion page at about the sum of its four riot-proxy reads rather than the slowest one, which suggests riot-proxy serialises them or they compete for CPU; it was not confirmed (`docs/DECISIONS.md:531`).
 
 ## Shared fetches
 
-Three lookups are held in process memory and shared by concurrent requests. Each stores the promise, not the result, so callers that arrive while a fetch is in flight wait on the same request. A failed fetch is dropped so the next page tries again.
+Three lookups are held in process memory and shared by concurrent requests. Callers that arrive while a fetch is in flight wait on the same request: the lookups store the promise, and `patchVersions` shares its first fetch until a value is held. A failed fetch is dropped so the next page tries again. All three are loaded at start-up (ADR-048).
 
-| Lookup          | Key   | Lifetime                | Source                                |
-| --------------- | ----- | ----------------------- | ------------------------------------- |
-| `patchVersions` | none  | `PATCH_TTL_MS` = 5 min  | `src/lib/server/patch.ts:45-66`       |
-| `staticNames`   | patch | until the patch changes | `src/lib/server/static-data.ts:25-37` |
-| `statShards`    | patch | until the patch changes | `src/lib/server/cdragon.ts:9-39`      |
+| Lookup          | Key   | Lifetime                                                                    | Source                                |
+| --------------- | ----- | --------------------------------------------------------------------------- | ------------------------------------- |
+| `patchVersions` | none  | Served at once; after `PATCH_TTL_MS` (5 min), one shared background refresh | `src/lib/server/patch.ts:62-129`      |
+| `staticNames`   | patch | Two patches (`HELD_PATCHES`); a third drops the oldest                      | `src/lib/server/static-data.ts:22-51` |
+| `statShards`    | patch | Two patches; a third drops the oldest                                       | `src/lib/server/cdragon.ts:10-37`     |
+
+The refresh is one at a time: callers that find the held versions stale while a refresh is running do not start another (`src/lib/server/patch.ts:113-114`). When it finds a new current patch, it waits for that patch's Data Dragon lookups (`preparePatch`) before pages switch, so pages never wait on them; the stat shards start at the same time but do not hold back the switch. A failed refresh keeps the held patch; while riot-proxy fails the version list or the new patch's lookups, each request after the TTL starts another, one at a time, with no back-off. riot-proxy answers them from memory. The refresh runs detached from the request that started it (`outsideLoad`, `src/lib/server/timing.ts:54-60`), so it is not part of that request's timing.
 
 Riot player data and analytics are never held by the site (`docs/DECISIONS.md:562`, ADR-041).
 
 ## Deadlines and failures
 
-Every riot-proxy call carries a deadline from `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else. The body is read inside the deadline, and a caller's own abort still applies (`src/lib/server/proxy.ts:69-135`). There are no retries in the site. The 30 s budget leaves room for riot-proxy's own Riot client, which allows 25 s per request (`riot-proxy:src/riot/client.rs:22-24`). CommunityDragon's `perks.json` fetch has its own 5 s deadline, `CDRAGON_BUDGET_MS`, body included (`src/lib/server/cdragon.ts:11-32`).
+Every riot-proxy call carries a deadline from `proxyBudget`: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else. The body is read inside the deadline, and a caller's own abort still applies (`src/lib/server/proxy.ts:69-135`). There are no retries in the site. The 30 s budget leaves room for riot-proxy's own Riot client, which allows 25 s per request (`riot-proxy:src/riot/client.rs:22-24`). CommunityDragon's `perks.json` fetch has its own 5 s deadline, `CDRAGON_BUDGET_MS`, body included (`src/lib/server/cdragon.ts:12-34`).
 
 `withTimeout` races the fetch, and then the body read, against a promise that only its own timer or the caller's abort rejects; either one also aborts the fetch (`src/lib/server/proxy.ts:95-135`). Any throw other than the caller's own abort becomes `error(503)`: a spent deadline, a refused connection, a DNS failure, a body that breaks off. The caller's own abort passes through as it was.
 
@@ -73,7 +75,7 @@ The site has no rate limiter of its own. Three limits act on its traffic:
 | Riot API rate limits                         | riot-proxy | Per routing value and method. An interactive request waits up to 2 s; then a cached copy is served as `STALE`, or `RATE_LIMITED` (HTTP 503)                       | `riot-proxy:src/config.rs:716`, `riot-proxy:src/fetcher.rs:455-466`         |
 | Refresh window                               | riot-proxy | One `refresh=true` per player and part per 60 s; inside the window the cached copy is returned with `refreshAvailableIn`                                          | `riot-proxy:src/routes/players/refresh.rs:17-18,43-71`                      |
 
-Each riot-proxy call counts against the quota, including static and analytics calls, because every read route is metered (`riot-proxy:src/http/auth.rs:318-343`, `riot-proxy:src/routes/docs.rs:118-126`). A cold profile view costs two to eight calls (profile, match page, versions, and the five Data Dragon files on the first view of a patch); a warm one costs two.
+Each riot-proxy call counts against the quota, including static and analytics calls, because every read route is metered (`riot-proxy:src/http/auth.rs:318-343`, `riot-proxy:src/routes/docs.rs:118-126`). Once the patch is held, a profile view costs two calls (profile, match page); a cold start whose warm-up has not finished or failed adds the versions call and the five Data Dragon files. The site's own background work adds one `/v1/static/versions` call per 5 minutes of traffic, and the five Data Dragon files once per patch, at start-up or when a new patch is found (ADR-048).
 
 > **TODO (unverified):** the `quota_per_min` actually set for `ninjagoldfinch-lol-prod`. Run `riot-proxy key list` on `ngf-prod-syd1`. Code default is 600.
 
@@ -94,5 +96,5 @@ There is none in the site beyond the deadlines: a slow riot-proxy holds each aff
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L69-L154`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/patch.ts:L45-L66`, `src/lib/server/static-data.ts:L25-L49`, `src/lib/server/cdragon.ts:L9-L39`, `src/lib/server/profile.ts:L76-L127`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L24-L29`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L531,L562`, `docs/IMPLEMENTATION.md:L391`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Sources:** `src/lib/server/proxy.ts:L69-L154`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/timing.ts:L54-L60`, `src/lib/server/static-data.ts:L22-L63`, `src/lib/server/cdragon.ts:L10-L37`, `src/lib/server/profile.ts:L76-L127`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L11-L13,L34-L39`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L531,L562,L684-L703`, `docs/IMPLEMENTATION.md:L391`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
+**Last verified:** 2026-11-03 against commit `e183749`

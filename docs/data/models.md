@@ -12,7 +12,7 @@ The site has no database and no stored models. These are the objects each server
 | Durations           | seconds (`duration`, build times `at`)                                                                           | Riot `gameDuration` seconds; timeline events in ms, converted (`src/lib/domain/builds.ts:215-242`)       |
 | Start time          | `startedAt` epoch milliseconds                                                                                   | Riot `gameCreation`                                                                                      |
 | Patch               | `major.minor`, e.g. `16.20`                                                                                      | Riot `gameVersion` is a game build (`16.20.824.8524`) (`src/lib/domain/matches.ts:160-167`)              |
-| Data Dragon version | `ddragonVersion`, e.g. `16.20.1`                                                                                 | riot-proxy `ddragonVersion` on summaries; derived for match pages (`src/lib/server/patch.ts:30-41`)      |
+| Data Dragon version | `ddragonVersion`, e.g. `16.20.1`                                                                                 | riot-proxy `ddragonVersion` on summaries; derived for match pages (`src/lib/server/patch.ts:33-44`)      |
 | Champion            | `{ id, key, name, level? }`: `id` numeric, `key` Data Dragon id for the icon (`MonkeyKing`), `name` display name | Riot `championId`, `championName`; names from the current patch                                          |
 | Role                | riot-proxy names (`MIDDLE`) inside data; site slugs (`mid`) in URLs; labels (`Mid`) on screen                    | Riot `teamPosition` (`src/lib/domain/champion-stats.ts:34-40`, `src/lib/domain/champion-stats.ts:44-47`) |
 | Team                | `teamId` 100 = "Blue team", 200 = "Red team", else `Team <id>`                                                   | Riot `teamId` (`src/lib/domain/match-detail.ts:77`)                                                      |
@@ -112,5 +112,5 @@ Against a lane opponent the 4th and 5th item steps are dropped and the card omit
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L17-L154`, `src/lib/server/match.ts:L18-L22,L76-L84`, `src/lib/server/patch.ts:L30-L41`, `src/lib/server/champions.ts:L14-L24`, `src/lib/server/champion-page.ts:L31-L57`, `src/lib/domain/matches.ts:L9-L85,L160-L167`, `src/lib/domain/match-detail.ts:L18-L155`, `src/lib/domain/builds.ts:L21-L214`, `src/lib/domain/champion-stats.ts:L34-L40,L197-L241`, `src/lib/domain/champion-page.ts:L17-L215`, `src/lib/domain/champion-stats.ts:L44-L47`, `src/lib/api/match.ts`, `docs/DECISIONS.md:L167`
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Sources:** `src/lib/server/profile.ts:L17-L154`, `src/lib/server/match.ts:L18-L22,L76-L84`, `src/lib/server/patch.ts:L33-L44`, `src/lib/server/champions.ts:L14-L24`, `src/lib/server/champion-page.ts:L31-L57`, `src/lib/domain/matches.ts:L9-L85,L160-L167`, `src/lib/domain/match-detail.ts:L18-L155`, `src/lib/domain/builds.ts:L21-L214`, `src/lib/domain/champion-stats.ts:L34-L40,L197-L241`, `src/lib/domain/champion-page.ts:L17-L215`, `src/lib/domain/champion-stats.ts:L44-L47`, `src/lib/api/match.ts`, `docs/DECISIONS.md:L167`
+**Last verified:** 2026-11-03 against commit `e183749`

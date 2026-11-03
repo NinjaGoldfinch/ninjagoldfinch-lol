@@ -20,20 +20,34 @@ export const NO_NAMES: StaticNames = {
 };
 
 // Data Dragon files cannot change within a patch, and item.json alone is
-// ~700 kB, so the reduced lookups for the current patch are kept in memory.
-// Only one patch is held; a new patch replaces it. ADR-013.
-let latest: { patch: string; names: Promise<StaticNames> } | undefined;
+// ~700 kB, so the reduced lookups are kept in memory (ADR-013). Two patches
+// are held: the one pages use, and a new one loading before they switch to
+// it (ADR-048). A third replaces the oldest.
+export const HELD_PATCHES = 2;
+const held = new Map<string, Promise<StaticNames>>();
 
 export function staticNames(patch: string, client: ProxyClient = proxy): Promise<StaticNames> {
-	if (latest?.patch === patch) return latest.names;
+	const hit = held.get(patch);
+	if (hit) return hit;
 
 	const names = fetchNames(patch, client);
-	latest = { patch, names };
-	// A failed fetch is not kept, so the next page tries again.
-	names.catch(() => {
-		if (latest?.names === names) latest = undefined;
-	});
+	keep(held, patch, names);
 	return names;
+}
+
+/**
+ * Holds `value` for `patch`, dropping the oldest patch past HELD_PATCHES.
+ * A failure is not kept, so the next page tries again.
+ */
+export function keep<T>(map: Map<string, Promise<T>>, patch: string, value: Promise<T>): void {
+	map.set(patch, value);
+	for (const oldest of map.keys()) {
+		if (map.size <= HELD_PATCHES) break;
+		map.delete(oldest);
+	}
+	value.catch(() => {
+		if (map.get(patch) === value) map.delete(patch);
+	});
 }
 
 async function fetchNames(patch: string, client: ProxyClient): Promise<StaticNames> {
@@ -77,7 +91,7 @@ export async function namesOrFallback(
 	}
 }
 
-/** For tests: forget the held patch. */
+/** For tests: forget the held patches. */
 export function clearStaticNames(): void {
-	latest = undefined;
+	held.clear();
 }
