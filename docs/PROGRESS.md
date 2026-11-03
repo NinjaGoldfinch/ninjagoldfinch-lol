@@ -55,7 +55,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [ ] SPD-06 Cloudflare's cache of `__data.json`
 - [x] SPD-07 Timing for each load, in the server log: one line per request over 100 ms, with each riot-proxy call; cold and warm timings from production in ADR-046 — #86, #87
 - [x] SPD-08 Cold-path calls started sooner: the patch and its lookups alongside each page's main call; a cold profile waits for its slower chain — #88, #89 (ADR-047)
-- [ ] SPD-09 Static data loaded at start-up; the patch refreshed in the background
+- [x] SPD-09 Static data loaded at start-up; the patch refreshed in the background: the first profile after a restart 118 ms against 196 ms, no request waiting on a stale patch — #90, #96 (ADR-048)
 - [x] SPD-10 Images fetched sooner: preconnect to the image hosts, the champion header icon eager and first, async decoding — #91
 - [~] SPD-11 Dropped: SPD-07's timings put the time in riot-proxy's calls and the lookups, not page size (owner, 2026-11-03; ADR-046, ADR-047)
 
