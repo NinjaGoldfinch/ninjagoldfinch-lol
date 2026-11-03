@@ -19,6 +19,27 @@ test('the accent is light purple', async ({ page }) => {
 	await expect(button).toHaveCSS('background-color', 'oklch(0.79 0.12 302)');
 });
 
+test('the site icon is the ninja goldfinch, not the Svelte default', async ({ page }) => {
+	await page.goto('/');
+	const href = await page.locator('link[rel="icon"]').getAttribute('href');
+	expect(href).toBeTruthy();
+	// Vite may inline a small SVG as a data: URL and rewrite its quotes, so
+	// fetch it from the page and read the parsed document.
+	const icon = await page.evaluate(async (url) => {
+		const response = await fetch(url);
+		const svg = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
+		return {
+			type: response.headers.get('content-type'),
+			backing: svg.querySelector('svg > rect')?.getAttribute('fill'),
+			fills: [...svg.querySelectorAll('path')].map((path) => path.getAttribute('fill'))
+		};
+	}, href ?? '');
+	expect(icon.type).toContain('image/svg+xml');
+	// The lavender backing square and the gold body.
+	expect(icon.backing).toBe('#C4A2F2');
+	expect(icon.fills).toContain('#F2C94C');
+});
+
 test('an unknown page shows the not-found state, with the footer', async ({ page }) => {
 	const response = await page.goto('/no-such-page');
 	expect(response?.status()).toBe(404);
