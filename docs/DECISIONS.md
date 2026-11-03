@@ -701,3 +701,16 @@ Date: 2026-11-03 · Task: SPD-09
 - A new patch is shown up to `PATCH_TTL_MS` plus the time its lookups take after riot-proxy mirrors it.
 - If CommunityDragon has not published a new patch's `perks.json`, match pages on the new patch show no stat shards until it has, and each match page tries again, as before.
 - While riot-proxy fails a refresh, each request after the TTL starts another, one at a time; riot-proxy answers them from memory.
+
+## ADR-049: MIT licence
+
+Date: 2026-11-03 · Task: none
+
+**Context.** The repository is public and had no licence, so nobody else had permission to use, copy or change the code. The owner's other open-source repositories are MIT.
+
+**Decision.** The code is licensed under the MIT License (`LICENSE`), and `package.json` declares `"license": "MIT"`. It stays `"private": true`, which only stops it being published to npm.
+
+**Consequences.**
+
+- Anyone may reuse the code under MIT's terms, keeping the copyright notice.
+- Third-party code keeps its own licence; MIT covers only this repository's own code.

@@ -112,3 +112,7 @@ sudo systemctl restart ninjagoldfinch-lol
 ```
 
 `ORIGIN` goes on the build command because the site's origin is fixed at build time (ADR-014); it is not read from the settings file. Form posts, such as Refresh, are accepted only from that origin.
+
+## License
+
+Licensed under the [MIT License](LICENSE).
