@@ -488,7 +488,7 @@ riot-proxy v2.6.0 keeps analytics responses in memory and warms the champion tab
 - [ ] SPD-08 Profile, match and champions loads start the patch and static-data calls alongside their main calls; same pages, same fallbacks
 - [ ] SPD-09 Static data loaded at start-up through the `init` hook; after `PATCH_TTL_MS` the patch refreshes in the background; on a new patch, pages keep the old one until its lookups have loaded
 - [ ] SPD-10 Preconnect to the image hosts from `src/lib/assets.ts`; the champion header icon and the profile icon eager with `fetchpriority="high"`; `decoding="async"` on every `<img>`
-- [ ] SPD-11 Smaller page data, only if SPD-07 shows the size matters: the profile's champion names not sent twice, matchups trimmed to what the page uses; names stay in the page
+- [ ] SPD-11 Dropped: smaller page data. SPD-07's timings put a slow page's time in riot-proxy's calls and the lookups, not the size of its data (owner, 2026-11-03; ADR-046, ADR-047)
 
 **Exit check:** none beyond each task's own; every task records before and after numbers from production in its PR.
 
