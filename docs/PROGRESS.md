@@ -69,6 +69,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 ## FIX — fixes
 
 - [x] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items — #65
+- [x] FIX-02 The site icon is a ninja goldfinch on a lavender square, replacing the Svelte default — #94
 
 ## RV — fixes from the code review of 2026-11-03
 
