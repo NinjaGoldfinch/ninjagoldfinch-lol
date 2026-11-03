@@ -25,6 +25,7 @@
 				width={size}
 				height={size}
 				loading="lazy"
+				decoding="async"
 				class="rounded-sm"
 			/>
 		{:else}
@@ -41,6 +42,7 @@
 			width={size}
 			height={size}
 			loading="lazy"
+			decoding="async"
 			class="rounded-full bg-bg"
 		/>
 	{:else}
@@ -54,6 +56,7 @@
 			width={small}
 			height={small}
 			loading="lazy"
+			decoding="async"
 			style:margin="{gap}px"
 		/>
 	{:else}

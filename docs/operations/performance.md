@@ -50,6 +50,26 @@ Before ADR-039's riot-proxy changes, production's `/champions/__data.json` took 
 
 Throughput was 177 requests/s one at a time and 234 requests/s at 16 concurrent: one Node thread is the ceiling, and latency under concurrency is queueing. There are no benchmarks in the repository; these were taken with a small Python script for this document.
 
+## In the browser
+
+Images are the browser's main extra wait: every one comes straight from the Data Dragon CDN or CommunityDragon, not from the site ([architecture/decisions/0011-images-from-public-cdns.md](../architecture/decisions/0011-images-from-public-cdns.md)). Since SPD-10 the HTML helps the browser fetch them sooner:
+
+- **Preconnect.** Every page has `<link rel="preconnect">` to Data Dragon (`src/routes/+layout.svelte:21-24`); the profile and match pages add one to CommunityDragon for their lane badges and stat shards. The champion page shows no CommunityDragon images, so it has none. The origins come from `DDRAGON_ORIGIN` and `CDRAGON_ORIGIN` in `src/lib/assets.ts:12-19`; preconnect adds no host the page did not already load images from.
+- **The main image first.** The champion page's header icon is `ChampionIcon` with `priority` (`loading="eager"`, `fetchpriority="high"`); the profile icon was already eager and now also has `fetchpriority="high"`. Other images stay `loading="lazy"`.
+- **No layout shift, no decode stall.** Every `<img>` keeps its `width` and `height` and has `decoding="async"`.
+
+`tests/e2e/images.test.ts` checks all three with JavaScript off. SvelteKit's `data-sveltekit-preload-code="viewport"`, also in the plan, was not adopted.
+
+**SPD-10, measured locally** (2026-11-03; Playwright against the production build and the mock proxy, image hosts answered locally after 30 ms, 1280×800, median of 7 loads):
+
+| What                                                           | Before (`main`) | With SPD-10 |
+| -------------------------------------------------------------- | --------------- | ----------- |
+| Champion page header icon requested, after the HTML arrived    | 46.6 ms         | 5.6 ms      |
+| Profile icon requested, after the HTML arrived (already eager) | 4.3 ms          | 4.4 ms      |
+| Cumulative layout shift, champion page / profile               | 0.064 / 0.039   | unchanged   |
+
+Preconnect's gain is a saved DNS, TCP and TLS handshake to each host, which a local run cannot show; it was not measured on production.
+
 ## Tuning knobs
 
 None of these is a setting; each is a constant in code, changed by a commit with its test.
@@ -83,5 +103,5 @@ The biggest lever is the edge cache: a longer `s-maxage` means fewer renders and
 
 ---
 
-**Sources:** `src/lib/server/profile.ts:L76-L114`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/cdragon.ts:L12-L13`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L11-L21`, `src/lib/server/timing.ts:L10-L95`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L703`; local measurements 2026-10-20
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/lib/server/profile.ts:L76-L114`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L86-L148`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/cdragon.ts:L12-L13`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/server/proxy.ts:L37-L78`, `src/hooks.server.ts:L11-L21`, `src/lib/server/timing.ts:L10-L95`, `src/lib/server/cache.ts:L5-L16`, `src/lib/domain/match-filters.ts:L7`, `src/lib/assets.ts:L12-L19`, `src/routes/+layout.svelte:L21-L24`, `src/lib/components/ChampionIcon.svelte:L1-L24`, `tests/e2e/images.test.ts`, `docs/DECISIONS.md:L159-L170,L517-L565,L632-L703`; local measurements 2026-10-20 and 2026-11-03 (SPD-10)
+**Last verified:** 2026-11-03 against commit `ea998cb`

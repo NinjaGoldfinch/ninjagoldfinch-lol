@@ -8,7 +8,7 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | `tests/unit/*.test.ts`                       | 41 Vitest files: domain modules, loaders, cold-path call order, proxy client, load timing, env rules, hooks, mock, fixtures | `just check`        |
 | `tests/unit/fixtures.ts`                     | Helpers: `fixtureBody(path)`, recorded paths, `recordedNames()`                                                             | imported by tests   |
-| `tests/e2e/*.test.ts`                        | 5 Playwright files: `routes`, `match`, `champion-page`, `champions`, `layout`                                               | `just e2e`          |
+| `tests/e2e/*.test.ts`                        | 6 Playwright files: `routes`, `match`, `champion-page`, `champions`, `layout`, `images`                                     | `just e2e`          |
 | `tests/mock-proxy/`                          | `mock.ts` (fixture loader and HTTP server), `server.ts` (CLI, default port 8787)                                            | Playwright, by hand |
 | `tests/fixtures/*.json`                      | 50 fixtures: recorded or synthetic riot-proxy responses, and one CommunityDragon file                                       | mock and unit tests |
 | `tests/fixtures/builds/`                     | riot-proxy's golden build fixtures, copied unchanged; not served by the mock                                                | unit tests          |
@@ -27,7 +27,7 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 | `pnpm playwright test tests/e2e/match.test.ts -g "bot laner"` | One file or test by title                                      | Playwright        |
 | `bash deploy/proxmox/test.sh`                                 | Deploy-script test alone                                       | `justfile:28`     |
 
-Results on 2026-10-20 at `e7c395c`: unit `Test Files 34 passed (34)`, `Tests 332 passed (332)`; e2e `81 passed (31.9s)`. On 2026-11-03, with RV-03: `Test Files 35 passed (35)`, `Tests 341 passed (341)`.
+Results on 2026-10-20 at `e7c395c`: unit `Test Files 34 passed (34)`, `Tests 332 passed (332)`; e2e `81 passed (31.9s)`. On 2026-11-03, with RV-03: `Test Files 35 passed (35)`, `Tests 341 passed (341)`. With SPD-10 (`tests/e2e/images.test.ts`), e2e has 91 tests.
 
 ## Unit tests
 
@@ -91,7 +91,7 @@ Fixtures must contain no `rpx_` or `RGAPI-` strings (`CLAUDE.md:13-14`); the pre
 
 ## Browser tests
 
-`tests/e2e/` covers each page twice: in a `test.describe` with `javaScriptEnabled: false`, proving the server-rendered page is complete, and again with JavaScript for enhancements such as popups and tabs (`tests/e2e/match.test.ts:6-7`, `tests/e2e/routes.test.ts:11-12`). Tests find elements by role and accessible name, assert the legal footer on each page type (`tests/e2e/routes.test.ts:3,21`), and check layout at several widths (`tests/e2e/match.test.ts:484`).
+`tests/e2e/` covers each page twice: in a `test.describe` with `javaScriptEnabled: false`, proving the server-rendered page is complete, and again with JavaScript for enhancements such as popups and tabs (`tests/e2e/match.test.ts:6-7`, `tests/e2e/routes.test.ts:11-12`). Tests find elements by role and accessible name, assert the legal footer on each page type (`tests/e2e/routes.test.ts:3,21`), and check layout at several widths (`tests/e2e/match.test.ts:484`). `images.test.ts` checks, with JavaScript off, the preconnect links to the image hosts, that the champion page's header icon and the profile icon load first (`fetchpriority="high"`), and that every image has `width`, `height` and `decoding="async"` (SPD-10).
 
 Chromium needs its system packages, fonts included; without them text lays out at zero height and visibility checks fail (`README.md:16-17`).
 
@@ -115,5 +115,5 @@ There is no coverage tool or threshold: no coverage provider in `package.json` a
 
 ---
 
-**Sources:** `justfile:L19-L36`, `package.json:L10-L20,L45-L47`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/unit/fixtures-redacted.test.ts:L1-L52`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `tests/unit/timing.test.ts`, `tests/unit/cold-path.test.ts:L18-L117`, `tests/unit/patch.test.ts:L97-L286`, `tests/unit/static-data.test.ts:L60-L77`, `tests/unit/cdragon.test.ts:L68-L78`, `tests/unit/hooks.test.ts:L64-L83`, `tests/unit/env-example.test.ts:L1-L19`, `src/lib/server/proxy.ts:L82-L135`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `justfile:L19-L36`, `package.json:L10-L20,L45-L47`, `vite.config.ts:L22-L37`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L1-L48`, `tests/unit/fixtures-redacted.test.ts:L1-L52`, `tests/mock-proxy/server.ts:L1-L12`, `tests/record-fixture.ts:L1-L82`, `tests/redact.ts:L1-L38`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/unit/mock-proxy.test.ts:L1-L30`, `tests/unit/fixtures-spec.test.ts:L84-L120`, `tests/unit/proxy.test.ts:L120-L169`, `tests/unit/timing.test.ts`, `tests/unit/cold-path.test.ts:L18-L117`, `tests/unit/patch.test.ts:L97-L286`, `tests/unit/static-data.test.ts:L60-L77`, `tests/unit/cdragon.test.ts:L68-L78`, `tests/unit/hooks.test.ts:L64-L83`, `tests/unit/env-example.test.ts:L1-L19`, `src/lib/server/proxy.ts:L82-L135`, `tests/e2e/routes.test.ts:L1-L21`, `tests/e2e/match.test.ts:L1-L10,L484`, `tests/e2e/images.test.ts:L1-L61`, `tests/fixtures/builds/README.md`, `deploy/proxmox/test.sh:L46-L82`, `.githooks/pre-commit:L12-L23`, `CLAUDE.md:L10-L14,L35`, `README.md:L16-L17`
+**Last verified:** 2026-11-03 against commit `ea998cb`

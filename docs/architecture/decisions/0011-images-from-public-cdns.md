@@ -8,7 +8,7 @@ riot-proxy mirrors Data Dragon's JSON for the site, but when this was decided no
 
 ## Decision
 
-- Image URLs are built only in `src/lib/assets.ts`: Data Dragon CDN for champions, items, profile icons, spells and runes; CommunityDragon for lane icons and stat shards (`src/lib/assets.ts:1-64`, ADR-009, ADR-015, ADR-026).
+- Image URLs are built only in `src/lib/assets.ts`: Data Dragon CDN for champions, items, profile icons, spells and runes; CommunityDragon for lane icons and stat shards (`src/lib/assets.ts:1-73`, ADR-009, ADR-015, ADR-026).
 - The patch in each URL comes from riot-proxy's `/v1/static/versions`.
 
 ## Consequences
@@ -27,5 +27,5 @@ Accepted.
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L103-L111,L185-L194,L225`, `src/lib/assets.ts:L1-L64`
-**Last verified:** 2026-11-03 against commit `03faa33`
+**Sources:** `docs/DECISIONS.md:L103-L111,L185-L194,L225`, `src/lib/assets.ts:L1-L73`
+**Last verified:** 2026-11-03 against commit `ea998cb`

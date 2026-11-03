@@ -78,6 +78,7 @@
 					width={i === 0 ? 28 : 20}
 					height={i === 0 ? 28 : 20}
 					loading="lazy"
+					decoding="async"
 					class="rounded-full bg-bg"
 				/>
 			{:else}<span class="text-muted">–</span>{/if}
@@ -96,6 +97,7 @@
 					width="24"
 					height="24"
 					loading="lazy"
+					decoding="async"
 					class="rounded-sm bg-bg"
 				/>
 			{:else}<span class="text-muted">–</span>{/if}

@@ -123,7 +123,7 @@ Both teams' scoreboards, each player's build (in a popup), and a Timeline tab wi
 
 | Query    | Meaning                                     | Read by                                                 |
 | -------- | ------------------------------------------- | ------------------------------------------------------- |
-| `player` | Riot ID to highlight, `GameName-TAG`        | the page (`src/routes/match/[matchId]/+page.svelte:32`) |
+| `player` | Riot ID to highlight, `GameName-TAG`        | the page (`src/routes/match/[matchId]/+page.svelte:33`) |
 | `tab`    | `timeline`; anything else is the scoreboard | the page (`:51`)                                        |
 | `build`  | Participant ID whose build to open          | the page (`:68`)                                        |
 
@@ -210,5 +210,5 @@ Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=6
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L71-L155`, `src/lib/server/match.ts:L34-L85`, `src/lib/server/champions.ts:L33-L62`, `src/lib/server/champion-page.ts:L82-L186`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L13-L195`, `src/lib/domain/champion-page.ts:L212-L305`, `src/hooks.server.ts:L18-L29`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L617-L630`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/routes/healthz/+server.ts:L5-L6`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L33-L69`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L71-L155`, `src/lib/server/match.ts:L34-L85`, `src/lib/server/champions.ts:L33-L62`, `src/lib/server/champion-page.ts:L82-L186`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L13-L195`, `src/lib/domain/champion-page.ts:L212-L305`, `src/hooks.server.ts:L18-L29`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L617-L630`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
+**Last verified:** 2026-11-03 against commit `ea998cb`

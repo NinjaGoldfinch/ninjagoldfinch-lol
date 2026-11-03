@@ -1,6 +1,8 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import {
+	CDRAGON_ORIGIN,
+	DDRAGON_ORIGIN,
 	championIconUrl,
 	itemIconUrl,
 	cdragonGameData,
@@ -68,5 +70,26 @@ describe('ChampionIcon', () => {
 		expect(body).toContain('width="48"');
 		expect(body).toContain('height="48"');
 		expect(body).toContain('loading="lazy"');
+		expect(body).toContain('decoding="async"');
+		expect(body).not.toContain('fetchpriority="high"');
+	});
+
+	it("loads a page's main icon at once and first, with priority", () => {
+		const { body } = render(ChampionIcon, {
+			props: { patch: '16.20.1', id: 'Ahri', name: '', size: 64, priority: true }
+		});
+		expect(body).toContain('loading="eager"');
+		expect(body).toContain('fetchpriority="high"');
+		expect(body).toContain('width="64"');
+	});
+});
+
+describe('image origins', () => {
+	it('are the origins the icon URLs are built on, for preconnect', () => {
+		expect(DDRAGON_ORIGIN).toBe('https://ddragon.leagueoflegends.com');
+		expect(CDRAGON_ORIGIN).toBe('https://raw.communitydragon.org');
+		expect(new URL(championIconUrl('16.20.1', 'Ahri')).origin).toBe(DDRAGON_ORIGIN);
+		expect(new URL(laneIconUrl('16.20.1', 'MIDDLE') ?? '').origin).toBe(CDRAGON_ORIGIN);
+		expect(new URL(statShardIconUrl('16.20.1', 'perk-images/x.png')).origin).toBe(CDRAGON_ORIGIN);
 	});
 });

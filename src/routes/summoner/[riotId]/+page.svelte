@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { CDRAGON_ORIGIN } from '#lib/assets.ts';
 	import { page } from '$app/state';
 	import ChampionSummary from '#lib/components/ChampionSummary.svelte';
 	import MatchFilters from '#lib/components/MatchFilters.svelte';
@@ -33,6 +34,8 @@
 </script>
 
 <svelte:head>
+	<!-- Lane badges and stat shards come from CommunityDragon (SPD-10). -->
+	<link rel="preconnect" href={CDRAGON_ORIGIN} />
 	<title>{profile.riotId.gameName}#{profile.riotId.tagLine} · {profile.region.label}</title>
 </svelte:head>
 

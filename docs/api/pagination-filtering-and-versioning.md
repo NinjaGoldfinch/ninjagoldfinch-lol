@@ -22,7 +22,7 @@ Sources: `src/lib/domain/match-filters.ts:5-37`, `src/lib/server/profile.ts:99-1
 
 - The "Older" link appears when riot-proxy's `hasMore` is true and the page is below 1001; "Newer" from page 2 (`src/lib/components/Pagination.svelte:9-17`). riot-proxy sets `hasMore` when a full page came back, exactly when filtering by champion (`riot-proxy:src/routes/players.rs:697,866`).
 - Custom games are removed after the page is fetched, so a page may show fewer than ten rows, with a note (ADR-017).
-- With a champion filter the matches come from riot-proxy's archive; while its backfill of the player's history is incomplete (`archive.complete: false`) the page says older games are still arriving (`src/lib/server/profile.ts:43-48`, `src/routes/summoner/[riotId]/+page.svelte:99`).
+- With a champion filter the matches come from riot-proxy's archive; while its backfill of the player's history is incomplete (`archive.complete: false`) the page says older games are still arriving (`src/lib/server/profile.ts:43-48`, `src/routes/summoner/[riotId]/+page.svelte:102`).
 - Canonical form, in this order: `?queue=…&champion=…&page=…`, defaults left out (`src/lib/domain/match-filters.ts:39-50`). Anything else on a GET gets `307` to it (`src/routes/summoner/[riotId]/+page.server.ts:18-22`).
 - Refresh keeps the filter: `?queue=420&/refresh` (`src/lib/domain/match-filters.ts:52-59`).
 
@@ -49,7 +49,7 @@ Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, th
 
 ## Match page parameters
 
-`player=<GameName-TAG>`, `tab=timeline` and `build=<participant id>` are read in the browser (`src/routes/match/[matchId]/+page.svelte:32,51,68`). The server ignores them and does not redirect, but each combination is a separate edge cache entry (ADR-024).
+`player=<GameName-TAG>`, `tab=timeline` and `build=<participant id>` are read in the browser (`src/routes/match/[matchId]/+page.svelte:33,52,69`). The server ignores them and does not redirect, but each combination is a separate edge cache entry (ADR-024).
 
 ## URL versioning
 
@@ -69,5 +69,5 @@ riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by commi
 
 ---
 
-**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L99-L109`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L99`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L22-L27`, `src/routes/match/[matchId]/+page.svelte:L32-L68`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L99-L109`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L102`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L22-L27`, `src/routes/match/[matchId]/+page.svelte:L33-L69`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
+**Last verified:** 2026-11-03 against commit `ea998cb`

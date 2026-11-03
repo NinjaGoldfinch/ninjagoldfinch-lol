@@ -43,7 +43,7 @@ Commit inspected: `e7c395c` on branch `docs/VS-exit-check` (clean tree), 2026-10
 | `src/routes/`         | Pages and endpoints (section 4)                                                                                                       |
 | `static/`             | `robots.txt`                                                                                                                          |
 | `tests/unit/`         | 41 Vitest files                                                                                                                       |
-| `tests/e2e/`          | 5 Playwright files                                                                                                                    |
+| `tests/e2e/`          | 6 Playwright files                                                                                                                    |
 | `tests/fixtures/`     | 54 recorded or synthetic riot-proxy responses; `builds/` holds riot-proxy's golden build fixture                                      |
 | `tests/mock-proxy/`   | Mock riot-proxy replaying fixtures                                                                                                    |
 | `tests/` (files)      | `record-fixture.ts`, `redact.ts`                                                                                                      |
@@ -100,9 +100,9 @@ No JSON API, RPC, websocket or queue consumer. `/healthz` is the only non-HTML e
 | riot-proxy                    | `GET /v1/lol/analytics/champions`                                                         | same                                         | 5 s, essential                                                                                                                                       | `src/lib/server/champions.ts:40`                                               |
 | riot-proxy                    | `GET /v1/lol/analytics/patches[?championId=]`                                             | same                                         | 5 s, optional                                                                                                                                        | `src/lib/server/champions.ts:41-43`, `src/lib/server/champion-page.ts:135-139` |
 | riot-proxy                    | `GET /v1/lol/analytics/champions/{championId}` (+`/builds`, `/matchups`)                  | same                                         | 5 s; detail essential, builds and matchups optional                                                                                                  | `src/lib/server/champion-page.ts:121-140`                                      |
-| CommunityDragon `CDRAGON_URL` | `GET {base}/{major.minor}/plugins/rcp-be-lol-game-data/global/default/v1/perks.json`      | none                                         | 5 s (`CDRAGON_BUDGET_MS`); held for two patches, loaded at start-up; failure tolerated on match pages and does not hold back a switch to a new patch | `src/lib/server/cdragon.ts:12-37`, `src/lib/assets.ts:49-51`                   |
-| Browser → Data Dragon CDN     | Image URLs `https://ddragon.leagueoflegends.com/cdn/...`                                  | none                                         | n/a (browser)                                                                                                                                        | `src/lib/assets.ts:9-35`                                                       |
-| Browser → CommunityDragon     | Lane and stat shard icons `https://raw.communitydragon.org/...`                           | none                                         | n/a (browser)                                                                                                                                        | `src/lib/assets.ts:10,41-64`                                                   |
+| CommunityDragon `CDRAGON_URL` | `GET {base}/{major.minor}/plugins/rcp-be-lol-game-data/global/default/v1/perks.json`      | none                                         | 5 s (`CDRAGON_BUDGET_MS`); held for two patches, loaded at start-up; failure tolerated on match pages and does not hold back a switch to a new patch | `src/lib/server/cdragon.ts:12-37`, `src/lib/assets.ts:58-60`                   |
+| Browser → Data Dragon CDN     | Image URLs `https://ddragon.leagueoflegends.com/cdn/...`                                  | none                                         | n/a (browser)                                                                                                                                        | `src/lib/assets.ts:9-44`                                                       |
+| Browser → CommunityDragon     | Lane and stat shard icons `https://raw.communitydragon.org/...`                           | none                                         | n/a (browser)                                                                                                                                        | `src/lib/assets.ts:10,50-73`                                                   |
 
 Not present: calls to Riot, to ninja-monitor, to any database, cache server, object store or webhook (grep for `s3`, `r2`, `bucket`, `onidel`, `redis`, `sqlite`, `postgres`, `monitor`, `metrics` across `src/ tests/ deploy/` returned nothing relevant).
 
@@ -189,7 +189,7 @@ $ just e2e
   81 passed (25.9s)
 ```
 
-E2E files: `routes.test.ts`, `match.test.ts`, `champion-page.test.ts`, `champions.test.ts`, `layout.test.ts`. Playwright runs `node build` against the mock proxy on port 8787 (`playwright.config.ts:3-31`).
+E2E files: `routes.test.ts`, `match.test.ts`, `champion-page.test.ts`, `champions.test.ts`, `layout.test.ts`, and since SPD-10 `images.test.ts` (91 e2e tests). Playwright runs `node build` against the mock proxy on port 8787 (`playwright.config.ts:3-31`).
 
 `prettier --check .` covers Markdown under `docs/` except `docs/IMPLEMENTATION.md` (`.prettierignore:12-14`), so new docs must be Prettier-formatted.
 

@@ -67,7 +67,7 @@
 <a href="/champions{query}" class="text-sm text-muted hover:text-accent">‹ All champions</a>
 
 <div class="mt-3 flex flex-wrap items-center gap-4">
-	<ChampionIcon patch={data.ddragonVersion} id={data.champion.id} name="" size={64} />
+	<ChampionIcon patch={data.ddragonVersion} id={data.champion.id} name="" size={64} priority />
 	<div>
 		<h1 class="text-2xl font-semibold">{data.champion.name}</h1>
 		<p class="mt-1 text-sm text-muted">{scope}</p>

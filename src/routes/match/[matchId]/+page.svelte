@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { CDRAGON_ORIGIN } from '#lib/assets.ts';
 	import { afterNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import BuildPanel from '#lib/components/BuildPanel.svelte';
@@ -123,6 +124,8 @@
 </script>
 
 <svelte:head>
+	<!-- Lane badges and stat shards come from CommunityDragon (SPD-10). -->
+	<link rel="preconnect" href={CDRAGON_ORIGIN} />
 	<title>{data.queue} · {data.matchId}</title>
 </svelte:head>
 
