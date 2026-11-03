@@ -680,3 +680,24 @@ cold match    131 ms  match 20, timeline 53 (lookups held from the profile; stat
 - The cold match went from 149–167 ms to 118–131 ms, with the stat shards now fetched alongside the match.
 
 **Consequences.** A cold page waits for its slowest chain, not the sum of its calls. A profile that fails still costs the lookups' calls, which are then held for the next page.
+
+## ADR-048: Static data loaded at start-up; the patch refreshed in the background
+
+Date: 2026-11-03 · Task: SPD-09
+
+**Context.** ADR-013 holds the Data Dragon lookups for the current patch, and ADR-041 holds the version list for 5 minutes. After a restart the first page still waited for both, and after the 5 minutes the next request waited for `/v1/static/versions` again. ADR-047 measured a cold profile at 196 ms, about 70 ms of it parsing the lookups. The owner's answer for a new patch (`docs/notes/page-speed.md`): serve the old patch's lookups at once while the new patch's load, and switch when they are ready.
+
+**Decision.** It covers data that can't change within a patch, never player data or analytics.
+
+- **Start-up.** The server `init` hook (`src/hooks.server.ts`) starts `warmPatch`: the version list, then the current patch's lookups and stat shards. It is not awaited, so the server answers at once and early requests share the same loads. A failure is logged, not thrown. It does not run while `vite build` prerenders.
+- **Refresh.** Once the held versions are older than `PATCH_TTL_MS`, `patchVersions` still answers with them at once and starts one background refresh, shared by every caller. A failed refresh keeps the held versions, and the next request tries again. Only a cold start, with nothing held, waits. The refresh runs outside the timing of the request that noticed the stale patch (`outsideLoad`, ADR-046), since that request doesn't wait for it.
+- **A new patch.** When a refresh finds a new current patch, its Data Dragon lookups load first (`preparePatch`). Pages keep the old patch, its icons' version and its lookups, until they have loaded, then switch together, so a page never mixes two patches' names and icons. If they fail, the old patch stays. The new patch's stat shards start loading at the same time but don't hold back the switch: match pages already do without them (ADR-026), a cold start doesn't wait for them either, and CommunityDragon can publish a patch later than riot-proxy mirrors it. The plan named the stat shards too; the owner's answer named the lookups.
+- **Two patches held.** The lookups and the stat shards each hold two patches (`HELD_PATCHES`), so the old patch still serves while the new one loads. A third drops the oldest. This replaces ADR-013's one patch.
+
+**Consequences.**
+
+- After a deploy, no visitor waits for the lookups. No request waits on `/v1/static/versions` or on a new patch's lookups once a patch is held.
+- Holding two patches doubles the lookups' memory for the days after a patch change: a few MB.
+- A new patch is shown up to `PATCH_TTL_MS` plus the time its lookups take after riot-proxy mirrors it.
+- If CommunityDragon has not published a new patch's `perks.json`, match pages on the new patch show no stat shards until it has, and each match page tries again, as before.
+- While riot-proxy fails a refresh, each request after the TTL starts another, one at a time; riot-proxy answers them from memory.

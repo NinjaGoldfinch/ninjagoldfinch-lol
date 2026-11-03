@@ -1,7 +1,10 @@
 import { error } from '@sveltejs/kit';
 import { patchOf } from '#lib/domain/matches.ts';
 import { proxy, type ProxyClient } from './proxy.ts';
+import { statShards } from './cdragon.ts';
 import { toHttpError } from './errors.ts';
+import { staticNames } from './static-data.ts';
+import { outsideLoad } from './timing.ts';
 
 // Patch versions are dotted numbers (riot-proxy's own `version` pattern),
 // which also keeps them safe to put in asset URLs.
@@ -42,32 +45,117 @@ export function ddragonVersionFor(
 
 type PatchVersions = { current: string; versions: string[] };
 
-/** How long the version list is held. riot-proxy's mirror moves about once a patch. */
+/** Loads what pages need for a patch before they are switched to it. */
+export type PreparePatch = (patch: string, client: ProxyClient) => Promise<unknown>;
+
+/**
+ * A patch's Data Dragon lookups, which pages need, held once loaded. Its stat
+ * shards start loading too but don't hold back the switch: match pages do
+ * without them, and CommunityDragon can publish a new patch later than
+ * riot-proxy mirrors it.
+ */
+export const preparePatch: PreparePatch = (patch, client) => {
+	statShards(patch).catch(() => undefined);
+	return staticNames(patch, client);
+};
+
+/** How long the version list is used before it is refreshed. riot-proxy's mirror moves about once a patch. */
 export const PATCH_TTL_MS = 5 * 60 * 1000;
 
-// Every page asks for the current patch, which changes about every two weeks,
-// so one answer is shared for a few minutes, as ADR-013 holds the lookups.
-let held: { at: number; versions: Promise<PatchVersions> } | undefined;
+// Every page asks for the current patch, which changes about every two
+// weeks. The answer is held (ADR-041), and once it is older than
+// PATCH_TTL_MS it is still served at once while one refresh runs in the
+// background (ADR-048). A new patch is switched to only when its lookups have
+// loaded, so a page never mixes two patches' names and icons.
+let held: { at: number; versions: PatchVersions } | undefined;
+/** The first fetch, before anything is held; concurrent callers share it. */
+let cold: Promise<PatchVersions> | undefined;
+let refreshing: Promise<void> | undefined;
+/** Bumped by clearPatchVersions, so a refresh started before it changes nothing. */
+let generation = 0;
 
 /**
  * The current patch, and Riot's version list for matching older games.
- * riot-proxy answers this from its mirror, not from Riot. Held for
- * PATCH_TTL_MS and shared by concurrent callers; a failure is not kept.
+ * riot-proxy answers this from its mirror, not from Riot. Only the first call,
+ * with nothing held, waits for riot-proxy; a failure then is not kept.
  */
-export function patchVersions(client: ProxyClient = proxy): Promise<PatchVersions> {
-	if (held && Date.now() - held.at < PATCH_TTL_MS) return held.versions;
-
-	const versions = fetchVersions(client);
-	held = { at: Date.now(), versions };
-	versions.catch(() => {
-		if (held?.versions === versions) held = undefined;
-	});
-	return versions;
+export function patchVersions(
+	client: ProxyClient = proxy,
+	prepare: PreparePatch = preparePatch
+): Promise<PatchVersions> {
+	if (held) {
+		if (Date.now() - held.at >= PATCH_TTL_MS) refresh(client, prepare);
+		return Promise.resolve(held.versions);
+	}
+	if (!cold) {
+		const started = generation;
+		const versions = fetchVersions(client);
+		cold = versions;
+		versions.then(
+			(v) => {
+				if (generation === started && !held) held = { at: Date.now(), versions: v };
+			},
+			() => undefined
+		);
+		const done = () => {
+			if (cold === versions) cold = undefined;
+		};
+		versions.then(done, done);
+	}
+	return cold;
 }
 
-/** For tests: forget the held versions. */
+/**
+ * Fetches the versions again without making anyone wait. On a new patch,
+ * its lookups load first; only then do pages move to it. A failure keeps
+ * the held patch, and the next request tries again.
+ */
+function refresh(client: ProxyClient, prepare: PreparePatch): void {
+	if (refreshing) return;
+	const started = generation;
+	// Detached from the request that noticed the stale patch: it doesn't wait.
+	refreshing = outsideLoad(async () => {
+		try {
+			const next = await fetchVersions(client);
+			const current = held?.versions.current;
+			if (next.current !== current) await prepare(next.current, client);
+			if (generation === started) held = { at: Date.now(), versions: next };
+		} catch (e) {
+			console.error(`patch refresh failed; keeping ${held?.versions.current ?? 'none'}:`, e);
+		} finally {
+			if (generation === started) refreshing = undefined;
+		}
+	});
+}
+
+/**
+ * At start-up: the current patch, its lookups and its stat shards, so the
+ * first visitor after a deploy doesn't wait for them (SPD-09). A failure is
+ * logged, not thrown: the first page tries again.
+ */
+export async function warmPatch(
+	client: ProxyClient = proxy,
+	prepare: PreparePatch = preparePatch
+): Promise<void> {
+	try {
+		const { current } = await patchVersions(client, prepare);
+		await prepare(current, client);
+	} catch (e) {
+		console.error('start-up warm of the current patch failed:', e);
+	}
+}
+
+/** For tests: forget the held versions and any refresh in flight. */
 export function clearPatchVersions(): void {
+	generation += 1;
 	held = undefined;
+	cold = undefined;
+	refreshing = undefined;
+}
+
+/** For tests: the refresh in flight, if any. */
+export function patchRefresh(): Promise<void> | undefined {
+	return refreshing;
 }
 
 async function fetchVersions(client: ProxyClient): Promise<PatchVersions> {
@@ -83,6 +171,9 @@ async function fetchVersions(client: ProxyClient): Promise<PatchVersions> {
 }
 
 /** The current patch. riot-proxy answers this from its mirror, not from Riot. */
-export async function currentPatch(client: ProxyClient = proxy): Promise<string> {
-	return (await patchVersions(client)).current;
+export async function currentPatch(
+	client: ProxyClient = proxy,
+	prepare: PreparePatch = preparePatch
+): Promise<string> {
+	return (await patchVersions(client, prepare)).current;
 }

@@ -69,7 +69,7 @@ What the client already does for you, so do not repeat it:
 | Deadline per call: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for everything else; a timeout or an unreachable riot-proxy throws a 503 and is logged as `proxy timeout` or `proxy unreachable` | `src/lib/server/proxy.ts:69-135`  |
 | Logs every non-2xx with riot-proxy's `X-Request-Id`                                                                                                                                                        | `src/lib/server/proxy.ts:7-20`    |
 | Logs analytics calls slower than 250 ms with `X-Cache`                                                                                                                                                     | `src/lib/server/proxy.ts:37-67`   |
-| Records the call's time by its spec path for the request that made it; a request over 100 ms logs them all on one `slow load` line                                                                         | `src/lib/server/timing.ts:32-51`  |
+| Records the call's time by its spec path for the request that made it; a request over 100 ms logs them all on one `slow load` line                                                                         | `src/lib/server/timing.ts:33-52`  |
 
 The middleware runs in this order: `refuseDotSegments` (refuses a `.` or `..` path parameter), `timeCalls`, `logFailures`, `logSlowAnalytics` (`src/lib/server/proxy.ts:149`). A new call needs nothing more to appear on the `slow load` line, under its spec path template (ADR-046).
 
@@ -109,5 +109,5 @@ Every path the code requests needs a fixture, or the mock proxy answers 500 (`te
 
 ---
 
-**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L56-L79`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/timing.ts:L32-L51`, `src/lib/server/match.ts:L34-L68`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/profile.ts:L76-L83`, `tests/unit/cold-path.test.ts`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023, ADR-046)
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Sources:** `CLAUDE.md:L18-L23,L60`, `README.md:L56-L79`, `.prettierignore:L15-L16`, `justfile:L15-L36`, `openapi/riot-proxy.json` (`info.version` 2.7.0), `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/timing.ts:L33-L52`, `src/lib/server/match.ts:L34-L68`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/profile.ts:L76-L83`, `tests/unit/cold-path.test.ts`, `src/lib/api/match.ts:L1-L4`, `src/lib/api/riot.ts:L1-L15`, `tests/mock-proxy/mock.ts:L27-L43`, `tests/record-fixture.ts:L41-L78`, `tests/redact.ts:L1-L38`, `tests/unit/fixtures-spec.test.ts:L84-L95`, `tests/unit/proxy.test.ts:L107-L112`, `tests/unit/match-loader.test.ts:L24-L37`, `.githooks/pre-commit:L10-L23`, `docs/DECISIONS.md` (ADR-006, ADR-017, ADR-018, ADR-023, ADR-046)
+**Last verified:** 2026-11-03 against commit `e183749`

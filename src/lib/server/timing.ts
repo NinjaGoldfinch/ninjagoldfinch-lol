@@ -27,7 +27,8 @@ const calls = new AsyncLocalStorage<Call[]>();
 
 /**
  * Records each riot-proxy call's time against the request that made it. A
- * call made outside a request (none today) is not recorded.
+ * call made outside a request, such as the start-up warm or a background
+ * patch refresh (`outsideLoad`), is not recorded.
  */
 export const timeCalls: Middleware = {
 	onRequest({ id, request, schemaPath }) {
@@ -48,6 +49,14 @@ function finish(id: string, outcome: Call['outcome']): void {
 	if (!call) return;
 	call.ms = Math.round(performance.now() - call.started);
 	call.outcome = outcome;
+}
+
+/**
+ * Runs `work` detached from the request that started it, so a request that
+ * doesn't wait for it isn't charged with its calls.
+ */
+export function outsideLoad<T>(work: () => T): T {
+	return calls.exit(work);
 }
 
 /**

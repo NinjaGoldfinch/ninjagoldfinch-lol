@@ -22,9 +22,9 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Patch.** A game version's `major.minor`, e.g. `16.20`. Champion statistics are filtered by patch ([api/pagination-filtering-and-versioning.md](../api/pagination-filtering-and-versioning.md)).
 
-**Data Dragon version.** A full Data Dragon version, e.g. `16.20.1`, the "current patch" the site builds image URLs and loads names for. Held for 5 minutes (`src/lib/server/patch.ts:45-66`). A match from an older patch uses that patch's Data Dragon version for its icons (`src/lib/server/patch.ts:34-41`, `src/lib/server/match.ts:80`).
+**Data Dragon version.** A full Data Dragon version, e.g. `16.20.1`, the "current patch" the site builds image URLs and loads names for. Held in memory, and refreshed in the background once older than 5 minutes (`src/lib/server/patch.ts:62-129`, ADR-048). A match from an older patch uses that patch's Data Dragon version for its icons (`src/lib/server/patch.ts:37-44`, `src/lib/server/match.ts:80`).
 
-**Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:9-64`, `src/lib/server/cdragon.ts:11-39`).
+**Data Dragon CDN, CommunityDragon.** Riot's static asset CDN and a community mirror of game data. The Browser loads images from both; the server reads only stat shard names from CommunityDragon's `perks.json` (`src/lib/assets.ts:9-64`, `src/lib/server/cdragon.ts:12-37`).
 
 **Stat shards.** The three small rune bonuses below the rune trees. Their names come from CommunityDragon because Data Dragon lacks them (ADR-015, ADR-026).
 
@@ -52,7 +52,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Edge cache.** Cloudflare's cache of rendered pages, controlled by the `Cache-Control` the site sends (`src/lib/server/cache.ts:5-16`, [data/caching.md](../data/caching.md)).
 
-**In-memory hold.** A value the site keeps in process memory to avoid asking riot-proxy every time: the current patch (5 min), Data Dragon names and stat shards (per patch) ([data/caching.md](../data/caching.md)).
+**In-memory hold.** A value the site keeps in process memory to avoid asking riot-proxy every time: the current patch (refreshed in the background after 5 min), Data Dragon names and stat shards (two patches each), all loaded at start-up ([data/caching.md](../data/caching.md)).
 
 **Request id.** riot-proxy's `X-Request-Id`, logged by the site on each failed call so the failure can be found in riot-proxy's logs ([operations/observability.md](../operations/observability.md#correlating-with-riot-proxy)).
 
@@ -62,11 +62,11 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **The gate.** `just check`, the one required check before a task is done; there is no CI ([workflows/release-process.md](../workflows/release-process.md)).
 
-**ADR.** An architecture decision record in `docs/DECISIONS.md` (ADR-001 to ADR-047); digests in [architecture/decisions/README.md](../architecture/decisions/README.md). riot-proxy has its own numbered ADRs; these docs prefix those with `riot-proxy:`.
+**ADR.** An architecture decision record in `docs/DECISIONS.md` (ADR-001 to ADR-048); digests in [architecture/decisions/README.md](../architecture/decisions/README.md). riot-proxy has its own numbered ADRs; these docs prefix those with `riot-proxy:`.
 
 **Task ID, phase.** Plan identifiers such as `P2-03` or `VS-03`, used in branch names and commit footers; phases P0–P4 end with a `phase-P<n>` tag ([workflows/release-process.md](../workflows/release-process.md#versioning-and-tags)).
 
 ---
 
-**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L33,L80`, `src/lib/server/patch.ts:L34-L66`, `src/lib/server/profile.ts:L137-L138`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L11-L39`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
-**Last verified:** 2026-11-03 against commit `5fede17`
+**Sources:** `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/matches.ts:L156-L158`, `src/lib/domain/champion-stats.ts:L23,L31`, `src/lib/api/match.ts:L10-L11`, `src/lib/server/match.ts:L24-L33,L80`, `src/lib/server/patch.ts:L37-L129`, `src/lib/server/profile.ts:L137-L138`, `src/lib/server/errors.ts:L41-L58`, `src/lib/server/proxy.ts:L69-L135`, `src/lib/server/cache.ts:L5-L16`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/assets.ts:L9-L64`, `tests/redact.ts:L1-L38`, `CLAUDE.md:L24`, `docs/DECISIONS.md` (ADR-012, 015, 019, 026, 035, 037, 040, 042, 043), `docs/_meta/vocabulary.md`
+**Last verified:** 2026-11-03 against commit `e183749`

@@ -114,7 +114,7 @@ export async function loadChampionPage(
 	{ client = proxy, vs = null }: { client?: ProxyClient; vs?: VsPick | null } = {}
 ): Promise<ChampionPage> {
 	const { ddragonVersion } = found;
-	// Held in memory for the current patch (ADR-013), so this costs nothing more.
+	// Held in memory for the patch (ADR-013, ADR-048), so this costs nothing more.
 	const names = await staticNames(ddragonVersion, client);
 
 	const path = { championId: found.championId };
