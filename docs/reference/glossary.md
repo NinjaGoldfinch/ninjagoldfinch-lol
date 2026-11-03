@@ -62,7 +62,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **The gate.** `just check`, the one required check before a task is done; there is no CI ([workflows/release-process.md](../workflows/release-process.md)).
 
-**ADR.** An architecture decision record in `docs/DECISIONS.md` (ADR-001 to ADR-043); digests in [architecture/decisions/README.md](../architecture/decisions/README.md). riot-proxy has its own numbered ADRs; these docs prefix those with `riot-proxy:`.
+**ADR.** An architecture decision record in `docs/DECISIONS.md` (ADR-001 to ADR-047); digests in [architecture/decisions/README.md](../architecture/decisions/README.md). riot-proxy has its own numbered ADRs; these docs prefix those with `riot-proxy:`.
 
 **Task ID, phase.** Plan identifiers such as `P2-03` or `VS-03`, used in branch names and commit footers; phases P0–P4 end with a `phase-P<n>` tag ([workflows/release-process.md](../workflows/release-process.md#versioning-and-tags)).
 

@@ -659,3 +659,24 @@ page                            cold     warm   slow load line (cold)
 - The first champion page after a restart, before any other page, took 148 ms: `versions` 51 ms and the static files 20–60 ms.
 
 **Consequences.** A slow page names the riot-proxy calls it waited on. The four `/v1/static/{file}` calls share one template; their order matches `staticNames`' (champion, item, summoner, runesReforged). No new dependency (`node:async_hooks`).
+
+## ADR-047: Independent calls start together
+
+Date: 2026-11-03 · Task: SPD-08
+
+**Context.** ADR-046's timings showed a cold profile asking for the patch and its Data Dragon lookups only after the profile and match calls had answered, and a cold match page asking for its lookups and CommunityDragon's stat shards only after the match. Neither depends on those calls.
+
+**Decision.** Each chain starts as soon as its own input is known, and chains run in parallel: profile (profile → match page) ‖ (patch → lookups); match: match ‖ timeline ‖ (patch → (lookups ‖ stat shards)); `/champions`: table ‖ patch list ‖ (patch → lookups). Failures behave as before (ADR-040, ADR-045). `early()` in `src/lib/server/errors.ts` marks a call started before it is awaited as handled, so a profile that fails first leaves no unhandled rejection. The champion page is unchanged: it needs the lookups to resolve the champion in its URL.
+
+**Measurements.** Production, `main` at f691710, 2026-11-03: the server restarted, then the first requests, before any visitor's.
+
+```text
+cold profile  196 ms  versions 39 ‖ profile 51 → matches 75; static files 26–55 and queues 23 started during the profile and matches calls
+cold match    131 ms  match 20, timeline 53 (lookups held from the profile; stat shards cold)
+```
+
+- The profile's riot-proxy calls took 126 ms, the profile → matches chain; one after another they would have taken about 220 ms. Before SPD-08 the cold profile took 204–222 ms with faster riot-proxy answers (profile 36–38 ms, matches 38–40 ms).
+- The rest of the profile's time, about 70 ms, is parsing the lookups and rendering, as before; SPD-09 takes the lookups off the request.
+- The cold match went from 149–167 ms to 118–131 ms, with the stat shards now fetched alongside the match.
+
+**Consequences.** A cold page waits for its slowest chain, not the sum of its calls. A profile that fails still costs the lookups' calls, which are then held for the next page.
