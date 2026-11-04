@@ -24,5 +24,5 @@ UI and presentation decisions (ADR-020 to ADR-036, ADR-042, ADR-043) are not dig
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L1-L703`, `riot-proxy:deploy/README.md:L14-L18`, `riot-proxy:docs/DECISIONS.md:L1510`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `docs/DECISIONS.md:L1-L715`, `riot-proxy:deploy/README.md:L14-L18`, `riot-proxy:docs/DECISIONS.md:L1510`
+**Last verified:** 2026-11-03 against commit `a6b406b`

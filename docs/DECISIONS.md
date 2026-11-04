@@ -694,6 +694,18 @@ Date: 2026-11-03 · Task: SPD-09
 - **A new patch.** When a refresh finds a new current patch, its Data Dragon lookups load first (`preparePatch`). Pages keep the old patch, its icons' version and its lookups, until they have loaded, then switch together, so a page never mixes two patches' names and icons. If they fail, the old patch stays. The new patch's stat shards start loading at the same time but don't hold back the switch: match pages already do without them (ADR-026), a cold start doesn't wait for them either, and CommunityDragon can publish a patch later than riot-proxy mirrors it. The plan named the stat shards too; the owner's answer named the lookups.
 - **Two patches held.** The lookups and the stat shards each hold two patches (`HELD_PATCHES`), so the old patch still serves while the new one loads. A third drops the oldest. This replaces ADR-013's one patch.
 
+**Measurements.** Production, `main` at a6b406b, 2026-11-03, with riot-proxy up for three hours. The site restarted, then the first requests, before any visitor's:
+
+```text
+first profile after a restart   118 ms   slow load 109 ms: profile 6, matches 36 (no /v1/static calls)
+warm profile                     48 ms
+profile 5½ minutes later         54 ms   no slow load line; no patch refresh failed
+```
+
+- ADR-047's cold profile, which still fetched the patch and lookups, took 196 ms; the lookups are now off the request.
+- The request after the patch went stale did not wait for `/v1/static/versions`.
+- The first profile's remaining ~65 ms over a warm one is outside riot-proxy (its calls took 42 ms): the server's first render of the page, with its code compiled on first use. Static data does not cover it; the owner accepted the result (2026-11-03).
+
 **Consequences.**
 
 - After a deploy, no visitor waits for the lookups. No request waits on `/v1/static/versions` or on a new patch's lookups once a patch is held.
