@@ -801,3 +801,23 @@ Date: 2026-11-05 · Task: DEP-04
 - Nothing deploys until the owner sets up the `prod` environment (required reviewer, the secret and the two variables) and `ninja-deploy` for `ninjagoldfinch-lol` on `ngf-prod-syd1` (health URL `http://127.0.0.1:3000/healthz`). Moving production from its checkout to `/srv/ninjagoldfinch-lol` is DEP-05.
 - A deploy runs only on approval in GitHub; the deploy key lets the repository run any release of the site with the unit's permissions and env, and nothing more.
 - `tests/unit/deploy-workflow.test.ts` pins the trigger, the `prod`-only choice, the environment, concurrency, the action and its inputs, the asset name `release.yml` publishes and the read-only token.
+
+## ADR-054: `v1.0.0`, and production runs releases from `/srv/ninjagoldfinch-lol`
+
+Date: 2026-11-05 · Task: DEP-05
+
+**Context.** Production runs `node build` in the checkout `/opt/ninjagoldfinch-lol` (owner's unit, ADR-038). ADR-051 to ADR-053 give the site versioned releases and a `deploy.yml`, and `ninja-deploy` keeps releases in `/srv/<service>/releases/` with `current` linked to the live one. `deploy-host-add.sh --adopt` moves a running service into `/srv` by copying one installed binary in as the first release and pointing the unit at it with a drop-in; the site is a directory built from a checkout, not a binary. The owner chose semver releases from `v1.0.0` (ADR-050).
+
+**Decision.**
+
+- `package.json`'s version becomes `1.0.0`; the merge commit is tagged `v1.0.0`.
+- A drop-in, `deploy/systemd/ninja-deploy.conf`, installed as `/etc/systemd/system/ninjagoldfinch-lol.service.d/ninja-deploy.conf`, sets `WorkingDirectory=/srv/ninjagoldfinch-lol/current` and `ExecStart=/usr/bin/node /srv/ninjagoldfinch-lol/current/build`. The owner's unit keeps its user, `EnvironmentFile` and hardening; the server writes nothing to disk, so `ProtectSystem=strict` still fits.
+- The move copies `--adopt` by hand (`docs/deployment/releases.md`): `deploy-host-add.sh` without `--adopt`, `v1.0.0` unpacked as the first release from the published tarball after checking `SHA256SUMS`, `current` linked, the drop-in installed, one restart and a check that `/healthz` reports `1.0.0`. Removing the drop-in goes back to the checkout. A `deploy.yml` run of `v1.0.0` then proves the pipeline end to end.
+- The `prod` environment copies riot-proxy's: the owner as required reviewer, deploys from `main` only, the same host variables, a deploy key of its own.
+
+**Consequences.**
+
+- Releases reach production only through `deploy.yml`; `update-all ninja-lol` is retired, and the checkout stays as the fallback until releases have settled, then goes.
+- Each release is a `package.json` bump merged to `main`, then its tag (ADR-051); a failed health check rolls back to the previous release on the host.
+- The move itself is owner work on GitHub and the host; this task's PR carries the version, the drop-in and the procedure. DEP-05 is ticked once production runs `v1.0.0` from `/srv`.
+- `tests/unit/systemd-dropin.test.ts` pins the drop-in to exactly those settings and to the service and layout `deploy.yml` and `scripts/package.sh` use.

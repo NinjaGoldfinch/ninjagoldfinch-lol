@@ -78,6 +78,7 @@ Not written: `workflows/adding-a-migration.md` (no database). `adding-a-riot-cal
 | [deployment/overview.md](./deployment/overview.md)                         | The shared VPS, Tunnel, hostnames, who owns what    |
 | [deployment/install.md](./deployment/install.md)                           | Fresh install on Ubuntu 26.04, with the real unit   |
 | [deployment/configuration.md](./deployment/configuration.md)               | Every setting, secrets and production values        |
+| [deployment/releases.md](./deployment/releases.md)                         | Releases on production, and the move from `/opt`    |
 | [deployment/upgrade-and-rollback.md](./deployment/upgrade-and-rollback.md) | Deploying a commit and going back                   |
 | [deployment/backup-and-restore.md](./deployment/backup-and-restore.md)     | What state exists and how it is recovered           |
 | [deployment/capacity.md](./deployment/capacity.md)                         | The site's share of the VPS, measured and estimated |

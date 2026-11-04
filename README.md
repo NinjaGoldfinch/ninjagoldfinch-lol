@@ -92,6 +92,8 @@ The LAN preview ran as one Docker container built from the `Dockerfile`, with `d
 
 Production runs without Docker: `node build` under systemd on the same server as riot-proxy, reached through a Cloudflare Tunnel at `https://ninjagoldfinch.lol`.
 
+From `v1.0.0` it runs a release from `/srv/ninjagoldfinch-lol/current`, deployed with `.github/workflows/deploy.yml` after the owner's approval (ADR-051 to ADR-054). The move from the checkout, and deploying and rolling back releases, are in [docs/deployment/releases.md](docs/deployment/releases.md). The checkout below is how production ran before, and the fallback until the move has settled.
+
 | What       | Where                                                                                  |
 | ---------- | -------------------------------------------------------------------------------------- |
 | Checkout   | `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key                          |
