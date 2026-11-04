@@ -77,6 +77,13 @@ describe('release.yml', () => {
 			/^ {2}staging:\n(?: {4}.*\n)*? {4}needs: release\n(?: {4}.*\n)*? {4}uses: \.\/\.github\/workflows\/deploy\.yml\n {4}with:\n {6}env: staging\n {6}version: \$\{\{ github\.ref_name \}\}$/m
 		);
 		expect(release).not.toMatch(/env: prod/);
-		expect(release).not.toContain('secrets: inherit');
+	});
+
+	// A called workflow sees only the secrets its caller passes on, even those of
+	// its own environment: without this, v1.0.3's staging deploy got an empty
+	// DEPLOY_SSH_KEY while the environment's variables arrived (ADR-057).
+	it("passes secrets on to the staging deploy, so it gets its environment's key", () => {
+		expect(release).toMatch(/^ {2}staging:\n(?: {4}.*\n)*? {4}secrets: inherit$/m);
+		expect([...release.matchAll(/secrets: inherit/g)]).toHaveLength(1);
 	});
 });
