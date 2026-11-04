@@ -97,6 +97,8 @@ jobs:
     needs: release
     permissions:
       contents: read
+      # The staging deploy records its smoke test as a commit status (ADR-060).
+      statuses: write
     uses: ./.github/workflows/deploy.yml
     with:
       env: staging

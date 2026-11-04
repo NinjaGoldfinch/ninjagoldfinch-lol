@@ -38,9 +38,10 @@ describe('the deploy workflow', () => {
 		);
 	});
 
-	it('goes through the shared deploy action, v1', () => {
-		const uses = [...deploy.matchAll(/uses: (\S+)/g)].map((m) => m[1]);
-		expect(uses).toEqual(['NinjaGoldfinch/ninja-actions/deploy@v1']);
+	it('goes through the shared deploy action, v1, and pins anything else', () => {
+		const uses = [...deploy.matchAll(/\buses: (\S+)/g)].map((m) => m[1]);
+		expect(uses[0]).toBe('NinjaGoldfinch/ninja-actions/deploy@v1');
+		for (const use of uses.slice(1)) expect(use).toMatch(/@[0-9a-f]{40}$/);
 	});
 
 	// The origin is fixed at build time, so each environment has its own tarball (ADR-057).
@@ -55,18 +56,79 @@ describe('the deploy workflow', () => {
 		expect(deploy).not.toContain('checksums:');
 	});
 
-	it('reads only, with the host and key from the environment', () => {
+	it('reads, and writes only commit statuses, with the host and keys from the environment', () => {
 		expect(deploy).toMatch(/^permissions:\n {2}contents: read$/m);
-		expect(deploy).not.toMatch(/: write$/m);
+		expect([...deploy.matchAll(/^ *(\w[\w-]*): write$/gm)].map((m) => m[1])).toEqual(['statuses']);
+		expect(deploy).toMatch(
+			/^ {4}permissions:\n {6}contents: read\n(?: {6}#.*\n)* {6}statuses: write$/m
+		);
 		expect(deploy).toContain('host: ${{ vars.DEPLOY_HOST }}');
 		expect(deploy).toContain('known-hosts: ${{ vars.DEPLOY_KNOWN_HOSTS }}');
 		expect(deploy).toContain('ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}');
-		expect([...deploy.matchAll(/secrets\.(\w+)/g)].map((m) => m[1])).toEqual(['DEPLOY_SSH_KEY']);
+		expect([...deploy.matchAll(/secrets\.(\w+)/g)].map((m) => m[1])).toEqual([
+			'DEPLOY_SSH_KEY',
+			'CF_ACCESS_CLIENT_ID',
+			'CF_ACCESS_CLIENT_SECRET'
+		]);
 	});
 
 	it('runs on the self-hosted runner', () => {
 		const runners = [...deploy.matchAll(/runs-on: (.+)/g)].map((m) => m[1]);
 		expect(runners).toEqual(['[self-hosted, linux, proxmox]', '[self-hosted, linux, proxmox]']);
+	});
+});
+
+// ADR-060: nothing reaches prod that has not passed on staging.
+describe('the prod gate', () => {
+	it('deploys to prod only a version that passed staging, or was live in prod', () => {
+		expect(deploy).toContain(
+			"require-status: ${{ inputs.env == 'prod' && 'staging/smoke prod/deployed' || '' }}"
+		);
+		expect(deploy).toContain("set-status: ${{ inputs.env == 'prod' && 'prod/deployed' || '' }}");
+	});
+
+	it('can be broken only by hand, with a reason', () => {
+		expect(deploy).toContain('unverified-reason: ${{ inputs.break_glass }}');
+		const dispatch = deploy.slice(
+			deploy.indexOf('workflow_dispatch:'),
+			deploy.indexOf('workflow_call:')
+		);
+		const call = deploy.slice(deploy.indexOf('workflow_call:'), deploy.indexOf('\npermissions:'));
+		expect(dispatch).toMatch(/^ {6}break_glass:\n(?: {8}.*\n)*? {8}default: ''$/m);
+		expect(call).not.toContain('break_glass');
+		expect(release).not.toContain('break_glass');
+	});
+});
+
+describe('the staging smoke test', () => {
+	it('runs on staging only, through Access, after the deploy', () => {
+		const action = deploy.indexOf('uses: NinjaGoldfinch/ninja-actions/deploy@v1');
+		const smoke = deploy.indexOf('- name: Smoke test staging');
+		expect(action).toBeGreaterThan(-1);
+		expect(smoke).toBeGreaterThan(action);
+		const step = deploy.slice(smoke, deploy.indexOf('- name: Record staging/smoke'));
+		expect(step).toMatch(/^ {8}if: inputs\.env == 'staging'$/m);
+		expect(step).toContain('CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}');
+		expect(step).toContain('CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}');
+		expect(step).toMatch(
+			/^ {8}run: scripts\/smoke\.sh https:\/\/staging\.ninjagoldfinch\.lol "\$VERSION"$/m
+		);
+	});
+
+	// The gate reads this status; a failure is recorded too, and only success passes.
+	it("records its result, pass or fail, as staging/smoke on the version's commit", () => {
+		const step = deploy.slice(deploy.indexOf('- name: Record staging/smoke'));
+		expect(step).toContain(
+			"if: always() && inputs.env == 'staging' && (steps.smoke.outcome == 'success' || steps.smoke.outcome == 'failure')"
+		);
+		expect(step).toContain('gh api "repos/$GITHUB_REPOSITORY/commits/$VERSION" --jq .sha');
+		expect(step).toContain('-f state="$OUTCOME" -f context=staging/smoke');
+	});
+
+	it('gets the permission to record it from release.yml', () => {
+		expect(release).toMatch(
+			/^ {2}staging:\n(?: {4}.*\n)*? {6}statuses: write\n(?: {4}.*\n)*? {4}uses: \.\/\.github\/workflows\/deploy\.yml$/m
+		);
 	});
 });
 

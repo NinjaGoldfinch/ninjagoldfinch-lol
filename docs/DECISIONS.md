@@ -915,3 +915,25 @@ Date: 2026-11-05 · Task: DEP-07
 - The job downloads Chromium on each run (a minute or two).
 - If the runner VM later gets Chromium's libraries, the job could move there; nothing else would change.
 - `tests/unit/gate.test.ts` fails if the job stops running `just e2e`'s command, stops installing Chromium with its libraries, moves off the hosted runner, reads secrets, or stops running before releases.
+
+## ADR-060: nothing reaches prod that has not passed a smoke test on staging
+
+Date: 2026-11-05 · Task: DEP-08
+
+**Context.** Before a release is built, CI runs the gate and the browser tests (ADR-059). Nothing tested a release once it ran on staging, and a prod deploy did not look at staging at all. The only check on a host was `ninja-deploy`'s health check: `/healthz` reports the new version. The owner asked that nothing deploys to prod unless it has passed on staging (2026-11-05). ninja-actions builds the gate into the shared deploy action (ninja-actions #14), so every repository uses one check: `require-status` refuses a version unless its commit has one of the named commit statuses at success, `set-status` sets one after a successful deploy, and `unverified-reason` breaks the glass, logged. The status names are shared: `staging/smoke` and `prod/deployed`. Staging is behind Cloudflare Access (ADR-057), so a check from CI needs an Access service token.
+
+**Decision.**
+
+- `scripts/smoke.sh <base-url> <version>` checks that `/healthz` reports the version, and that `/`, `/about`, `/champions`, `/champions/ahri`, a profile and a match (the owner's, also in the fixtures) answer 200 with a Content-Security-Policy. Each page gets three tries, so one slow riot-proxy call does not fail a deploy. With `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` set it sends them as Access headers, from a file rather than the command line. A redirect on `/healthz` is reported as Access refusing the token.
+- After a staging deploy, `deploy.yml` runs it against `https://staging.ninjagoldfinch.lol` with the `staging` environment's token, then records the outcome, success or failure, as `staging/smoke` on the version's commit. The script comes from the workflow's commit, so the test can be rerun for an older release.
+- A prod deploy passes `require-status: staging/smoke prod/deployed` and `set-status: prod/deployed` to the action. `prod/deployed` marks versions that were live in prod, so rolling back to one is allowed without a new staging run. `break_glass`, an input of the manual run only, becomes `unverified-reason`.
+- The deploy job gets `statuses: write`, and `release.yml`'s staging caller grants it. That is the only write either has.
+- The package test runs the smoke test against both tarballs and the mock riot-proxy, and checks that it fails on the wrong version.
+
+**Consequences.**
+
+- The check runs after the prod approval, inside the action, but before anything is downloaded or touched on the host.
+- Releases from before this have neither status. Versions that were live in prod are marked `prod/deployed` once by hand, and a later release reaches prod through staging (`docs/deployment/releases.md`).
+- A failed smoke test leaves `staging/smoke` at failure, and the release run fails. Rerunning the staging deploy after a fix sets it again.
+- This needs the action with ninja-actions #14 at `v1`. An input the action does not know is ignored with a warning, which would skip the check, so this is merged only after `v1` moves. It also needs the Access token in the `staging` environment.
+- `tests/unit/deploy-workflow.test.ts` pins the gate's inputs, the break-glass input (manual only), the smoke step (staging only, after the deploy, with the token), the status it records and the permission; `scripts/package.test.sh` runs the script.

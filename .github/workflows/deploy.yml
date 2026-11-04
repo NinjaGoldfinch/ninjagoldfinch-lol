@@ -1,6 +1,6 @@
 name: Deploy
 
-# ADR-053, ADR-057. Deploys a release to staging or prod through the shared
+# ADR-053, ADR-057, ADR-060. Deploys a release to staging or prod through the shared
 # pipeline, NinjaGoldfinch/ninja-actions/deploy: it checks the environment's
 # tarball against SHA256SUMS (both from release.yml, ADR-052), uploads it to
 # /srv/ninjagoldfinch-lol/releases/ unless the host already has it, and
@@ -9,6 +9,14 @@ name: Deploy
 # purpose is deploying the previous version: it is still on the host, so there
 # is no upload. release.yml calls this with env staging for every release, with
 # no approval; the prod environment waits for the owner's approval.
+#
+# Nothing reaches prod untested (ADR-060): after a staging deploy,
+# scripts/smoke.sh tests staging through Cloudflare Access and records the
+# result as the commit status `staging/smoke` on the version's commit. The
+# action deploys to prod only a version whose commit has `staging/smoke` or
+# `prod/deployed` (live in prod before, so rolling back to it is allowed) at
+# success, and sets `prod/deployed` once it is live. `break_glass` skips that
+# check in an emergency, with the reason in the log and the job summary.
 on:
   workflow_dispatch:
     inputs:
@@ -20,6 +28,10 @@ on:
       version:
         description: Release tag, e.g. v1.0.0
         required: true
+      break_glass:
+        description: Emergency only. Deploy to prod without the staging check; give the reason (it is logged)
+        type: string
+        default: ''
   workflow_call:
     inputs:
       env:
@@ -64,6 +76,10 @@ jobs:
       group: deploy-${{ inputs.env }}
       cancel-in-progress: false
     timeout-minutes: 10
+    permissions:
+      contents: read
+      # The action reads and sets prod's statuses; the smoke step sets staging/smoke.
+      statuses: write
     steps:
       - uses: NinjaGoldfinch/ninja-actions/deploy@v1
         with:
@@ -73,3 +89,35 @@ jobs:
           host: ${{ vars.DEPLOY_HOST }}
           known-hosts: ${{ vars.DEPLOY_KNOWN_HOSTS }}
           ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          require-status: ${{ inputs.env == 'prod' && 'staging/smoke prod/deployed' || '' }}
+          set-status: ${{ inputs.env == 'prod' && 'prod/deployed' || '' }}
+          unverified-reason: ${{ inputs.break_glass }}
+
+      # Staging only, once the release is live there. The script comes from this
+      # workflow's commit, so a smoke test can be rerun for an older release.
+      - if: inputs.env == 'staging'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Smoke test staging
+        id: smoke
+        if: inputs.env == 'staging'
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          VERSION: ${{ inputs.version }}
+        run: scripts/smoke.sh https://staging.ninjagoldfinch.lol "$VERSION"
+      # Success or failure, on the version's commit; prod accepts only success.
+      - name: Record staging/smoke
+        if: always() && inputs.env == 'staging' && (steps.smoke.outcome == 'success' || steps.smoke.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          OUTCOME: ${{ steps.smoke.outcome }}
+        run: |
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$VERSION" --jq .sha)
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$sha" \
+            -f state="$OUTCOME" -f context=staging/smoke \
+            -f description="Smoke test of $VERSION on staging: $OUTCOME" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
+          echo "staging/smoke=$OUTCOME on $VERSION ($sha)"
