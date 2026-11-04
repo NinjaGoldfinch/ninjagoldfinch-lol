@@ -13,12 +13,16 @@ From `v1.0.0` production runs a release, not a checkout (ADR-054). A `v*` tag bu
 
 ## Deploy, roll back, look
 
+The owner deploys from their Mac with `ngf-deploy`, which starts `deploy.yml` and, with `-w`, waits for it. `-v` takes the full tag, `v` included: `-v 1.0.1` fails with `bad version`.
+
 ```sh
-gh workflow run deploy.yml -R NinjaGoldfinch/ninjagoldfinch-lol -f env=prod -f version=vX.Y.Z
-gh run watch -R NinjaGoldfinch/ninjagoldfinch-lol      # approve in the Actions tab when asked
+ngf-deploy ninjagoldfinch-lol -v vX.Y.Z -w             # approve in the Actions tab when asked
+ngf-deploy -l                                          # each repository's latest release
 ```
 
-Rolling back is deploying the previous tag the same way; it is still on the host, so nothing is uploaded. On the host, `ls -l /srv/ninjagoldfinch-lol/current`, `cat /srv/ninjagoldfinch-lol/live.json` and `curl -s http://127.0.0.1:3000/healthz` say what runs.
+Without `ngf-deploy`, the same run is `gh workflow run deploy.yml -R NinjaGoldfinch/ninjagoldfinch-lol -f env=prod -f version=vX.Y.Z`, then `gh run watch`.
+
+Rolling back is deploying the previous tag the same way; it is still on the host, so nothing is uploaded. Rehearsed on 2026-11-05 (P5-04): `v1.0.2` → `v1.0.1` → `v1.0.2`, each deploy job 10–11 s and each run under 30 s including the approval. On the host, `ls -l /srv/ninjagoldfinch-lol/current`, `cat /srv/ninjagoldfinch-lol/live.json` and `curl -s http://127.0.0.1:3000/healthz` say what runs.
 
 ## Moving production from the checkout (once)
 

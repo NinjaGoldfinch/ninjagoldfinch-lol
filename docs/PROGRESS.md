@@ -103,6 +103,7 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 ## P5 — Production
 
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
+- [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
 
 ## Brought forward
 
@@ -256,6 +257,17 @@ Since P3, also: the match page's build follows riot-proxy's BLD-04 definitions (
 Open with riot-proxy: Viego's possession can log skill points he didn't spend. A writeup and a handoff for a Viego-only rule went to riot-proxy on 2026-10-10; the site will mirror the rule once it lands.
 
 Tagged `phase-P4` on the commit that records this check. Paused for owner review before P5.
+
+### P5-04 rollback rehearsal — passed 2026-11-05
+
+The first tagged release, `v1.0.0`, went out through `deploy.yml` in DEP-05; `v1.0.1` (#108) and `v1.0.2` (#110) followed. The owner rolled production back to the previous tag and forward again from their Mac, approving each run in the Actions tab:
+
+```text
+ngf-deploy ninjagoldfinch-lol -v v1.0.1 -w   run 41905592046  created 20:20:02Z  job 20:20:15Z -> 20:20:26Z (11 s)  success  "v1.0.1 is live on prod"
+ngf-deploy ninjagoldfinch-lol -v v1.0.2 -w   run 41905758241  created 20:21:02Z  job 20:21:18Z -> 20:21:28Z (10 s)  success  "v1.0.2 is live on prod"
+```
+
+Each run took under 30 s from start to "live", approval included, against the five-minute target; `ninja-deploy` waits for `/healthz` to report the tag's version before it reports success (ADR-051). `/healthz` answered in the browser afterwards. Times are UTC (2026-11-04), from `gh run view`.
 
 ### SPD-06 check — passed 2026-11-03
 
