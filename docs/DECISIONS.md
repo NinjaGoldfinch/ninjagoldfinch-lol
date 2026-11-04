@@ -764,3 +764,22 @@ Date: 2026-11-05 · Task: DEP-02
 - Releasing means bumping `package.json`'s version in a PR before tagging.
 - A build from a checkout reports `package.json`'s version too (`0.0.1` until `v1.0.0`), whatever commit it is.
 - `tests/unit/healthz.test.ts` fails if the body loses `ok` or `version`, the version stops matching `package.json`, or it stops being a semver a tag can match on one line.
+
+## ADR-052: a `v*` tag builds a self-contained release tarball
+
+Date: 2026-11-05 · Task: DEP-03
+
+**Context.** ninja-deploy uploads one release asset per version: a `.tar.gz` with one top-level directory holding `version.json`, checked against the release's `SHA256SUMS`, unpacked to `/srv/<service>/releases/<version>/` (`ninja-actions` `deploy/action.yml`, `infra/deploy.sh`). ninja-monitor's `release.yml` builds its tarballs on a `v*` tag after its CI, with build provenance. The site's server is `build/` from adapter-node, which bundles everything except `package.json`'s `dependencies`; `openapi-fetch` was the only one, so `build/` needed a `node_modules` beside it. The public origin is fixed at build time (ADR-014).
+
+**Decision.**
+
+- `openapi-fetch` moves to `devDependencies`, so adapter-node bundles it and `package.json` has no `dependencies`. A release then needs Node (22.18 or later) and nothing installed. This changes no code that runs; the rule on new runtime dependencies still applies to anything the server imports.
+- `scripts/package.sh <tag> [out]` refuses a tag that is not `v` plus `package.json`'s version (ADR-051), builds with `ORIGIN=https://ninjagoldfinch.lol` into a temporary directory (`BUILD_OUT`, read by `vite.config.ts`, so the checkout's `build/` keeps its origin), and writes `ninjagoldfinch-lol.tar.gz` (`ninjagoldfinch-lol/` holding `build/`, `package.json`, `LICENSE` and `version.json`, `{"version","commit","built_at"}` as ninja-monitor writes it) and `SHA256SUMS`.
+- `.github/workflows/release.yml` runs on `v*` tags: the gate (`ci.yml`, now also `workflow_call`), then `package.sh` on the self-hosted runner, attestation, and a GitHub release with the tarball and `SHA256SUMS`, checked again before publishing. Only the publishing job can write; actions are pinned to commits.
+- `scripts/package.test.sh` joins the gate after the deploy test (about 3 s): bad and mismatched tags are refused, and the tarball, unpacked away from the checkout with no `node_modules`, answers `/healthz` with its version and serves `/champions` from the mock riot-proxy.
+
+**Consequences.**
+
+- The unit runs `node <release>/build`; its env (`PROXY_URL`, `PROXY_KEY`, `PORT`, …) stays in the unit, outside the release. DEP-04 and DEP-05 set up the host.
+- A release built for another origin needs `ORIGIN` set when running `package.sh` by hand.
+- `tests/unit/release.test.ts` pins the workflow's trigger, order, permissions, runners and pinned actions, and that `package.json` keeps no `dependencies`.

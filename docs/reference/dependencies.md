@@ -14,11 +14,11 @@ Version numbers below are those installed from the lockfile on 2026-10-20 (`node
 
 ## Runtime
 
-| Package         | Range     | Installed | Purpose                                                                                                                              | Notes                                                                                                                                                                                                  |
-| --------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `openapi-fetch` | `^0.17.0` | 0.17.0    | The typed riot-proxy client: path templates and parameters checked against the generated types (`src/lib/server/proxy.ts:2,144-150`) | ADR-006: about 6 kB, one dependency; replaces re-typing riot-proxy's paths by hand. The only package the built server imports from `node_modules` at runtime (checked in `build/server` on 2026-10-20) |
+| Package         | Range     | Installed | Purpose                                                                                                                              | Notes                                                                                                                                                                                                            |
+| --------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openapi-fetch` | `^0.17.0` | 0.17.0    | The typed riot-proxy client: path templates and parameters checked against the generated types (`src/lib/server/proxy.ts:2,144-150`) | ADR-006: about 6 kB, one dependency; replaces re-typing riot-proxy's paths by hand. Listed under `devDependencies` since ADR-052, so adapter-node bundles it into `build/` and a release needs no `node_modules` |
 
-Everything else, Svelte and SvelteKit included, is bundled into `build/` at build time. Production still installs all dependencies because it builds on the host; the preview image prunes to production dependencies after building (`Dockerfile:12`).
+It and everything else, Svelte and SvelteKit included, is bundled into `build/` at build time: `package.json` has no `dependencies`, and adapter-node leaves only those outside the bundle. A release tarball therefore runs with no `node_modules` (ADR-052; `scripts/package.test.sh` checks it). Production still installs all dependencies while it builds on the host; the preview image prunes to production dependencies after building (`Dockerfile:12`), which leaves none.
 
 ## Framework and build
 

@@ -11,7 +11,8 @@ describe('the gate', () => {
 		expect(read('justfile')).toMatch(/^check:\n {4}bash scripts\/check\.sh\n/m);
 	});
 
-	it('runs every step it always ran, in order', () => {
+	// ADR-050's steps, then the release package test (ADR-052).
+	it('runs every step, in order', () => {
 		const steps = read('scripts/check.sh')
 			.split('\n')
 			.filter((line) => /^(pnpm|bash) /.test(line));
@@ -23,7 +24,8 @@ describe('the gate', () => {
 			'pnpm svelte-check --tsconfig ./tsconfig.json',
 			'pnpm vitest run',
 			'pnpm build',
-			'bash deploy/proxmox/test.sh'
+			'bash deploy/proxmox/test.sh',
+			'bash scripts/package.test.sh'
 		]);
 	});
 

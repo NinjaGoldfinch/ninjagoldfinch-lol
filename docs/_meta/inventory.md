@@ -16,7 +16,7 @@ Commit inspected: `e7c395c` on branch `docs/VS-exit-check` (clean tree), 2026-10
 | Framework               | SvelteKit 3.0.1 (installed), `@sveltejs/adapter-node` 6.0.0                                        | `node_modules/@sveltejs/kit/package.json`, `package.json:24-25` |
 | UI                      | Svelte 5.57.2, Tailwind CSS 4.3.3                                                                  | `node_modules/*/package.json`                                   |
 | Build                   | Vite 8.3.3                                                                                         | `node_modules/vite/package.json`                                |
-| Only runtime dependency | `openapi-fetch` 0.17.0                                                                             | `package.json:48-50`                                            |
+| Only runtime dependency | `openapi-fetch` 0.17.0                                                                             | `package.json:34` (bundled, ADR-052)                            |
 | Type generation         | `openapi-typescript` ^7.13.0 (dev)                                                                 | `package.json:33`, `justfile:16-17`                             |
 | Tests                   | Vitest 4.1.11 (unit), Playwright 1.64.0 (e2e)                                                      | `package.json:18-19`                                            |
 | Lint and format         | ESLint 10 + typescript-eslint + eslint-plugin-svelte; Prettier 3 with svelte and tailwind plugins  | `eslint.config.js`, `prettier.config.js`                        |
