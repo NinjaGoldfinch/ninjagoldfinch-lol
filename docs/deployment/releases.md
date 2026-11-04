@@ -97,7 +97,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart ninjagoldfinch-lol
 
 # Node takes a second or so to listen: wait, as ninja-deploy does, before judging.
-for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz && break; sleep 1; done; echo
+for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz 2>/dev/null && break; sleep 1; done; echo
                                                            # {"ok":true,"version":"1.0.0"}
 curl -sI https://ninjagoldfinch.lol/champions | head -1    # 200
 systemctl show ninjagoldfinch-lol -p ExecStart | grep -o '/srv/[^ ;]*'
