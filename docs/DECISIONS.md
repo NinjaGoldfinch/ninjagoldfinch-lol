@@ -694,6 +694,18 @@ Date: 2026-11-03 · Task: SPD-09
 - **A new patch.** When a refresh finds a new current patch, its Data Dragon lookups load first (`preparePatch`). Pages keep the old patch, its icons' version and its lookups, until they have loaded, then switch together, so a page never mixes two patches' names and icons. If they fail, the old patch stays. The new patch's stat shards start loading at the same time but don't hold back the switch: match pages already do without them (ADR-026), a cold start doesn't wait for them either, and CommunityDragon can publish a patch later than riot-proxy mirrors it. The plan named the stat shards too; the owner's answer named the lookups.
 - **Two patches held.** The lookups and the stat shards each hold two patches (`HELD_PATCHES`), so the old patch still serves while the new one loads. A third drops the oldest. This replaces ADR-013's one patch.
 
+**Measurements.** Production, `main` at a6b406b, 2026-11-03, with riot-proxy up for three hours. The site restarted, then the first requests, before any visitor's:
+
+```text
+first profile after a restart   118 ms   slow load 109 ms: profile 6, matches 36 (no /v1/static calls)
+warm profile                     48 ms
+profile 5½ minutes later         54 ms   no slow load line; no patch refresh failed
+```
+
+- ADR-047's cold profile, which still fetched the patch and lookups, took 196 ms; the lookups are now off the request.
+- The request after the patch went stale did not wait for `/v1/static/versions`.
+- The first profile's remaining ~65 ms over a warm one is outside riot-proxy (its calls took 42 ms): the server's first render of the page, with its code compiled on first use. Static data does not cover it; the owner accepted the result (2026-11-03).
+
 **Consequences.**
 
 - After a deploy, no visitor waits for the lookups. No request waits on `/v1/static/versions` or on a new patch's lookups once a patch is held.
@@ -714,3 +726,22 @@ Date: 2026-11-03 · Task: none
 
 - Anyone may reuse the code under MIT's terms, keeping the copyright notice.
 - Third-party code keeps its own licence; MIT covers only this repository's own code.
+
+## ADR-050: CI runs the gate; releases and deploys follow the shared pipeline
+
+Date: 2026-11-05 · Task: DEP-01
+
+**Context.** The plan kept CI/CD out of scope (`docs/IMPLEMENTATION.md:19`), and `CLAUDE.md` forbade adding any: `just check`, run by the pre-push hook, was the only gate (ADR-002, ADR-003, architecture decision 0010). Production builds in place from a checkout of `main` on `ngf-prod-syd1`. riot-proxy and ninja-monitor now release and deploy through the shared pipeline in `NinjaGoldfinch/ninja-actions` (a deploy tarball per release, `deploy.yml` behind the owner's approval, a health check and automatic rollback on the host). The owner asked for the site to join it, with CI on pull requests (owner, 2026-11-05).
+
+**Decision.**
+
+- The gate is `scripts/check.sh`, the steps `just check` ran, unchanged and in the same order. `just check`, the pre-push hook and CI all run it.
+- `.github/workflows/ci.yml` runs it on every pull request and on `main`: on the self-hosted Proxmox runner, or on a hosted runner for a fork's pull request, with a read-only token, no secrets and actions pinned to commits. The unit tests read the server env, so the job copies `.env.example` to `.env`, as `just setup` does.
+- `CLAUDE.md`'s rule changes from "do not add CI" to: CI, releases and deploys follow the shared pipeline, and change only through a task and an ADR. Releases (semver tags from `v1.0.0`, the owner's choice) and `deploy.yml` come in the next DEP tasks.
+
+**Consequences.**
+
+- A pull request shows the gate's result; nothing changes for local work.
+- `just e2e` stays outside the gate, in CI as locally.
+- GitHub Actions must be enabled on the repository and a runner registered for it on the Proxmox runner VM before the job can run there; until then a pull request's check stays queued.
+- `tests/unit/gate.test.ts` fails if `just check`, the pre-push hook or `ci.yml` stop running `scripts/check.sh`, if the script's steps change, or if CI loses the fork rule, the read-only token or its pinned actions.

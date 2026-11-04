@@ -8,8 +8,11 @@ live in docs/IMPLEMENTATION.md. Read it before doing anything.
 - One task -> one branch -> one PR -> squash-merge. Never commit to main.
   Never batch tasks.
 - Every PR ships tests for the behaviour it adds or changes.
-- `just check` passes before a task is done. There is no CI; this command
-  is the gate. Do not add GitHub Actions workflows or any CI/CD config.
+- `just check` passes before a task is done. It runs scripts/check.sh, the
+  one gate, which CI also runs on every PR (.github/workflows/ci.yml).
+  CI, releases and deploys follow the shared pipeline in
+  NinjaGoldfinch/ninja-actions (ADR-050); change them only through a task
+  and an ADR.
 - No secrets. PROXY_KEY lives only in .env. Fixtures are redacted: no
   `rpx_` and no `RGAPI-` strings anywhere in the repo.
 - The proxy key never reaches the browser. Anything that reads it lives
@@ -40,6 +43,8 @@ tests/e2e/           Playwright against the mock proxy
 tests/fixtures/      redacted proxy responses
 openapi/             committed copy of the riot-proxy spec
 deploy/              compose file for the VM
+.github/workflows/   CI (the gate); release and deploy later (ADR-050)
+scripts/check.sh     the gate itself
 
 ## Commands
 

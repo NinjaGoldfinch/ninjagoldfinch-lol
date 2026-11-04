@@ -27,7 +27,7 @@ The rest of the 12 GB is the kernel's page cache, which riot-proxy's SQLite reli
 | After about 26,000 requests                                            | 571 MB, still rising slowly; unchanged after 20 s idle |
 | Same load, 24,000 requests with `NODE_OPTIONS=--max-old-space-size=96` | 202–221 MB, flat; no errors                            |
 
-The in-memory lookups (current patch, Data Dragon names and CommunityDragon stat shards) are loaded at start-up, so "Just started" will now include them; that was not re-measured. Since ADR-048 they are held for two patches, the one in use and a new one loading before pages switch to it, which doubles their share for the days after a patch change: a few MB (`src/lib/server/static-data.ts:22-51`, `docs/DECISIONS.md:700`).
+The in-memory lookups (current patch, Data Dragon names and CommunityDragon stat shards) are loaded at start-up, so "Just started" will now include them; that was not re-measured. Since ADR-048 they are held for two patches, the one in use and a new one loading before pages switch to it, which doubles their share for the days after a patch change: a few MB (`src/lib/server/static-data.ts:22-51`, `docs/DECISIONS.md:712`).
 
 The growth without a cap is V8 letting its heap grow, not a leak: with the old-space heap capped at 96 MB the same load ran with flat memory. Node's default heap limit on a 12 GB machine is well above ninja-monitor's 1 GiB alert, so under sustained traffic the process can approach that alert without being in trouble.
 
@@ -100,5 +100,5 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 
 ---
 
-**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541,L700`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541,L712`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
+**Last verified:** 2026-11-03 against commit `a6b406b`

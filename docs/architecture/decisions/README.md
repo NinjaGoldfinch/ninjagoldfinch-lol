@@ -15,7 +15,7 @@ Each record has the sections Context, Decision, Consequences, Status and Evidenc
 | [0007](./0007-region-from-riot-id.md)          | Region from the Riot ID and match id                                  | ADR-037                            |
 | [0008](./0008-deadlines-and-optional-calls.md) | Deadlines on every call; optional calls degrade alone                 | ADR-040                            |
 | [0009](./0009-no-streaming.md)                 | No streaming; riot-proxy warms analytics                              | ADR-039, ADR-046                   |
-| [0010](./0010-local-hooks-instead-of-ci.md)    | No CI; `just check` behind a git hook                                 | ADR-002, ADR-003                   |
+| [0010](./0010-local-hooks-instead-of-ci.md)    | No CI; `just check` behind a git hook (superseded by ADR-050)         | ADR-002, ADR-003, ADR-050          |
 | [0011](./0011-images-from-public-cdns.md)      | Images from Data Dragon CDN and CommunityDragon                       | ADR-009, ADR-015, ADR-026          |
 
 Decisions that belong to riot-proxy, not this repo, are documented there: fetching and archiving timelines, the two object stores (Onidel Object Storage as the system of record, Cloudflare R2 as an `rclone` replica), the consumer-key model and running bare metal on `ngf-prod-syd1` (`riot-proxy:deploy/README.md:14-18`, `riot-proxy:docs/DECISIONS.md:1510`).
@@ -24,5 +24,5 @@ UI and presentation decisions (ADR-020 to ADR-036, ADR-042, ADR-043) are not dig
 
 ---
 
-**Sources:** `docs/DECISIONS.md:L1-L703`, `riot-proxy:deploy/README.md:L14-L18`, `riot-proxy:docs/DECISIONS.md:L1510`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `docs/DECISIONS.md:L1-L715`, `riot-proxy:deploy/README.md:L14-L18`, `riot-proxy:docs/DECISIONS.md:L1510`
+**Last verified:** 2026-11-03 against commit `a6b406b`

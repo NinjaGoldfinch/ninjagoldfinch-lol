@@ -52,10 +52,10 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [~] SPD-03 Dropped on measurement (ADR-039)
 - [~] SPD-04 Dropped on measurement (ADR-039)
 - [x] SPD-05 A timeout on every riot-proxy call: 5 s for analytics and static data, 30 s otherwise, a 503 when spent; optional calls degrade on a throw as on an error response — #63 (ADR-040)
-- [ ] SPD-06 Cloudflare's cache of `__data.json`
+- [x] SPD-06 Cloudflare's cache of `__data.json`: every page type's `__data.json` goes `MISS` then `HIT` with its page's policy, checked from outside — #95
 - [x] SPD-07 Timing for each load, in the server log: one line per request over 100 ms, with each riot-proxy call; cold and warm timings from production in ADR-046 — #86, #87
 - [x] SPD-08 Cold-path calls started sooner: the patch and its lookups alongside each page's main call; a cold profile waits for its slower chain — #88, #89 (ADR-047)
-- [ ] SPD-09 Static data loaded at start-up; the patch refreshed in the background
+- [x] SPD-09 Static data loaded at start-up; the patch refreshed in the background: the first profile after a restart 118 ms against 196 ms, no request waiting on a stale patch — #90, #96 (ADR-048)
 - [x] SPD-10 Images fetched sooner: preconnect to the image hosts, the champion header icon eager and first, async decoding — #91
 - [~] SPD-11 Dropped: SPD-07's timings put the time in riot-proxy's calls and the lookups, not page size (owner, 2026-11-03; ADR-046, ADR-047)
 
@@ -88,6 +88,16 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-11 Docs brought up to date with the ADRs; finished notes archived — #83
 - [x] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example` — #84
 - [x] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers — #85
+
+## DEP — releases and deploys through the shared pipeline
+
+Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monitor use (`NinjaGoldfinch/ninja-actions`), with CI on pull requests and semver releases from `v1.0.0`.
+
+- [~] DEP-01 CI runs the gate (`scripts/check.sh`) on every pull request and on `main`; `CLAUDE.md`'s no-CI rule replaced (ADR-050)
+- [ ] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release
+- [ ] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums`
+- [ ] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval
+- [ ] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol`
 
 ## Brought forward
 
@@ -241,6 +251,20 @@ Since P3, also: the match page's build follows riot-proxy's BLD-04 definitions (
 Open with riot-proxy: Viego's possession can log skill points he didn't spend. A writeup and a handoff for a Viego-only rule went to riot-proxy on 2026-10-10; the site will mirror the rule once it lands.
 
 Tagged `phase-P4` on the commit that records this check. Paused for owner review before P5.
+
+### SPD-06 check — passed 2026-11-03
+
+From outside (the owner's laptop), against `https://ninjagoldfinch.lol` running `main` at f691710 or later: each URL twice with `curl -s -o /dev/null -D -`, reading `cf-cache-status` and `cache-control`. `__data.json?x-sveltekit-invalidated=01` is the form the browser asks for on client-side navigation.
+
+```text
+page                           HTML           __data.json    __data.json?x-sveltekit-invalidated=01   Cache-Control
+/champions                     EXPIRED → HIT  MISS → HIT     EXPIRED → HIT                             public, s-maxage=600, stale-while-revalidate=600
+/champions/ahri                MISS → HIT     MISS → HIT     MISS → HIT                                public, s-maxage=600, stale-while-revalidate=600
+/summoner/NinjaGoldfinch-OCENZ EXPIRED → HIT  MISS → HIT     EXPIRED → HIT                             public, s-maxage=60, stale-while-revalidate=300
+/match/OC1_712351051           HIT → HIT      MISS → HIT     MISS → HIT                                public, s-maxage=86400, stale-while-revalidate=86400
+```
+
+A `HIT` answered in 70–85 ms. The match's first `__data.json` `MISS` took 12 s at the origin, while riot-proxy was restarting repeatedly that night; a first attempt at the match HTML hung and was stopped. Client-side navigation is served from the edge like the HTML.
 
 ### VS exit check — passed 2026-10-19
 

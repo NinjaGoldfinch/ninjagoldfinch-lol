@@ -105,5 +105,5 @@ The site depends on riot-proxy's routes and fields at the committed spec's versi
 
 ---
 
-**Sources:** `README.md:L47-L67,L104-L114`, `CLAUDE.md:L11-L12`, `docs/DECISIONS.md:L500-L516,L684-L703`, `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L11-L29`, `src/lib/recent-storage.ts:L6-L22`, `node_modules/@sveltejs/adapter-node/index.js:L17`, `riot-proxy:README.md:L122`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:.github/workflows/release.yml`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `README.md:L47-L67,L104-L114`, `CLAUDE.md:L11-L12`, `docs/DECISIONS.md:L500-L516,L684-L715`, `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L11-L29`, `src/lib/recent-storage.ts:L6-L22`, `node_modules/@sveltejs/adapter-node/index.js:L17`, `riot-proxy:README.md:L122`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:.github/workflows/release.yml`
+**Last verified:** 2026-11-03 against commit `a6b406b`
