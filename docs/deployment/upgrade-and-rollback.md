@@ -1,5 +1,7 @@
 # Upgrade and rollback
 
+> From `v1.0.0` production deploys releases instead: see [releases.md](./releases.md) (ADR-054). This page is the checkout procedure, kept as the fallback until the move has settled.
+
 How to deploy a new version of ninjagoldfinch.lol to production and how to go back to the previous one. The site has no database, migrations or bucket, so a rollback is a checkout, a rebuild and a restart; the things to watch are the edge cache and the riot-proxy version the site was built against.
 
 ## What a version is
