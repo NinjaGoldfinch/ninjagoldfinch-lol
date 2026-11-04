@@ -86,17 +86,18 @@ Every response that passes through `handle` carries these headers (`src/lib/serv
 Every page, error pages included, also carries a `Content-Security-Policy`, which SvelteKit builds from `CSP_DIRECTIVES` (`vite.config.ts`, hash mode):
 
 ```
-default-src 'self'; connect-src 'self'; font-src 'self';
+default-src 'self'; connect-src 'self' https://cloudflareinsights.com; font-src 'self';
 img-src 'self' data: https://ddragon.leagueoflegends.com https://raw.communitydragon.org;
-object-src 'none'; script-src 'self' 'sha256-…'; style-src 'self'; style-src-attr 'unsafe-inline';
+object-src 'none'; script-src 'self' https://static.cloudflareinsights.com 'sha256-…'; style-src 'self'; style-src-attr 'unsafe-inline';
 base-uri 'self'; form-action 'self'; frame-ancestors 'none'
 ```
 
 - `script-src` allows the page's one inline script, SvelteKit's bootstrap, by its hash. A hash rather than a nonce, because pages are shared from Cloudflare's cache: a nonce would be served to every visitor of a cached page.
 - `style-src-attr 'unsafe-inline'` allows `style="…"` attributes. The server renders Svelte's `style:` directives as attributes, and the gold chart, the objective markers and the damage bars are positioned from data. It allows no `<style>` element and no stylesheet from elsewhere.
-- `img-src` names the two image hosts from `src/lib/assets.ts` (`DDRAGON_ORIGIN`, `CDRAGON_ORIGIN`), the only third-party origins a page makes the browser contact, and `data:` for the site icon, which Vite inlines. The `<link rel="preconnect">` to them (SPD-10) adds no new origin and sends no credentials.
+- `img-src` names the two image hosts from `src/lib/assets.ts` (`DDRAGON_ORIGIN`, `CDRAGON_ORIGIN`), the only third-party origins the site's own pages make the browser contact, and `data:` for the site icon, which Vite inlines. The `<link rel="preconnect">` to them (SPD-10) adds no new origin and sends no credentials.
 - `/` and `/about` are rendered per request, not prerendered, so they get the headers too; adapter-node serves prerendered pages without running `handle` (ADR-055).
 - `/_app/*` files (scripts, styles, fonts) are served by adapter-node before `handle` and carry none of these headers. CSP and framing apply to documents, not to the files they load, and these are the site's own hashed files with a correct `Content-Type`, so the missing `nosniff` there is accepted.
+- `script-src` and `connect-src` also allow Cloudflare Web Analytics (`CLOUDFLARE_INSIGHTS`, ADR-056). Cloudflare adds its beacon, `https://static.cloudflareinsights.com/beacon.min.js`, to every page at the edge; it is not in the site's code, so the mock-proxy tests never load it. The beacon reports page views and real visitors' Core Web Vitals to `https://cloudflareinsights.com`, and sets no cookies or storage. Without these entries the CSP blocked it (seen in production on `v1.0.1`).
 
 Cloudflare adds none of these itself: on 2026-11-05, before this change, `curl -sI https://ninjagoldfinch.lol/` showed only Cloudflare's `nel`, `report-to` and `cf-*` headers besides the site's own. `tests/e2e/security.test.ts` checks the headers on each page type and fails on any CSP violation while the pages are used, with JavaScript and without.
 
