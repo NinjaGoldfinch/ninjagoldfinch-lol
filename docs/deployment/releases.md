@@ -139,7 +139,7 @@ To deploy or roll back staging by hand: `gh workflow run deploy.yml -R NinjaGold
 
 ### Setting up staging (once)
 
-Do these before tagging the next release; until then its staging job fails, though the release itself is published. Releases before the one that brings this (`v1.0.2` and older) have no staging tarball, so the first staging deploy is the next release.
+Do steps 1 to 3 before tagging the next release: without them its staging job fails, and so does the release run, though the release itself is published. Releases before the one that brings this (`v1.0.2` and older) have no staging tarball, so the first staging deploy is the next release.
 
 **1. The `staging` environment on GitHub.** No reviewer; deploys from `main` (by hand) and from `v*` tags (`release.yml` runs on the tag). Its own deploy key:
 
@@ -163,10 +163,9 @@ rm /tmp/deploy-key /tmp/deploy-key.pub
 
 The host key's SHA256 fingerprint is `mmH6z4Rh/xdv/rweuR7awTeUy41kan3pGQxPGWQn5gU`; check the line with `ssh-keyscan -t ed25519 51.161.153.34 | ssh-keygen -lf -`.
 
-**2. The site on `ngf-mon-syd1`.** A fresh install: no checkout, the unit runs the release directly. The staging riot-proxy must be up and give the site a key of its own (made on the staging riot-proxy, never the production one):
+**2. The site on `ngf-mon-syd1`.** A fresh install: no checkout, the unit runs the release directly. The site needs a key of its own from the staging riot-proxy, never the production one. Until the staging riot-proxy exists, use a placeholder: with `NODE_ENV=production` the site refuses to start without some `PROXY_KEY`, but `/healthz` never calls riot-proxy, so the site deploys and passes its health check while data pages answer 503 "Temporarily unavailable" (checked 2026-11-05 with nothing on the proxy port). Step 5 swaps in the real key.
 
 ```sh
-curl -s http://127.0.0.1:8080/readyz; echo               # the staging riot-proxy answers
 node --version                                            # v22.18 or later
 ss -ltn 'sport = :3000'                                   # nothing listening yet
 
@@ -177,7 +176,7 @@ NODE_ENV=production
 HOST=127.0.0.1
 PORT=3000
 PROXY_URL=http://127.0.0.1:8080
-PROXY_KEY=<the site's key from the STAGING riot-proxy>
+PROXY_KEY=placeholder-until-staging-riot-proxy
 ENV
 sudo stat -c '%a %U' /etc/ninjagoldfinch-lol/env          # 600 root
 
@@ -224,6 +223,18 @@ sudo ./ninja-actions-main/infra/deploy-host-add.sh ninjagoldfinch-lol \
 ```sh
 for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz 2>/dev/null && break; sleep 1; done; echo
 cat /srv/ninjagoldfinch-lol/live.json                     # "env":"staging"
+```
+
+With the placeholder key, `/` and `/about` render and data pages such as `/champions` answer 503; the journal logs `proxy unreachable` until the staging riot-proxy runs.
+
+**5. The real key, once the staging riot-proxy exists.** Make the site a key on the staging riot-proxy (`riot-proxy key create --name ninjagoldfinch-lol-staging`, [integration/authentication.md](../integration/authentication.md)), then on the box:
+
+```sh
+curl -s http://127.0.0.1:8080/readyz; echo               # the staging riot-proxy answers
+sudoedit /etc/ninjagoldfinch-lol/env                      # PROXY_KEY=<the new staging key>
+sudo systemctl restart ninjagoldfinch-lol
+for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz 2>/dev/null && break; sleep 1; done; echo
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/champions   # 200
 ```
 
 ---
