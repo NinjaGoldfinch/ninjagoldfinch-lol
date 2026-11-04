@@ -229,7 +229,7 @@ sequenceDiagram
 
 ## Other routes
 
-- `/healthz` answers `{"ok":true}` without calling riot-proxy (`src/routes/healthz/+server.ts:5-6`).
+- `/healthz` answers `{"ok":true,"version":"…"}` without calling riot-proxy (`src/routes/healthz/+server.ts:7-9`).
 - `/search` either redirects (303) or re-renders the form; a Riot ID never reaches riot-proxy from here (`src/routes/search/+page.server.ts:14-47`).
 - `/` and `/about` are prerendered at build time and served as static files from `build/prerendered`, without running `handle` (`src/routes/+page.ts:3`, `src/routes/about/+page.ts:2`).
 - Old URLs with a region redirect with 308, sent `no-store` by `handle` (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, `src/routes/match/[region]/[matchId]/+server.ts:8-11`).

@@ -74,12 +74,12 @@ sudo systemctl restart ninjagoldfinch-lol
 
 ```sh
 git -C /opt/ninjagoldfinch-lol log -1 --oneline            # the commit now deployed
-curl -s http://127.0.0.1:3000/healthz                      # {"ok":true}
+curl -s http://127.0.0.1:3000/healthz                      # {"ok":true,"version":"…"}
 sudo journalctl -u ninjagoldfinch-lol -n 50 --no-pager      # no start-up errors
 curl -sI https://ninjagoldfinch.lol/champions | head -5     # through the Tunnel
 ```
 
-`/healthz` answers without touching riot-proxy, so also load one page that does (`src/routes/healthz/+server.ts:5-6`). If the server refused to start, the journal shows the env validation message, for example `PROXY_KEY is required when NODE_ENV=production` (`src/lib/server/env.ts:51`). Rolling back is in [deployment/upgrade-and-rollback.md](../deployment/upgrade-and-rollback.md).
+`/healthz` answers without touching riot-proxy, so also load one page that does (`src/routes/healthz/+server.ts:7-9`). If the server refused to start, the journal shows the env validation message, for example `PROXY_KEY is required when NODE_ENV=production` (`src/lib/server/env.ts:51`). Rolling back is in [deployment/upgrade-and-rollback.md](../deployment/upgrade-and-rollback.md).
 
 ## The preview VM (dormant)
 
@@ -96,5 +96,5 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 
 ---
 
-**Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L516`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L47-L67,L104-L114`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L5-L6`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
+**Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L516`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L47-L67,L104-L114`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L7-L9`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-03 against commit `8cc2076`

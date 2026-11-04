@@ -745,3 +745,22 @@ Date: 2026-11-05 · Task: DEP-01
 - `just e2e` stays outside the gate, in CI as locally.
 - GitHub Actions must be enabled on the repository and a runner registered for it on the Proxmox runner VM before the job can run there; until then a pull request's check stays queued.
 - `tests/unit/gate.test.ts` fails if `just check`, the pre-push hook or `ci.yml` stop running `scripts/check.sh`, if the script's steps change, or if CI loses the fork rule, the read-only token or its pinned actions.
+
+## ADR-051: `/healthz` reports the version in `package.json`
+
+Date: 2026-11-05 · Task: DEP-02
+
+**Context.** The shared deploy script (`ninja-actions` `infra/deploy.sh`, `ninja-deploy`) restarts the unit, then polls the service's health URL. If the one-line JSON body has a top-level `"version"` string, the deploy counts as healthy only once it equals the tag it activated, with or without the leading `v`; without one, any 200 counts, so the old process still answering would pass. ninja-monitor reports `env!("CARGO_PKG_VERSION")`, its manifest's version, and its release workflow refuses a tag that does not match the manifest.
+
+**Decision.**
+
+- `GET /healthz` answers `{"ok":true,"version":"<x.y.z>"}`. `ok` stays, so existing checks keep working.
+- The version is `package.json`'s, compiled into the server bundle (`src/lib/server/version.ts`), as ninja-monitor does. Only the string is bundled, not the rest of `package.json`.
+- The release workflow (DEP-03) must refuse a `v*` tag that does not match `package.json`'s version, or every deploy of it would fail its health check and roll back.
+
+**Consequences.**
+
+- A deploy waits for the new release to answer, and rolls back if the old one never stops answering.
+- Releasing means bumping `package.json`'s version in a PR before tagging.
+- A build from a checkout reports `package.json`'s version too (`0.0.1` until `v1.0.0`), whatever commit it is.
+- `tests/unit/healthz.test.ts` fails if the body loses `ok` or `version`, the version stops matching `package.json`, or it stops being a semver a tag can match on one line.

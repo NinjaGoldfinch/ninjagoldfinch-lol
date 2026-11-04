@@ -31,7 +31,7 @@ The full procedure is `deploy/proxmox/README.md`. In outline, on the Proxmox hos
 
 3. Wait for cloud-init, read the VM's deploy key and add it to GitHub read-only (`deploy/proxmox/README.md:32-44`).
 4. On the VM, run `ninjagoldfinch-update` once (clones into `/opt/ninjagoldfinch`, writes `deploy/.env` with `ORIGIN=http://<vm-ip>:3000`, mode 600, and stops), set `PROXY_URL` and `PROXY_KEY` in `deploy/.env`, then run it again to build and start (`deploy/proxmox/ninjagoldfinch-update:37-48`).
-5. Check `curl -s http://localhost:3000/healthz` returns `{"ok":true}`.
+5. Check `curl -s http://localhost:3000/healthz` returns `{"ok":true,…}`.
 
 `create-vm.sh` options, from `./create-vm.sh --help` (run 2026-10-20):
 

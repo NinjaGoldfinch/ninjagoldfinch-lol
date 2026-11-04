@@ -73,13 +73,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [ok]
+                required: [ok, version]
                 properties:
                   ok:
                     type: boolean
                     const: true
+                  version:
+                    type: string
+                    description: The running release, from `package.json` at build time; a deploy waits for it to match the tag it activated (ADR-051).
               example:
                 ok: true
+                version: 1.0.0
   /search:
     get:
       tags: [pages]

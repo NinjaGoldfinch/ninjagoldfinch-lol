@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 
@@ -199,10 +200,11 @@ test('/about shows what the site is and the legal notice', async ({ page }) => {
 	await expect(page.getByRole('main')).toContainText(LEGAL);
 });
 
-test('/healthz answers without touching the proxy', async ({ request }) => {
+test('/healthz answers with the version, without touching the proxy', async ({ request }) => {
+	const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
 	const response = await request.get('/healthz');
 	expect(response.status()).toBe(200);
-	expect(await response.json()).toEqual({ ok: true });
+	expect(await response.json()).toEqual({ ok: true, version });
 	expect(response.headers()['cache-control']).toBe('no-store');
 });
 

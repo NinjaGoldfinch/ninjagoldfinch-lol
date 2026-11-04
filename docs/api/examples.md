@@ -32,7 +32,7 @@ curl -s $B/healthz
 ```
 
 ```text
-{"ok":true}
+{"ok":true,"version":"0.0.1"}
 ```
 
 ## 2. Find a player
