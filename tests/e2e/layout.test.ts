@@ -19,7 +19,7 @@ test('the accent is light purple', async ({ page }) => {
 	await expect(button).toHaveCSS('background-color', 'oklch(0.79 0.12 302)');
 });
 
-test('the site icon is the purple ninja, not the Svelte default', async ({ page }) => {
+test('the site icon is the lavender N on deep purple, not the Svelte default', async ({ page }) => {
 	await page.goto('/');
 	const href = await page.locator('link[rel="icon"]').getAttribute('href');
 	expect(href).toBeTruthy();
@@ -31,13 +31,20 @@ test('the site icon is the purple ninja, not the Svelte default', async ({ page 
 		return {
 			type: response.headers.get('content-type'),
 			backing: svg.querySelector('svg > rect')?.getAttribute('fill'),
-			fills: [...svg.querySelectorAll('path')].map((path) => path.getAttribute('fill'))
+			paths: [...svg.querySelectorAll('path')].map((path) => ({
+				fill: path.getAttribute('fill'),
+				stroke: path.getAttribute('stroke')
+			}))
 		};
 	}, href ?? '');
 	expect(icon.type).toContain('image/svg+xml');
-	// The deep-purple backing square, the black hood and the lavender eye band.
+	// The deep-purple backing square, a dark outline under the N, then the
+	// lavender N on top.
 	expect(icon.backing).toBe('#6B3FB8');
-	expect(icon.fills).toEqual(expect.arrayContaining(['#14161C', '#C4A2F2']));
+	expect(icon.paths).toEqual([
+		{ fill: '#14161C', stroke: '#14161C' },
+		{ fill: '#C4A2F2', stroke: null }
+	]);
 });
 
 test('an unknown page shows the not-found state, with the footer', async ({ page }) => {
