@@ -93,11 +93,11 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monitor use (`NinjaGoldfinch/ninja-actions`), with CI on pull requests and semver releases from `v1.0.0`.
 
-- [~] DEP-01 CI runs the gate (`scripts/check.sh`) on every pull request and on `main`; `CLAUDE.md`'s no-CI rule replaced (ADR-050)
-- [~] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release (ADR-051)
-- [~] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums` (ADR-052)
-- [~] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval (ADR-053)
-- [~] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol` (ADR-054; the move is the owner's, `docs/deployment/releases.md`)
+- [x] DEP-01 CI runs the gate (`scripts/check.sh`) on every pull request and on `main`; `CLAUDE.md`'s no-CI rule replaced (ADR-050) — #99
+- [x] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release (ADR-051) — #100
+- [x] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums` (ADR-052) — #101
+- [x] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval (ADR-053) — #102
+- [x] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol` (ADR-054) — #103, #105
 
 ## Brought forward
 
@@ -277,3 +277,20 @@ $ curl -sL 'http://127.0.0.1:3000/champions/ahri?rank=diamond+&vs=syndra' | grep
 ```
 
 The server-rendered page holds the Diamond+ builds against Syndra, and its matchup links keep the rank and the pick. The owner also saw the _vs_ picker in a browser. VS-04 was dropped.
+
+### DEP exit check — passed 2026-11-05
+
+`v1.0.0` (`38df259`, #103) built by `release.yml`: `ninjagoldfinch-lol.tar.gz` passed `SHA256SUMS` and `gh attestation verify`, held `version.json` for that commit and no `node_modules`, and, unpacked away from the checkout, answered `/healthz` with `1.0.0` and served `/champions` and a profile from the mock riot-proxy. The owner moved production to `/srv/ninjagoldfinch-lol` (`docs/deployment/releases.md`), then deployed `v1.0.0` through `deploy.yml` with approval in the `prod` environment ([run 41894530244](https://github.com/NinjaGoldfinch/ninjagoldfinch-lol/actions/runs/41894530244)).
+
+```text
+$ curl -fsS http://127.0.0.1:3000/healthz
+{"ok":true,"version":"1.0.0"}
+$ curl -sI https://ninjagoldfinch.lol/champions | head -1
+HTTP/2 200
+$ systemctl show ninjagoldfinch-lol -p ExecStart | grep -o '/srv/[^ ;]*'
+/srv/ninjagoldfinch-lol/current/build
+$ cat /srv/ninjagoldfinch-lol/live.json
+{"service":"ninjagoldfinch-lol","env":"prod","version":"v1.0.0","commit":"38df2592fadd409a63ed83e15e697557d24d0782","deployed_at":"2026-11-04T19:12:14Z"}
+```
+
+The first check after switching the unit ran before Node listened and saw a 502; the release had started within a second (journal), and the check now waits (#105). The `/opt/ninjagoldfinch-lol` checkout stays as the fallback until releases have settled, and `update-all ninja-lol` is to be retired (step 6 of the move).
