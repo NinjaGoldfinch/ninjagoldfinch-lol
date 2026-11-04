@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The one gate (`just check`, the pre-push hook and CI all run this): format,
-# spec drift, lint, svelte-check, unit tests, build, deploy test. ADR-050.
+# spec drift, lint, svelte-check, unit tests, build, deploy test, release package
+# test. ADR-050, ADR-052.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -12,3 +13,4 @@ pnpm svelte-check --tsconfig ./tsconfig.json
 pnpm vitest run
 pnpm build
 bash deploy/proxmox/test.sh
+bash scripts/package.test.sh

@@ -4,11 +4,13 @@ name: CI
 # runs), on every pull request and on main. Pull requests from this repository
 # run on the self-hosted Proxmox runner; one from a fork runs on a hosted
 # runner instead, so outside code never reaches it (the repository also requires
-# approval before an outside contributor's workflows run).
+# approval before an outside contributor's workflows run). The release workflow
+# calls it before building a release (ADR-052).
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read

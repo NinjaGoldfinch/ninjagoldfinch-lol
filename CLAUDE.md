@@ -51,7 +51,8 @@ scripts/check.sh     the gate itself
 just setup    install, enable git hooks, create .env
 just dev      dev server
 just gen      regenerate API types from openapi/riot-proxy.json
-just check    format, spec drift, lint, svelte-check, unit tests, build, deploy test
+just check    format, spec drift, lint, svelte-check, unit tests, build, deploy test,
+              release package test
 just e2e      Playwright smoke tests
 just image    build the production image
 

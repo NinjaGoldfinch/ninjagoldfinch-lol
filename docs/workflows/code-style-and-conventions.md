@@ -76,7 +76,7 @@ Types used in history: `feat`, `fix`, `docs`, `chore`, `style`, `perf`, `test`, 
 
 ## Dependencies
 
-A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). The only runtime dependency today is `openapi-fetch` (`package.json:48-50`); see [reference/dependencies.md](../reference/dependencies.md).
+A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). The only runtime dependency today is `openapi-fetch` (`package.json:34`, bundled into the build since ADR-052); see [reference/dependencies.md](../reference/dependencies.md).
 
 ---
 

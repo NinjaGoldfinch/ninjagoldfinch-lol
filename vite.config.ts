@@ -12,7 +12,8 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter(),
+			// scripts/package.sh builds a release outside the checkout's build/ (ADR-052).
+			adapter: adapter({ out: process.env.BUILD_OUT ?? 'build' }),
 			// adapter-node 6 no longer reads ORIGIN at runtime; without this it guesses
 			// the origin from the Host header and assumes https. Set at build time.
 			// ADR-014.

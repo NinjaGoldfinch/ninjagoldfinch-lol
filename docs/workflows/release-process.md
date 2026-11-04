@@ -1,10 +1,11 @@
 # Release process
 
-How a change to ninjagoldfinch.lol travels from a task branch to production. CI runs the gate (`scripts/check.sh`, the same as `just check`) on every pull request (ADR-050); versioned releases and deploys through the pipeline are being added (`docs/PROGRESS.md`, DEP). Until then there is no versioned release and no deploy automation: `main` is what ships, and an operator deploys it by hand on the production host.
+How a change to ninjagoldfinch.lol travels from a task branch to production. CI runs the gate (`scripts/check.sh`, the same as `just check`) on every pull request (ADR-050); a `v*` tag builds a release (ADR-052). Deploying a release through the pipeline is still being added (`docs/PROGRESS.md`, DEP-04, DEP-05); until then `main` is what ships, and an operator deploys it by hand on the production host.
 
 ## Versioning and tags
 
-- **No release versions.** `package.json:4` holds `"version": "0.0.1"` and is never bumped; there are no `vX.Y.Z` tags. Production runs whatever commit of `main` was last pulled.
+- **Release versions.** `package.json:4` holds the version, `0.0.1` until the first release, `v1.0.0` (DEP-05). `/healthz` reports it, and a deploy waits for it to match the tag it activated (ADR-051). Production runs whatever commit of `main` was last pulled until it deploys releases.
+- **Cutting a release.** Bump `package.json`'s version in a pull request (a `chore(release): vX.Y.Z` commit), merge it, then tag that commit on `main` with the same version and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag runs `.github/workflows/release.yml`: the gate, then `scripts/package.sh`, which refuses a tag that is not `package.json`'s version, builds the site for `https://ninjagoldfinch.lol` and packs `ninjagoldfinch-lol.tar.gz` (one directory: `build/`, `package.json`, `LICENSE`, `version.json`) with `SHA256SUMS`. A GitHub release for the tag carries both, with build provenance (ADR-052).
 - **Phase tags** mark the end of a plan phase after its exit check passes: `phase-P0` to `phase-P4` (all 2026-10-09/10, `git tag -n1`). The rule is in `CLAUDE.md:70-74`: paste the exit check into `docs/PROGRESS.md`, tag `phase-P<n>`, and pause for owner review. Later work series (SPD, VS, FIX) record their exit checks in `docs/PROGRESS.md` without a tag (`docs/PROGRESS.md:221`).
 - **Changelog.** There is no `CHANGELOG`. The per-task log is `docs/PROGRESS.md`, where each ticked task carries its PR number (`CLAUDE.md:28-29`, for example `docs/PROGRESS.md:59-61`), and design decisions are in `docs/DECISIONS.md`.
 
@@ -87,12 +88,12 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 
 ## What does not exist
 
-| Not present                                      | Why / status                                                                                  |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| CI, releases and deploys outside the pipeline    | Only through a task and an ADR (`CLAUDE.md`, ADR-050); CI runs the same gate as `just check`  |
-| A deploy script or unit file in the repo         | ADR-038: "none of them is in the repo as a script or unit file yet" (`docs/DECISIONS.md:513`) |
-| Release tags, artefacts or images for production | Production builds from a checkout on the host (ADR-038)                                       |
-| Automatic rollback                               | Manual, by checking out the previous commit and rebuilding                                    |
+| Not present                                   | Why / status                                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| CI, releases and deploys outside the pipeline | Only through a task and an ADR (`CLAUDE.md`, ADR-050); CI runs the same gate as `just check`  |
+| A deploy script or unit file in the repo      | ADR-038: "none of them is in the repo as a script or unit file yet" (`docs/DECISIONS.md:513`) |
+| Production running a release                  | Production builds from a checkout on the host (ADR-038) until DEP-04 and DEP-05               |
+| Automatic rollback                            | Manual, by checking out the previous commit and rebuilding                                    |
 
 ---
 
