@@ -54,7 +54,7 @@ describe('the release workflow', () => {
 	});
 
 	it('pins every action to a commit', () => {
-		const uses = [...release.matchAll(/uses: (\S+)/g)].map((m) => m[1]);
+		const uses = [...release.matchAll(/\buses: (\S+)/g)].map((m) => m[1]);
 		expect(uses.filter((use) => !use.startsWith('./'))).not.toHaveLength(0);
 		for (const use of uses) if (!use.startsWith('./')) expect(use).toMatch(/@[0-9a-f]{40}$/);
 	});

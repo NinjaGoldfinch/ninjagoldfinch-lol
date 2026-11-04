@@ -24,6 +24,45 @@ Without `ngf-deploy`, the same run is `gh workflow run deploy.yml -R NinjaGoldfi
 
 Rolling back is deploying the previous tag the same way; it is still on the host, so nothing is uploaded. Rehearsed on 2026-11-05 (P5-04): `v1.0.2` → `v1.0.1` → `v1.0.2`, each deploy job 10–11 s and each run under 30 s including the approval. On the host, `ls -l /srv/ninjagoldfinch-lol/current`, `cat /srv/ninjagoldfinch-lol/live.json` and `curl -s http://127.0.0.1:3000/healthz` say what runs.
 
+## The prod gate
+
+Nothing reaches prod that has not passed on staging (ADR-060). Two commit statuses on a version's commit record it:
+
+| Status          | Set by                                                                               | Means                                     |
+| --------------- | ------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `staging/smoke` | `deploy.yml` after a staging deploy: `scripts/smoke.sh` through Access, pass or fail | the version passed (or failed) on staging |
+| `prod/deployed` | the deploy action after a successful prod deploy                                     | the version has been live in prod         |
+
+A prod deploy goes ahead only if the version's commit has either at success; otherwise the action refuses it, after the approval, before anything is downloaded. `prod/deployed` is what lets a rollback to an earlier prod version through. To see a version's statuses:
+
+```sh
+gh api repos/NinjaGoldfinch/ninjagoldfinch-lol/commits/vX.Y.Z/status --jq '.statuses[] | "\(.context) \(.state)"'
+```
+
+A smoke test that failed, or never ran (a release from before ADR-060), is fixed by deploying the version to staging again, which reruns it: `ngf-deploy ninjagoldfinch-lol -e staging -v vX.Y.Z -w`. To run the smoke test by hand from a machine with the Access token: `CF_ACCESS_CLIENT_ID=… CF_ACCESS_CLIENT_SECRET=… scripts/smoke.sh https://staging.ninjagoldfinch.lol vX.Y.Z`.
+
+In an emergency, break the glass with a reason; it goes in the log and the job summary:
+
+```sh
+gh workflow run deploy.yml -R NinjaGoldfinch/ninjagoldfinch-lol -f env=prod -f version=vX.Y.Z \
+  -f break_glass='why this cannot wait for staging'
+```
+
+### Marking the versions already live in prod (once)
+
+Releases up to `v1.0.4` came before the gate and have neither status. Mark the ones that have been live in prod, so rolling back to them stays possible (`v1.0.0` to `v1.0.2`, all deployed and rehearsed on 2026-11-05):
+
+```sh
+R=NinjaGoldfinch/ninjagoldfinch-lol
+for v in v1.0.0 v1.0.1 v1.0.2; do
+  sha=$(gh api "repos/$R/commits/$v" --jq .sha)
+  gh api -X POST "repos/$R/statuses/$sha" -f state=success -f context=prod/deployed \
+    -f description="Live in prod before the gate (ADR-060)" >/dev/null && echo "$v prod/deployed"
+done
+```
+
+`v1.0.3` and `v1.0.4` only ever ran on staging: they reach prod after a staging deploy that passes the smoke test.
+
 ## Moving production from the checkout (once)
 
 The unit ran `node build` in `/opt/ninjagoldfinch-lol` ([install.md](./install.md)). `deploy-host-add.sh --adopt` moves a single binary, so the site is moved by hand the same way: the release goes in as the first one, a drop-in points the unit at it, and removing the drop-in goes back. The checkout stays until the release has run for a while.
@@ -137,7 +176,7 @@ Every release also deploys to staging, `https://staging.ninjagoldfinch.lol`, wit
 
 The origin is fixed at build time (ADR-014), so each release carries two tarballs from the same commit, listed in one `SHA256SUMS`: `ninjagoldfinch-lol.tar.gz` for `https://ninjagoldfinch.lol` and `ninjagoldfinch-lol-staging.tar.gz` for `https://staging.ninjagoldfinch.lol`. `deploy.yml` picks the tarball by environment; `/healthz` reports the same version from both.
 
-Staging is behind Access, so check it from the box on loopback (`curl -s http://127.0.0.1:3000/healthz`), or in a browser after the Access login. A CI check against the public hostname would need an Access service token (not set up).
+Staging is behind Access, so check it from the box on loopback (`curl -s http://127.0.0.1:3000/healthz`), or in a browser after the Access login. CI's smoke test after each staging deploy goes through Access with a service token, the `staging` environment's secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, made in Cloudflare Zero Trust for the `staging` Access app ([The prod gate](#the-prod-gate)).
 
 To deploy or roll back staging by hand: `gh workflow run deploy.yml -R NinjaGoldfinch/ninjagoldfinch-lol -f env=staging -f version=vX.Y.Z` (no approval).
 
@@ -261,5 +300,5 @@ To cut staging off without touching the live site: `rp key revoke ninjagoldfinch
 
 ---
 
-**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
+**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058, ADR-060), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-05, during the move: `v1.0.0` started from `/srv` and served pages within a second of the restart

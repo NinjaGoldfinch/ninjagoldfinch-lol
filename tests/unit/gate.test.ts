@@ -59,7 +59,7 @@ describe('CI', () => {
 	});
 
 	it('pins every action to a commit', () => {
-		const uses = [...ci.matchAll(/uses: (\S+)/g)].map((m) => m[1]);
+		const uses = [...ci.matchAll(/\buses: (\S+)/g)].map((m) => m[1]);
 		expect(uses.length).toBeGreaterThan(0);
 		for (const use of uses) expect(use).toMatch(/@[0-9a-f]{40}$/);
 	});

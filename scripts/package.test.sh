@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Checks scripts/package.sh (ADR-052, ADR-057): it refuses a tag that is not
-# package.json's version, and each tarball it makes runs on its own, unpacked
+# Checks scripts/package.sh (ADR-052, ADR-057) and scripts/smoke.sh (ADR-060):
+# package.sh refuses a tag that is not package.json's version, and each tarball
+# it makes runs on its own, unpacked
 # away from the checkout with no node_modules: /healthz answers with that
-# version, a page is served from the mock riot-proxy, and a form post is
+# version, the smoke test passes against the mock riot-proxy, and a form post is
 # accepted from the tarball's own origin and refused from the other's.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -60,8 +61,12 @@ check() {
 	done
 	[ "$body" = "{\"ok\":true,\"version\":\"$version\"}" ] ||
 		fail "$asset: /healthz answered '$body'; server log: $(cat "$tmp/$asset.log")"
-	status=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/champions")
-	[ "$status" = 200 ] || fail "$asset: /champions answered $status; server log: $(cat "$tmp/$asset.log")"
+	# The smoke test deploy.yml runs on staging (ADR-060), with a stand-in Access token.
+	CF_ACCESS_CLIENT_ID=package-test CF_ACCESS_CLIENT_SECRET=package-test \
+		scripts/smoke.sh "http://127.0.0.1:$port" "v$version" >/dev/null ||
+		fail "$asset: the smoke test failed; server log: $(cat "$tmp/$asset.log")"
+	scripts/smoke.sh "http://127.0.0.1:$port" v0.0.0-wrong >/dev/null 2>&1 &&
+		fail "$asset: the smoke test passed with the wrong version"
 
 	# The origin is fixed at build time (ADR-014): SvelteKit refuses a form post from any other.
 	post() {
