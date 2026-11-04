@@ -783,3 +783,21 @@ Date: 2026-11-05 · Task: DEP-03
 - The unit runs `node <release>/build`; its env (`PROXY_URL`, `PROXY_KEY`, `PORT`, …) stays in the unit, outside the release. DEP-04 and DEP-05 set up the host.
 - A release built for another origin needs `ORIGIN` set when running `package.sh` by hand.
 - `tests/unit/release.test.ts` pins the workflow's trigger, order, permissions, runners and pinned actions, and that `package.json` keeps no `dependencies`.
+
+## ADR-053: releases reach production through `deploy.yml` and `ninja-actions/deploy@v1`
+
+Date: 2026-11-05 · Task: DEP-04
+
+**Context.** riot-proxy and ninja-monitor deploy with a `deploy.yml` started by hand: it runs in the `prod` environment, which waits for the owner's approval, and calls `NinjaGoldfinch/ninja-actions/deploy@v1` with the service name, the tag and the release asset. The action downloads the asset and checks it against the release's checksums, uploads it over SSH with a key forced to `ninja-deploy <service>`, and activates it; the host health-checks and rolls back by itself. The site's releases carry `ninjagoldfinch-lol.tar.gz` and `SHA256SUMS` (ADR-052), and `/healthz` reports the version (ADR-051).
+
+**Decision.**
+
+- `.github/workflows/deploy.yml` is the sibling workflow with only the service and asset changed: `workflow_dispatch` with `env` (only `prod` until a staging host exists) and `version`; the `prod` environment; one deploy per environment at a time; `contents: read`; the self-hosted runner; host, known hosts and key from the environment (`DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_SSH_KEY`).
+- The action is used at its `v1` tag, as riot-proxy and ninja-monitor do, so fixes to the shared pipeline reach every service. It is the owner's own repository; third-party actions stay pinned to commits.
+- `SHA256SUMS` is the action's default checksums name, so the workflow does not pass one.
+
+**Consequences.**
+
+- Nothing deploys until the owner sets up the `prod` environment (required reviewer, the secret and the two variables) and `ninja-deploy` for `ninjagoldfinch-lol` on `ngf-prod-syd1` (health URL `http://127.0.0.1:3000/healthz`). Moving production from its checkout to `/srv/ninjagoldfinch-lol` is DEP-05.
+- A deploy runs only on approval in GitHub; the deploy key lets the repository run any release of the site with the unit's permissions and env, and nothing more.
+- `tests/unit/deploy-workflow.test.ts` pins the trigger, the `prod`-only choice, the environment, concurrency, the action and its inputs, the asset name `release.yml` publishes and the read-only token.

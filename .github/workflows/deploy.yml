@@ -1,0 +1,48 @@
+name: Deploy
+
+# ADR-053 (task DEP-04). Deploys a release to production through the shared
+# pipeline, NinjaGoldfinch/ninja-actions/deploy: it checks the release's
+# tarball against SHA256SUMS (both from release.yml, ADR-052), uploads it to
+# /srv/ninjagoldfinch-lol/releases/ unless the host already has it, and
+# activates it. The host restarts the site, waits for /healthz to report the
+# new version (ADR-051) and rolls back by itself if it does not. Rolling back on
+# purpose is deploying the previous version: it is still on the host, so there
+# is no upload. The prod environment waits for the owner's approval.
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Where to deploy
+        type: choice
+        options: [prod]
+        default: prod
+      version:
+        description: Release tag, e.g. v1.0.0
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.env }}
+  cancel-in-progress: false
+
+env:
+  SERVICE: ninjagoldfinch-lol
+  ASSET: ninjagoldfinch-lol.tar.gz
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.version }} to ${{ inputs.env }}
+    runs-on: [self-hosted, linux, proxmox]
+    environment: ${{ inputs.env }}
+    timeout-minutes: 10
+    steps:
+      - uses: NinjaGoldfinch/ninja-actions/deploy@v1
+        with:
+          service: ${{ env.SERVICE }}
+          version: ${{ inputs.version }}
+          asset: ${{ env.ASSET }}
+          host: ${{ vars.DEPLOY_HOST }}
+          known-hosts: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}

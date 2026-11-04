@@ -1,6 +1,6 @@
 # Release process
 
-How a change to ninjagoldfinch.lol travels from a task branch to production. CI runs the gate (`scripts/check.sh`, the same as `just check`) on every pull request (ADR-050); a `v*` tag builds a release (ADR-052). Deploying a release through the pipeline is still being added (`docs/PROGRESS.md`, DEP-04, DEP-05); until then `main` is what ships, and an operator deploys it by hand on the production host.
+How a change to ninjagoldfinch.lol travels from a task branch to production. CI runs the gate (`scripts/check.sh`, the same as `just check`) on every pull request (ADR-050); a `v*` tag builds a release (ADR-052). `.github/workflows/deploy.yml` deploys a release once the host is set up for it (ADR-053, DEP-05); until then `main` is what ships, and an operator deploys it by hand on the production host.
 
 ## Versioning and tags
 
@@ -82,6 +82,15 @@ curl -sI https://ninjagoldfinch.lol/champions | head -5     # through the Tunnel
 
 `/healthz` answers without touching riot-proxy, so also load one page that does (`src/routes/healthz/+server.ts:7-9`). If the server refused to start, the journal shows the env validation message, for example `PROXY_KEY is required when NODE_ENV=production` (`src/lib/server/env.ts:51`). Rolling back is in [deployment/upgrade-and-rollback.md](../deployment/upgrade-and-rollback.md).
 
+## Deploying a release
+
+`.github/workflows/deploy.yml` (ADR-053) deploys a published release to `prod`. Start it from the Actions tab (Deploy, Run workflow) or with `gh workflow run deploy.yml -f env=prod -f version=vX.Y.Z`. The `prod` environment waits for the owner's approval, then `NinjaGoldfinch/ninja-actions/deploy@v1` checks the tarball against `SHA256SUMS`, uploads it to `/srv/ninjagoldfinch-lol/releases/` unless it is already there, and activates it: the host restarts the unit and waits for `/healthz` to report the new version (ADR-051), rolling back by itself if it does not. Rolling back on purpose is deploying the previous tag, which is still on the host.
+
+It needs, once (not yet done; DEP-05):
+
+- a `prod` environment on the repository with the owner as required reviewer, the secret `DEPLOY_SSH_KEY` and the variables `DEPLOY_HOST` and `DEPLOY_KNOWN_HOSTS` (ninja-actions `README.md`);
+- `ninja-deploy` set up for the service on `ngf-prod-syd1`: `deploy-host-add.sh ninjagoldfinch-lol --unit ninjagoldfinch-lol.service --health-url http://127.0.0.1:3000/healthz --key '<the .pub line>'`, with the unit running `node /srv/ninjagoldfinch-lol/current/build`.
+
 ## The preview VM (dormant)
 
 The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with a read-only deploy key, `git checkout --detach`, `docker compose -f deploy/compose.yaml up -d --build`, prune old images (`deploy/proxmox/ninjagoldfinch-update:1-48`). The VM no longer exists (owner, 2026-10-19); see [deployment/preview-vm.md](../deployment/preview-vm.md).
@@ -92,7 +101,7 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | CI, releases and deploys outside the pipeline | Only through a task and an ADR (`CLAUDE.md`, ADR-050); CI runs the same gate as `just check`  |
 | A deploy script or unit file in the repo      | ADR-038: "none of them is in the repo as a script or unit file yet" (`docs/DECISIONS.md:513`) |
-| Production running a release                  | Production builds from a checkout on the host (ADR-038) until DEP-04 and DEP-05               |
+| Production running a release                  | Production builds from a checkout on the host (ADR-038) until DEP-05                          |
 | Automatic rollback                            | Manual, by checking out the previous commit and rebuilding                                    |
 
 ---
