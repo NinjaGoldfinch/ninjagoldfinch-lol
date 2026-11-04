@@ -1,5 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SECURITY_HEADERS } from '#lib/server/security.ts';
 import { handle, handleError } from '../../src/hooks.server';
 
 const event = {
@@ -58,6 +59,55 @@ describe('handle', () => {
 
 	it("keeps a successful GET's own policy", async () => {
 		expect((await run('GET', 200)).headers.get('cache-control')).toBe('public, s-maxage=60');
+	});
+});
+
+describe('handle security headers', () => {
+	const expectSecurityHeaders = (response: Response) => {
+		for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+			expect(response.headers.get(name), name).toBe(value);
+		}
+	};
+	const run = (url: string, response: Response) =>
+		handle({
+			event: { ...event, request: new Request(url), url: new URL(url) } as RequestEvent,
+			resolve: async () => response
+		});
+
+	it('adds them to a page, alongside its own cache policy', async () => {
+		const response = await run(
+			'http://localhost/champions',
+			new Response('x', { headers: { 'cache-control': 'public, s-maxage=600' } })
+		);
+		expectSecurityHeaders(response);
+		expect(response.headers.get('cache-control')).toBe('public, s-maxage=600');
+	});
+
+	it('adds them to a redirect, which gets no-store', async () => {
+		const response = await run(
+			'http://localhost/champions?patch=all',
+			new Response(null, { status: 307, headers: { location: '/champions' } })
+		);
+		expectSecurityHeaders(response);
+		expect(response.headers.get('cache-control')).toBe('no-store');
+	});
+
+	it('adds them to an error, which gets no-store', async () => {
+		const response = await run(
+			'http://localhost/summoner/x-OCE',
+			new Response('x', { status: 503, headers: { 'cache-control': 'public, s-maxage=60' } })
+		);
+		expectSecurityHeaders(response);
+		expect(response.headers.get('cache-control')).toBe('no-store');
+	});
+
+	it('adds them to /healthz, which stays no-store', async () => {
+		const response = await run(
+			'http://localhost/healthz',
+			Response.json({ ok: true }, { headers: { 'cache-control': 'no-store' } })
+		);
+		expectSecurityHeaders(response);
+		expect(response.headers.get('cache-control')).toBe('no-store');
 	});
 });
 

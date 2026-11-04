@@ -99,6 +99,10 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 - [x] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval (ADR-053) — #102
 - [x] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol` (ADR-054) — #103, #105
 
+## P5 — Production
+
+- [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107
+
 ## Brought forward
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Production runs without Docker (ADR-038), so the rest of P5-01 (`cloudflared`, no published port, and the 200 MB image check) applies only if the Docker preview path comes back. The preview VM is dormant: VM 104 no longer exists (owner, 2026-10-19).

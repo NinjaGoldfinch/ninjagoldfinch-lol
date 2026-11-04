@@ -84,7 +84,7 @@ What does not leave the server:
 | Analytics responses                | riot-proxy                       | In memory until the next rebuild                                    | `riot-proxy:src/routes/analytics/cache.rs:1-19`                          |
 | Current patch                      | ninjagoldfinch.lol               | In process memory; refreshed in the background after 5 min          | `src/lib/server/patch.ts:62-129`                                         |
 | Data Dragon lookups, stat shards   | ninjagoldfinch.lol               | Two patches, in process memory                                      | `src/lib/server/static-data.ts:22-51`, `src/lib/server/cdragon.ts:10-37` |
-| Rendered pages                     | Cloudflare                       | Per `Cache-Control`: 60 s profiles, 1 day matches, 10 min analytics | `src/lib/server/cache.ts:5-16`                                           |
+| Rendered pages                     | Cloudflare                       | Per `Cache-Control`: 60 s profiles, 1 day matches, 10 min analytics | `src/lib/server/cache.ts:5-18`                                           |
 | Recent searches                    | the Browser                      | `localStorage`, up to eight Riot IDs                                | `src/lib/recent-storage.ts:6-22`, `src/lib/domain/recent.ts:6`           |
 | Images                             | Data Dragon CDN, CommunityDragon | Fetched by the Browser directly                                     | `src/lib/assets.ts:9-73`                                                 |
 

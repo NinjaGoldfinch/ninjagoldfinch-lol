@@ -50,7 +50,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Budget (deadline).** The time limit on one riot-proxy call: 5 s for analytics and static data, 30 s otherwise; past it the call is a 503 (`src/lib/server/proxy.ts:69-135`).
 
-**Edge cache.** Cloudflare's cache of rendered pages, controlled by the `Cache-Control` the site sends (`src/lib/server/cache.ts:5-16`, [data/caching.md](../data/caching.md)).
+**Edge cache.** Cloudflare's cache of rendered pages, controlled by the `Cache-Control` the site sends (`src/lib/server/cache.ts:5-18`, [data/caching.md](../data/caching.md)).
 
 **In-memory hold.** A value the site keeps in process memory to avoid asking riot-proxy every time: the current patch (refreshed in the background after 5 min), Data Dragon names and stat shards (two patches each), all loaded at start-up ([data/caching.md](../data/caching.md)).
 

@@ -76,7 +76,7 @@ export const load: PageServerLoad = async ({ url, untrack, setHeaders }) => {
 };
 ```
 
-(`src/routes/champions/+page.server.ts:7-20`.) Pick a policy from `CACHE_POLICIES` (`src/lib/server/cache.ts:5-16`) or add one there with a test in `tests/unit/cache.test.ts`. If the page has optional calls, have the loader return whether they all loaded (`complete`, `src/lib/server/champions.ts:53`) and send `none` when one failed, so the gap is not cached (ADR-045). You do not need to handle errors, POSTs or redirects: `src/hooks.server.ts:18-29` overrides the header to `no-store` for non-GET requests and errors, to `notFound` for 404s, and gives `no-store` to any response without one, such as a redirect thrown before `setHeaders`.
+(`src/routes/champions/+page.server.ts:7-20`.) Pick a policy from `CACHE_POLICIES` (`src/lib/server/cache.ts:5-18`) or add one there with a test in `tests/unit/cache.test.ts`. If the page has optional calls, have the loader return whether they all loaded (`complete`, `src/lib/server/champions.ts:53`) and send `none` when one failed, so the gap is not cached (ADR-045). You do not need to handle errors, POSTs or redirects: `src/hooks.server.ts:20-32` overrides the header to `no-store` for non-GET requests and errors, to `notFound` for 404s, and gives `no-store` to any response without one, such as a redirect thrown before `setHeaders`.
 
 A path that only redirects uses `+server.ts` with a `GET` handler instead (for example `src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 
@@ -105,5 +105,5 @@ Then commit on a task branch (`<type>/<task-id>-<slug>`) with a scoped Conventio
 
 ---
 
-**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L20`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L62`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L18-L29`, `src/routes/+layout.svelte:L1-L51`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
+**Sources:** `CLAUDE.md:L8-L68`, `src/routes/champions/+page.server.ts:L1-L20`, `src/routes/champions/+page.svelte:L1-L40`, `src/lib/server/champions.ts:L1-L62`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/cache.ts:L5-L16`, `src/hooks.server.ts:L20-L32`, `src/routes/+layout.svelte:L1-L51`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/app.css:L6-L16`, `src/lib/assets.ts`, `vite.config.ts:L22-L37`, `tests/unit/champions-loader.test.ts:L1-L29`, `tests/unit/match-loader.test.ts:L24-L42`, `tests/e2e/match.test.ts:L1-L10`, `tests/e2e/champions.test.ts:L5,L49`, `tests/mock-proxy/mock.ts:L27-L48`
 **Last verified:** 2026-11-03 against commit `ea998cb`

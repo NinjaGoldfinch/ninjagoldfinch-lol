@@ -60,7 +60,7 @@ sequenceDiagram
 
 - The site listens on `127.0.0.1` only (`HOST` in `/etc/ninjagoldfinch-lol/env`; `docs/DECISIONS.md:509`), so the Tunnel is the only way in.
 - Payloads are HTML pages, `__data.json` for client navigation, and `POST ?/refresh` form actions (see [../api/endpoints.md](../api/endpoints.md)).
-- Cloudflare's caching follows the site's `Cache-Control` (`src/lib/server/cache.ts:5-16`).
+- Cloudflare's caching follows the site's `Cache-Control` (`src/lib/server/cache.ts:5-18`).
 
 > **TODO (unverified):** whether adapter-node is told the real client address (`ADDRESS_HEADER=CF-Connecting-IP`, as the plan suggests in `docs/IMPLEMENTATION.md:392`). It is not among the variable names in `/etc/ninjagoldfinch-lol/env`, so the site probably sees `127.0.0.1` for every client; nothing in the code reads the client address today.
 

@@ -72,11 +72,33 @@ Because the quota is per key and every visitor shares the site's key, one client
 
 ## Response headers
 
-The site sets `Cache-Control` on every dynamic response and nothing else security-related: no `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options` or `X-Content-Type-Options` (observed on the production build, 2026-10-20: `cache-control`, `content-type`, `etag`, `x-sveltekit-page`). Whether Cloudflare adds any at the edge was not checked.
+Every response that passes through `handle` carries these headers (`src/lib/server/security.ts`, `src/hooks.server.ts:20-32`, ADR-055):
 
-The only third-party origins a page makes the Browser contact are the two image hosts, `https://ddragon.leagueoflegends.com` and `https://raw.communitydragon.org`; a future `Content-Security-Policy` would list them in `img-src`. The `<link rel="preconnect">` to them (SPD-10) adds no new origin and sends no credentials (`src/lib/assets.ts:9-19`).
+| Header                       | Value                                                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `Strict-Transport-Security`  | `max-age=31536000`: this host only, no `includeSubDomains` or `preload` (owner, 2026-11-05)                     |
+| `X-Content-Type-Options`     | `nosniff`                                                                                                       |
+| `Referrer-Policy`            | `strict-origin-when-cross-origin`                                                                               |
+| `X-Frame-Options`            | `DENY`                                                                                                          |
+| `Cross-Origin-Opener-Policy` | `same-origin`                                                                                                   |
+| `Permissions-Policy`         | `accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()` |
 
-> **TODO (unverified):** Security headers as served at `https://ninjagoldfinch.lol` after Cloudflare (HSTS, CSP and so on). Check with `curl -sI https://ninjagoldfinch.lol/` and the zone's SSL/TLS and Transform Rules settings.
+Every page, error pages included, also carries a `Content-Security-Policy`, which SvelteKit builds from `CSP_DIRECTIVES` (`vite.config.ts`, hash mode):
+
+```
+default-src 'self'; connect-src 'self'; font-src 'self';
+img-src 'self' data: https://ddragon.leagueoflegends.com https://raw.communitydragon.org;
+object-src 'none'; script-src 'self' 'sha256-…'; style-src 'self'; style-src-attr 'unsafe-inline';
+base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+- `script-src` allows the page's one inline script, SvelteKit's bootstrap, by its hash. A hash rather than a nonce, because pages are shared from Cloudflare's cache: a nonce would be served to every visitor of a cached page.
+- `style-src-attr 'unsafe-inline'` allows `style="…"` attributes. The server renders Svelte's `style:` directives as attributes, and the gold chart, the objective markers and the damage bars are positioned from data. It allows no `<style>` element and no stylesheet from elsewhere.
+- `img-src` names the two image hosts from `src/lib/assets.ts` (`DDRAGON_ORIGIN`, `CDRAGON_ORIGIN`), the only third-party origins a page makes the browser contact, and `data:` for the site icon, which Vite inlines. The `<link rel="preconnect">` to them (SPD-10) adds no new origin and sends no credentials.
+- `/` and `/about` are rendered per request, not prerendered, so they get the headers too; adapter-node serves prerendered pages without running `handle` (ADR-055).
+- `/_app/*` files (scripts, styles, fonts) are served by adapter-node before `handle` and carry none of these headers. CSP and framing apply to documents, not to the files they load, and these are the site's own hashed files with a correct `Content-Type`, so the missing `nosniff` there is accepted.
+
+Cloudflare adds none of these itself: on 2026-11-05, before this change, `curl -sI https://ninjagoldfinch.lol/` showed only Cloudflare's `nel`, `report-to` and `cf-*` headers besides the site's own. `tests/e2e/security.test.ts` checks the headers on each page type and fails on any CSP violation while the pages are used, with JavaScript and without.
 
 ## The no-auth modes
 
@@ -103,5 +125,5 @@ The only third-party origins a page makes the Browser contact are the two image 
 
 ---
 
-**Sources:** `src/env.ts:L17-L30`, `src/lib/server/env.ts:L47-L55`, `src/lib/server/proxy.ts:L3,L137-L154`, `src/lib/server/errors.ts:L6-L33`, `src/lib/server/cache.ts:L12-L13`, `src/hooks.server.ts:L31-L39`, `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L47-L50`, `src/lib/domain/match-detail.ts:L198-L201`, `src/routes/champions/+page.server.ts:L7-L14`, `vite.config.ts:L16-L19`, `tests/record-fixture.ts:L45-L48`, `src/lib/assets.ts:L9-L19`, `tests/unit/mock-proxy.test.ts:L29-L30`, `.githooks/pre-commit:L10-L23`, `.gitignore:L16-L18`, `pnpm-workspace.yaml:L3-L7`, `package.json:L34`, `CLAUDE.md:L13-L17`, `docs/DECISIONS.md:L57-L65,L509`, `build/server/adapter-node-handler.js:L489` (generated), `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/http/auth.rs:L43-L52`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:deploy/README.md:L26-L28`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L443,L617-L626,L710`, owner-supplied unit (inventory section 14)
-**Last verified:** 2026-11-03 against commit `ea998cb`
+**Sources:** `src/env.ts:L17-L30`, `src/lib/server/env.ts:L47-L55`, `src/lib/server/proxy.ts:L3,L137-L154`, `src/lib/server/errors.ts:L6-L33`, `src/lib/server/cache.ts:L12-L13`, `src/hooks.server.ts:L20-L32`, `src/lib/server/security.ts`, `src/lib/domain/riot-id.ts:L14-L44`, `src/lib/domain/regions.ts:L47-L50`, `src/lib/domain/match-detail.ts:L198-L201`, `src/routes/champions/+page.server.ts:L7-L14`, `vite.config.ts:L16-L19`, `tests/record-fixture.ts:L45-L48`, `src/lib/assets.ts:L9-L19`, `tests/unit/mock-proxy.test.ts:L29-L30`, `.githooks/pre-commit:L10-L23`, `.gitignore:L16-L18`, `pnpm-workspace.yaml:L3-L7`, `package.json:L34`, `CLAUDE.md:L13-L17`, `docs/DECISIONS.md:L57-L65,L509`, `build/server/adapter-node-handler.js:L489` (generated), `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/http/auth.rs:L43-L52`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:deploy/README.md:L26-L28`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L443,L617-L626,L710`, owner-supplied unit (inventory section 14)
+**Last verified:** 2026-11-05 against branch `feat/P5-03-security-headers`

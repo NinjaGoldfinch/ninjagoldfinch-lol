@@ -821,3 +821,24 @@ Date: 2026-11-05 · Task: DEP-05
 - Each release is a `package.json` bump merged to `main`, then its tag (ADR-051); a failed health check rolls back to the previous release on the host.
 - The move itself is owner work on GitHub and the host; this task's PR carries the version, the drop-in and the procedure. DEP-05 is ticked once production runs `v1.0.0` from `/srv`.
 - `tests/unit/systemd-dropin.test.ts` pins the drop-in to exactly those settings and to the service and layout `deploy.yml` and `scripts/package.sh` use.
+
+## ADR-055: security headers on every response, a hash-based CSP, and `/` and `/about` rendered per request
+
+Date: 2026-11-05 · Task: P5-03
+
+**Context.** The site sent no security headers, and Cloudflare adds none (`curl -sI https://ninjagoldfinch.lol/`, 2026-11-05). Pages are cached at the edge and shared between visitors (ADR-045). Each page has one inline script, SvelteKit's bootstrap, and no `{@html}`, `eval` or workers; Svelte's `style:` directives render as `style` attributes; images come from Data Dragon and CommunityDragon (`src/lib/assets.ts`), and the site icon is a `data:` URI that Vite inlines. `/` and `/about` were prerendered (ADR-045), and adapter-node serves prerendered pages and `/_app/*` files without running `handle`.
+
+**Decision.**
+
+- **Headers in `handle`.** `setSecurityHeaders` (`src/lib/server/security.ts`) sets `Strict-Transport-Security: max-age=31536000`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin` and a `Permissions-Policy` denying accelerometer, camera, geolocation, gyroscope, magnetometer, microphone, payment and USB, on every response `handle` returns: pages, redirects, errors, `__data.json` and `/healthz`. It runs after the cache rules and leaves `Cache-Control` alone.
+- **HSTS for this host only**, without `includeSubDomains` or `preload` (owner, 2026-11-05), so no other subdomain is committed to HTTPS and the header can be withdrawn.
+- **CSP through SvelteKit's `csp` option in hash mode** (`vite.config.ts`, `CSP_DIRECTIVES` in `src/lib/server/security.ts`): `default-src 'self'; script-src 'self'` plus the bootstrap's hash; `style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:` and the two image origins from `assets.ts`; `connect-src`, `font-src`, `base-uri` and `form-action` `'self'`; `object-src 'none'; frame-ancestors 'none'`. Hashes, not nonces: a nonce in a page cached at the edge would be served to every visitor. No `'unsafe-inline'` or `'unsafe-eval'` for scripts.
+- **`style-src-attr 'unsafe-inline'` stays.** The server renders `style:` as attributes, and they carry values computed from data: the gold chart's points and labels, objective markers, damage bars, and image placeholders sized by a prop. Classes cannot express continuous positions, and without JavaScript nothing could set them through the CSSOM. The keyword covers only `style` attributes; `<style>` elements and other origins' stylesheets stay blocked.
+- **`/` and `/about` are rendered per request** (owner, 2026-11-05). Prerendered, they would miss every header but a `<meta>` CSP, which cannot carry `frame-ancestors`. Each has a `+page.server.ts` that sets a new `static` policy, `public, s-maxage=600, stale-while-revalidate=600`; neither calls riot-proxy, so rendering costs almost nothing and the edge still serves repeat views. This replaces ADR-045's prerendered home page; until now these two pages had no `Cache-Control` and Cloudflare's Cache Everything rule kept them for its default TTL.
+- **`/_app/*` files are left alone.** They skip `handle`; CSP, framing and COOP apply to documents, not to the scripts, styles and fonts they load. They are the site's own hashed files with a correct `Content-Type`, so `nosniff` on them would add little, and setting it would need a server in front of adapter-node.
+
+**Consequences.**
+
+- A new third-party origin (an image host, analytics, a font) must be added to `CSP_DIRECTIVES`, or the browser blocks it. `tests/e2e/security.test.ts` fails on any CSP violation while the pages are used, with JavaScript and without.
+- `/` and `/about` now reach the Node process on an edge miss, once per 10 minutes per URL.
+- After the deploy, check through Cloudflare: `curl -sI https://ninjagoldfinch.lol/` and `/champions`.

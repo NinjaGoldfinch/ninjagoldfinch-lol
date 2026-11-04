@@ -2,19 +2,21 @@ import { building } from '$app/env';
 import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
 import { CACHE_POLICIES, responseCachePolicy } from '#lib/server/cache.ts';
 import { warmPatch } from '#lib/server/patch.ts';
+import { setSecurityHeaders } from '#lib/server/security.ts';
 import { timeLoad } from '#lib/server/timing.ts';
 
 // At start-up, load the current patch, its lookups and stat shards in the
 // background, so the first visitor after a deploy doesn't wait for them
 // (SPD-09). Not awaited: requests that arrive first share the same loads.
-// Skipped while `vite build` prerenders, which has no riot-proxy.
+// Skipped while `vite build` runs, which has no riot-proxy.
 export const init: ServerInit = () => {
 	if (!building) void warmPatch();
 };
 
 // Errors and form posts must never be cached at the edge, whatever a load set,
 // and a response no load gave a policy is not cached either. A slow request is
-// logged with its riot-proxy calls (SPD-07).
+// logged with its riot-proxy calls (SPD-07). Every response carries the
+// security headers; SvelteKit adds the CSP to pages itself (ADR-055).
 export const handle: Handle = async ({ event, resolve }) => {
 	const response = await timeLoad(event.route?.id ?? null, event.isDataRequest, () =>
 		resolve(event)
@@ -25,6 +27,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		// never cached. (SvelteKit marks its own data responses private, no-store.)
 		(response.headers.has('cache-control') ? undefined : 'none');
 	if (policy) response.headers.set('cache-control', CACHE_POLICIES[policy]);
+	setSecurityHeaders(response.headers);
 	return response;
 };
 
