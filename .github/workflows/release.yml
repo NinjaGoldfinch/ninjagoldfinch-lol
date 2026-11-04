@@ -101,3 +101,8 @@ jobs:
     with:
       env: staging
       version: ${{ github.ref_name }}
+    # Without it the called deploy job gets the staging environment's variables
+    # but an empty DEPLOY_SSH_KEY: a called workflow sees only secrets its caller
+    # passes on, even its own environment's (v1.0.3's run, ADR-057). This
+    # repository has no repository or organisation secrets, so nothing else goes.
+    secrets: inherit
