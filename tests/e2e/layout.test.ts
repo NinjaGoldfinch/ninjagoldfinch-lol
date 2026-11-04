@@ -19,7 +19,7 @@ test('the accent is light purple', async ({ page }) => {
 	await expect(button).toHaveCSS('background-color', 'oklch(0.79 0.12 302)');
 });
 
-test('the site icon is the ninja goldfinch, not the Svelte default', async ({ page }) => {
+test('the site icon is the purple ninja, not the Svelte default', async ({ page }) => {
 	await page.goto('/');
 	const href = await page.locator('link[rel="icon"]').getAttribute('href');
 	expect(href).toBeTruthy();
@@ -35,9 +35,9 @@ test('the site icon is the ninja goldfinch, not the Svelte default', async ({ pa
 		};
 	}, href ?? '');
 	expect(icon.type).toContain('image/svg+xml');
-	// The lavender backing square and the gold body.
-	expect(icon.backing).toBe('#C4A2F2');
-	expect(icon.fills).toContain('#F2C94C');
+	// The deep-purple backing square, the black hood and the lavender eye band.
+	expect(icon.backing).toBe('#6B3FB8');
+	expect(icon.fills).toEqual(expect.arrayContaining(['#14161C', '#C4A2F2']));
 });
 
 test('an unknown page shows the not-found state, with the footer', async ({ page }) => {

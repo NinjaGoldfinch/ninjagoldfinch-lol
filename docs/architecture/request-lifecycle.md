@@ -234,9 +234,7 @@ sequenceDiagram
 - `/` and `/about` are prerendered at build time and served as static files from `build/prerendered`, without running `handle` (`src/routes/+page.ts:3`, `src/routes/about/+page.ts:2`).
 - Old URLs with a region redirect with 308, sent `no-store` by `handle` (`src/routes/summoner/[region]/[riotId]/+server.ts:9-13`, `src/routes/match/[region]/[matchId]/+server.ts:8-11`).
 
-With JavaScript, SvelteKit fetches a page's `__data.json` instead of its HTML on client-side navigation. It runs the same load. SvelteKit sends it with `private, no-store`, and a redirect or an error in the load comes back as a 200 with a redirect or error node (`node_modules/@sveltejs/kit/src/runtime/server/data/index.js:89-148`). A header the load set with `setHeaders` replaces that, so a load that reached `setHeaders` gives its data the page's policy (`node_modules/@sveltejs/kit/src/runtime/server/respond.js:212-237,513-516`; observed on the profile). Whether Cloudflare caches the `public` ones is open task SPD-06 (`docs/PROGRESS.md:55`).
-
-> **TODO (unverified):** whether Cloudflare caches `__data.json` responses with a `public` policy (SPD-06). Needs a check from outside against production.
+With JavaScript, SvelteKit fetches a page's `__data.json` instead of its HTML on client-side navigation. It runs the same load. SvelteKit sends it with `private, no-store`, and a redirect or an error in the load comes back as a 200 with a redirect or error node (`node_modules/@sveltejs/kit/src/runtime/server/data/index.js:89-148`). A header the load set with `setHeaders` replaces that, so a load that reached `setHeaders` gives its data the page's policy (`node_modules/@sveltejs/kit/src/runtime/server/respond.js:212-237,513-516`; observed on the profile). Cloudflare caches the `public` ones like their HTML: on 2026-11-03 each page type's `__data.json`, with and without `x-sveltekit-invalidated=01`, went `MISS` or `EXPIRED` then `HIT` from outside, with its page's `Cache-Control` (SPD-06, `docs/PROGRESS.md`).
 
 ---
 

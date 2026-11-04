@@ -16,16 +16,9 @@ dev:
 gen:
     pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts
 
-# The one gate: everything a pipeline would run
+# The one gate, also run by the pre-push hook and CI (scripts/check.sh, ADR-050)
 check:
-    pnpm prettier --check .
-    pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts --check
-    pnpm eslint .
-    pnpm svelte-kit sync
-    pnpm svelte-check --tsconfig ./tsconfig.json
-    pnpm vitest run
-    pnpm build
-    bash deploy/proxmox/test.sh
+    bash scripts/check.sh
 
 # Browser smoke tests against the mock proxy
 e2e:

@@ -39,7 +39,9 @@ Measured through Cloudflare on 2026-10-15: `MISS` 55–69 ms, then `HIT` 25–30
 
 Cloudflare does not cache HTML unless a cache rule says so; the plan calls for one that respects origin `Cache-Control` (`docs/IMPLEMENTATION.md:390`). ADR-039 and ADR-042 record `HIT`s on production pages, so a rule exists.
 
-> **TODO (unverified):** the Cloudflare cache rule's exact settings, and whether `__data.json` responses with a `public` policy are cached (SPD-06, `docs/PROGRESS.md:55`). Read them in the Cloudflare dashboard.
+The rule covers `__data.json` too: on 2026-11-03 each page type's `__data.json`, with and without `x-sveltekit-invalidated=01`, went `MISS` or `EXPIRED` then `HIT` from outside, with the same `Cache-Control` as its HTML (SPD-06, `docs/PROGRESS.md`).
+
+> **TODO (unverified):** the Cloudflare cache rule's exact settings. Read them in the Cloudflare dashboard.
 
 **Invalidation.** Nothing purges the edge. A page changes when its `s-maxage` lapses: a profile within 60 s (plus up to 300 s stale while revalidating), analytics within 10 min, a match within a day. Refresh bypasses it by returning the fresh profile in the POST response (ADR-012).
 

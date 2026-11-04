@@ -726,3 +726,22 @@ Date: 2026-11-03 · Task: none
 
 - Anyone may reuse the code under MIT's terms, keeping the copyright notice.
 - Third-party code keeps its own licence; MIT covers only this repository's own code.
+
+## ADR-050: CI runs the gate; releases and deploys follow the shared pipeline
+
+Date: 2026-11-05 · Task: DEP-01
+
+**Context.** The plan kept CI/CD out of scope (`docs/IMPLEMENTATION.md:19`), and `CLAUDE.md` forbade adding any: `just check`, run by the pre-push hook, was the only gate (ADR-002, ADR-003, architecture decision 0010). Production builds in place from a checkout of `main` on `ngf-prod-syd1`. riot-proxy and ninja-monitor now release and deploy through the shared pipeline in `NinjaGoldfinch/ninja-actions` (a deploy tarball per release, `deploy.yml` behind the owner's approval, a health check and automatic rollback on the host). The owner asked for the site to join it, with CI on pull requests (owner, 2026-11-05).
+
+**Decision.**
+
+- The gate is `scripts/check.sh`, the steps `just check` ran, unchanged and in the same order. `just check`, the pre-push hook and CI all run it.
+- `.github/workflows/ci.yml` runs it on every pull request and on `main`: on the self-hosted Proxmox runner, or on a hosted runner for a fork's pull request, with a read-only token, no secrets and actions pinned to commits. The unit tests read the server env, so the job copies `.env.example` to `.env`, as `just setup` does.
+- `CLAUDE.md`'s rule changes from "do not add CI" to: CI, releases and deploys follow the shared pipeline, and change only through a task and an ADR. Releases (semver tags from `v1.0.0`, the owner's choice) and `deploy.yml` come in the next DEP tasks.
+
+**Consequences.**
+
+- A pull request shows the gate's result; nothing changes for local work.
+- `just e2e` stays outside the gate, in CI as locally.
+- GitHub Actions must be enabled on the repository and a runner registered for it on the Proxmox runner VM before the job can run there; until then a pull request's check stays queued.
+- `tests/unit/gate.test.ts` fails if `just check`, the pre-push hook or `ci.yml` stop running `scripts/check.sh`, if the script's steps change, or if CI loses the fork rule, the read-only token or its pinned actions.

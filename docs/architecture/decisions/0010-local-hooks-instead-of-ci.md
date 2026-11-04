@@ -20,7 +20,7 @@ The plan keeps CI/CD out of scope and asks for Actions to be disabled on the pri
 
 ## Status
 
-Accepted.
+Superseded on 2026-11-05 by ADR-050 (`docs/DECISIONS.md`): CI runs the gate, now `scripts/check.sh`, on every pull request, and releases and deploys follow the shared pipeline. The hooks stay.
 
 ## Evidence
 
