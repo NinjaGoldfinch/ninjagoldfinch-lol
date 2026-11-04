@@ -112,6 +112,8 @@ test.describe('with JavaScript', () => {
 
 		// Recent searches, read from localStorage, and client navigation.
 		await page.goto(PROFILE);
+		// The profile records itself once hydrated; leaving before then records nothing.
+		await page.waitForFunction(() => localStorage.getItem('recent-searches')?.includes('OCENZ'));
 		await page.goto('/');
 		await expect(page.getByRole('link', { name: 'NinjaGoldfinch#OCENZ' })).toBeVisible();
 		await page.getByRole('link', { name: 'About' }).first().click();

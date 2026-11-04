@@ -896,3 +896,22 @@ Date: 2026-11-05 · Task: DEP-06
 - Staging shows real data now, behind Access. Its calls, Refresh included, spend production riot-proxy's quota and Riot rate limit, capped by the key's quota; revoking the key cuts staging off without touching the live site.
 - Staging tests the site against production data, not riot-proxy changes; that still needs a staging riot-proxy. Switching to one is an env edit (`PROXY_URL=http://127.0.0.1:8080` and its key).
 - Checked on 2026-11-05: staging at `1.0.3` answered `/healthz`, `/champions` and `/champions/ahri` with 200 through the staging key.
+
+## ADR-059: the browser tests run in CI, on a hosted runner
+
+Date: 2026-11-05 · Task: DEP-07
+
+**Context.** ADR-050 put the gate (`scripts/check.sh`) in CI and left `just e2e` out, as it had been. The browser tests are the only check that drives pages in a real browser: navigation, filters, match tabs and popups, the timeline chart, Refresh, the CSP. A release could pass CI with them failing. The owner asked that nothing deploys untested (2026-11-05). The self-hosted runner (`ngf-ci-home`, Debian 13 from `ninja-actions` `infra/runner-setup.sh`) has build tools only, and its `runner` user has no sudo, so a job cannot install the system libraries Chromium needs.
+
+**Decision.**
+
+- `ci.yml` gains a second job, `just e2e`: checkout, Node 22, `pnpm install --frozen-lockfile`, `.env` from the example, `pnpm exec playwright install --with-deps chromium`, then `pnpm playwright test`, the command `just e2e` runs. It runs on every pull request and push to `main`, and before every release, since `release.yml` calls `ci.yml`.
+- It always runs on `ubuntu-24.04`, where `--with-deps` can install Chromium's libraries. That is free for a public repository, needs no change to the runner VM, and is safe: the job reads no secrets and has a read-only token, like the fork path of `just check`.
+- It stays outside `scripts/check.sh` and the pre-push hook, which keep their ADR-050 steps.
+
+**Consequences.**
+
+- A pull request shows two checks; a release builds only after both pass.
+- The job downloads Chromium on each run (a minute or two).
+- If the runner VM later gets Chromium's libraries, the job could move there; nothing else would change.
+- `tests/unit/gate.test.ts` fails if the job stops running `just e2e`'s command, stops installing Chromium with its libraries, moves off the hosted runner, reads secrets, or stops running before releases.

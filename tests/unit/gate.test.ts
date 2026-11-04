@@ -64,3 +64,37 @@ describe('CI', () => {
 		for (const use of uses) expect(use).toMatch(/@[0-9a-f]{40}$/);
 	});
 });
+
+// ADR-059: the browser tests run in CI too, so every pull request and every
+// release (release.yml calls ci.yml) passes them first.
+describe('CI browser tests', () => {
+	const ci = read('.github/workflows/ci.yml');
+	const e2e = ci.slice(ci.indexOf('\n  e2e:\n'));
+
+	it('run what `just e2e` runs', () => {
+		const recipe = /^e2e:\n {4}(.+)$/m.exec(read('justfile'))?.[1];
+		expect(recipe).toBe('pnpm playwright test');
+		expect(e2e).toMatch(new RegExp(`^ {6}- run: ${recipe}$`, 'm'));
+	});
+
+	it('install the Chromium the locked Playwright expects, with its libraries', () => {
+		expect(e2e).toMatch(/^ {6}- run: pnpm install --frozen-lockfile$/m);
+		expect(e2e).toMatch(/^ {6}- run: pnpm exec playwright install --with-deps chromium$/m);
+	});
+
+	// Chromium's system libraries need root; the self-hosted runner's user has no sudo.
+	it('run on a hosted runner, with no secrets', () => {
+		expect(e2e).toMatch(/^ {4}runs-on: ubuntu-24\.04$/m);
+		expect(e2e).not.toContain('secrets.');
+		expect(e2e).not.toMatch(/^ {4}permissions:/m);
+	});
+
+	it('run before every release', () => {
+		expect(read('.github/workflows/release.yml')).toMatch(
+			/^ {2}ci:\n {4}uses: \.\/\.github\/workflows\/ci\.yml$/m
+		);
+		expect(read('.github/workflows/release.yml')).toMatch(
+			/^ {2}build:\n(?: {4}.*\n)*? {4}needs: ci$/m
+		);
+	});
+});

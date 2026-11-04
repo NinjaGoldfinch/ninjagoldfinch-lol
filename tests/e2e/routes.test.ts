@@ -3,6 +3,16 @@ import { readFileSync } from 'node:fs';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 
+// A profile records itself under recent searches once hydrated, from client
+// JavaScript; leaving the page before then records nothing. On a slow machine
+// the server-rendered heading shows well before that.
+async function recorded(page: Page, name: string) {
+	await page.waitForFunction(
+		(name) => localStorage.getItem('recent-searches')?.includes(name),
+		name
+	);
+}
+
 async function search(page: Page, riotId: string) {
 	const form = page.getByRole('banner').getByRole('search');
 	await form.getByRole('textbox', { name: 'Riot ID or champion' }).fill(riotId);
@@ -172,6 +182,7 @@ test('the champion panel summarises the matches shown', async ({ page }) => {
 test('opened profiles appear under recent searches', async ({ page }) => {
 	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
+	await recorded(page, 'NinjaGoldfinch');
 	await page.goto('/');
 
 	const recent = page.getByRole('region', { name: 'Recent searches' });
@@ -187,6 +198,7 @@ test('a profile reached from another profile is remembered too', async ({ page }
 	// The header search navigates in the page, keeping the profile component.
 	await search(page, 'Synthetic#TEST');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Synthetic#TEST');
+	await recorded(page, 'Synthetic');
 	await page.goto('/');
 
 	const recent = page.getByRole('region', { name: 'Recent searches' });
