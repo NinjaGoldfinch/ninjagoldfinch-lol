@@ -16,7 +16,7 @@ ninjagoldfinch.lol is a server-rendered SvelteKit site that sits in front of rio
 
 **Out of scope for now**
 
-- CI/CD. No GitHub Actions workflows. The repo exposes one `just check` command that a pipeline of your own can call later.
+- CI/CD. No GitHub Actions workflows. The repo exposes one `just check` command that a pipeline of your own can call later. (Superseded by ADR-050, 2026-11-05: CI runs that command, and releases and deploys follow the shared pipeline.)
 - Accounts, Riot Sign On, monetisation, and anything that needs a database in the frontend.
 - Changes to riot-proxy. Gaps found while building are raised as issues there, not patched around here.
 

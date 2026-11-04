@@ -88,6 +88,16 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example` — #84
 - [x] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers — #85
 
+## DEP — releases and deploys through the shared pipeline
+
+Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monitor use (`NinjaGoldfinch/ninja-actions`), with CI on pull requests and semver releases from `v1.0.0`.
+
+- [~] DEP-01 CI runs the gate (`scripts/check.sh`) on every pull request and on `main`; `CLAUDE.md`'s no-CI rule replaced (ADR-050)
+- [ ] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release
+- [ ] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums`
+- [ ] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval
+- [ ] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol`
+
 ## Brought forward
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Production runs without Docker (ADR-038), so the rest of P5-01 (`cloudflared`, no published port, and the 200 MB image check) applies only if the Docker preview path comes back. The preview VM is dormant: VM 104 no longer exists (owner, 2026-10-19).

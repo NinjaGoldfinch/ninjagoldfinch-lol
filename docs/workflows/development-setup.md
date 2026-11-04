@@ -48,7 +48,7 @@ From a clean machine to passing tests and a local ninjagoldfinch.lol rendering p
 just check
 ```
 
-This is the only gate; there is no CI (`CLAUDE.md:11-12`). It runs, in order: `prettier --check .`, a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and `deploy/proxmox/test.sh` (`justfile:19-28`). On a fresh clone at `e7c395c` it passed (exit 0); the suite has 34 test files and 332 tests.
+This is the gate, and CI runs the same script on every pull request (`scripts/check.sh`, ADR-050). It runs, in order: `prettier --check .`, a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and `deploy/proxmox/test.sh` (`scripts/check.sh`; `just check` runs it). The unit tests need a `.env`: `just setup` copies `.env.example`, and CI does the same. On a fresh clone at `e7c395c` it passed (exit 0); the suite has 34 test files and 332 tests.
 
 `just check` and pushes are safe from a linked `git worktree`. `deploy/proxmox/test.sh` runs `git init/commit/tag` in a temporary directory; git exports `GIT_DIR` and its other location variables to hooks, so the script unsets them first (`deploy/proxmox/test.sh:7-10`, RV-01). Before RV-01 those commands landed in the real repository.
 
