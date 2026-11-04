@@ -60,7 +60,7 @@ Definitions of the terms used across these docs and the code, with where each on
 
 **Mock proxy.** `tests/mock-proxy/`, a small HTTP server that replays fixtures in place of riot-proxy for e2e tests and local work ([workflows/testing.md](../workflows/testing.md#how-riot-proxy-is-mocked)).
 
-**The gate.** `just check`, the one required check before a task is done; there is no CI ([workflows/release-process.md](../workflows/release-process.md)).
+**The gate.** `scripts/check.sh`, run by `just check`, the pre-push hook and CI: the one required check before a task is done ([workflows/ci.md](../workflows/ci.md)).
 
 **ADR.** An architecture decision record in `docs/DECISIONS.md` (ADR-001 to ADR-048); digests in [architecture/decisions/README.md](../architecture/decisions/README.md). riot-proxy has its own numbered ADRs; these docs prefix those with `riot-proxy:`.
 

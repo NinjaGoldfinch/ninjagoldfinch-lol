@@ -1,6 +1,6 @@
 # Release process
 
-How a change to ninjagoldfinch.lol travels from a task branch to production. There is no CI, no versioned release and no deploy automation: the local `just check` is the gate, `main` is what ships, and an operator deploys it by hand on the production host.
+How a change to ninjagoldfinch.lol travels from a task branch to production. CI runs the gate (`scripts/check.sh`, the same as `just check`) on every pull request (ADR-050); versioned releases and deploys through the pipeline are being added (`docs/PROGRESS.md`, DEP). Until then there is no versioned release and no deploy automation: `main` is what ships, and an operator deploys it by hand on the production host.
 
 ## Versioning and tags
 
@@ -89,7 +89,7 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 
 | Not present                                      | Why / status                                                                                  |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| GitHub Actions or any CI                         | Forbidden by `CLAUDE.md:11-12`; `just check` is the gate                                      |
+| CI, releases and deploys outside the pipeline    | Only through a task and an ADR (`CLAUDE.md`, ADR-050); CI runs the same gate as `just check`  |
 | A deploy script or unit file in the repo         | ADR-038: "none of them is in the repo as a script or unit file yet" (`docs/DECISIONS.md:513`) |
 | Release tags, artefacts or images for production | Production builds from a checkout on the host (ADR-038)                                       |
 | Automatic rollback                               | Manual, by checking out the previous commit and rebuilding                                    |

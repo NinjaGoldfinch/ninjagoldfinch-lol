@@ -65,10 +65,11 @@ Omitted: `data/schema.md` and `data/migrations.md`. The site has no database, ta
 | [workflows/adding-a-page.md](./workflows/adding-a-page.md)                           | Files to touch for a new page, with `/champions` as the example         |
 | [workflows/adding-a-proxy-call.md](./workflows/adding-a-proxy-call.md)               | Using a riot-proxy route the site does not call yet                     |
 | [workflows/testing.md](./workflows/testing.md)                                       | Unit, e2e, fixtures, mock proxy, deadlines under garbage collection     |
+| [workflows/ci.md](./workflows/ci.md)                                                 | What CI runs on every pull request, and the same check locally          |
 | [workflows/release-process.md](./workflows/release-process.md)                       | Branch to production, by hand                                           |
 | [workflows/code-style-and-conventions.md](./workflows/code-style-and-conventions.md) | Format, lint, naming, errors, logging, commits                          |
 
-Not written: `workflows/ci.md` (there is no CI; `just check` is the gate and CLAUDE.md forbids adding CI) and `workflows/adding-a-migration.md` (no database). `adding-a-riot-call.md` is replaced by `adding-a-proxy-call.md`, because the site never calls Riot.
+Not written: `workflows/adding-a-migration.md` (no database). `adding-a-riot-call.md` is replaced by `adding-a-proxy-call.md`, because the site never calls Riot.
 
 ### Deployment
 
