@@ -858,3 +858,24 @@ Date: 2026-11-05 · Task: P5-03
 - Every page trusts one more script origin, Cloudflare's, which already serves the whole site.
 - The Web Analytics dashboard shows human page views (cached pages and client-side navigation included) and real visitors' Core Web Vitals, alongside SPD-07's server timings.
 - If Web Analytics is turned off in Cloudflare, these two entries can go.
+
+## ADR-057: every release is also built for staging and deployed there without approval
+
+Date: 2026-11-05 · Task: DEP-06
+
+**Context.** A staging host now exists for the shared pipeline: `ngf-mon-syd1` (OVH, `ENV=staging` for `ninja-deploy`), where ninja-monitor already deploys through its `deploy.yml` with `env=staging`. The owner decided (2026-11-05) that the site has a staging copy at `https://staging.ninjagoldfinch.lol`, public only behind Cloudflare Access on its own tunnel, that every release deploys there automatically with no approval, and that prod keeps its approval (ADR-053). The site reaches the staging riot-proxy on loopback. The origin is fixed at build time (ADR-014), so a tarball built for production refuses form posts on any other host. A release created with the workflow's own `GITHUB_TOKEN` starts no other workflow, so a deploy triggered on `release: published` would never run.
+
+**Decision.**
+
+- `scripts/package.sh` builds the same commit twice: `ninjagoldfinch-lol.tar.gz` for `https://ninjagoldfinch.lol` and `ninjagoldfinch-lol-staging.tar.gz` for `https://staging.ninjagoldfinch.lol`, same layout and `version.json`, one `SHA256SUMS` listing both. The two origins are fixed in the script; the `ORIGIN` override for hand builds (ADR-052) goes.
+- `release.yml` attests and publishes both, then calls `deploy.yml` with `env: staging` and the tag. The calling job gets only `contents: read`; the deploy key comes from the `staging` environment, not from the caller.
+- `deploy.yml` takes `staging` or `prod` (staging by default, as ninja-monitor's) by hand, and `env` and `version` through `workflow_call`. It picks the tarball by environment. A first job refuses any other environment name, because a called workflow takes any string and GitHub would create an unknown environment, unprotected, before the deploy job could refuse it. The concurrency group moves to the deploy job, one deploy per environment at a time either way.
+- The `staging` environment has no reviewer and deploys from `main` (by hand) and from `v*` tags (the release run). The host install on `ngf-mon-syd1` is fresh, with no checkout: production's unit with `WorkingDirectory=/srv/ninjagoldfinch-lol/current`, so it needs no drop-in, and a key from the staging riot-proxy. Both are owner work (`docs/deployment/releases.md`).
+
+**Consequences.**
+
+- Every release reaches staging minutes after it is published; prod is still deployed by hand after the owner's approval.
+- Releases up to `v1.0.2` have no staging tarball; the first staging deploy is the next release. Until the `staging` environment and the host are set up, a release's staging job fails while the release itself is published.
+- A release takes one more build (about 3 s). The package test (`scripts/package.test.sh`, in the gate) runs both tarballs and checks that each accepts a form post from its own origin and refuses one from the other's.
+- CI checks against the public staging hostname would need a Cloudflare Access service token; checks from the box use loopback.
+- `tests/unit/deploy-workflow.test.ts` and `tests/unit/release.test.ts` pin the two tarballs, the staging job and its inputs, the environment check and the asset choice.

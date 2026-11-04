@@ -1,10 +1,14 @@
 name: Release
 
-# ADR-052 (task DEP-03). Push a tag such as v1.0.0, matching package.json's
-# version (ADR-051), to publish the site built for https://ninjagoldfinch.lol:
-# ninjagoldfinch-lol.tar.gz, the deploy tarball ninja-deploy unpacks (one
-# top-level directory with build/, package.json, LICENSE and version.json),
-# SHA256SUMS and build provenance. The gate runs first.
+# ADR-052, ADR-057. Push a tag such as v1.0.0, matching package.json's version
+# (ADR-051), to publish the site as the deploy tarballs ninja-deploy unpacks
+# (one top-level directory with build/, package.json, LICENSE and
+# version.json): ninjagoldfinch-lol.tar.gz built for https://ninjagoldfinch.lol
+# and ninjagoldfinch-lol-staging.tar.gz built for
+# https://staging.ninjagoldfinch.lol, with SHA256SUMS and build provenance. The
+# gate runs first; once published, the release deploys to staging through
+# deploy.yml. A release created with this workflow's token starts no other
+# workflow, so the deploy is called here rather than on `release: published`.
 on:
   push:
     tags: ['v*']
@@ -45,13 +49,16 @@ jobs:
       - name: Attest build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          subject-path: dist/ninjagoldfinch-lol.tar.gz
+          subject-path: |
+            dist/ninjagoldfinch-lol.tar.gz
+            dist/ninjagoldfinch-lol-staging.tar.gz
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release
           path: |
             dist/ninjagoldfinch-lol.tar.gz
+            dist/ninjagoldfinch-lol-staging.tar.gz
             dist/SHA256SUMS
           if-no-files-found: error
 
@@ -81,4 +88,16 @@ jobs:
             --verify-tag \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
-            ninjagoldfinch-lol.tar.gz SHA256SUMS
+            ninjagoldfinch-lol.tar.gz ninjagoldfinch-lol-staging.tar.gz SHA256SUMS
+
+  # Every release goes to staging without approval; prod is deployed by hand
+  # with deploy.yml and waits for the owner (ADR-053, ADR-057).
+  staging:
+    name: Deploy to staging
+    needs: release
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      env: staging
+      version: ${{ github.ref_name }}
