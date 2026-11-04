@@ -137,14 +137,14 @@ The unit text passes `systemd-analyze verify` (checked 2026-10-20).
 ```sh
 systemctl is-active ninjagoldfinch-lol                 # active
 sudo ss -ltnp | grep ':3000 '                          # 127.0.0.1:3000 only
-curl -s http://127.0.0.1:3000/healthz                  # {"ok":true}
+curl -s http://127.0.0.1:3000/healthz                  # {"ok":true,"version":"…"}
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/champions   # 200
 sudo journalctl -u ninjagoldfinch-lol -n 20 --no-pager # "Listening on http://127.0.0.1:3000"
 ```
 
 If the service exits at once, the journal shows SvelteKit's `env_invalid` with the variable, for example `PROXY_KEY is required when NODE_ENV=production` or `PROXY_URL is required` (`src/lib/server/env.ts:10-15,47-55`). These outputs were reproduced on 2026-10-20 by running the same build with the same five variables outside systemd.
 
-`/healthz` does not touch riot-proxy (`src/routes/healthz/+server.ts:5-6`); `/champions` does, so a 503 there with a healthy `/healthz` means the site cannot use riot-proxy ([operations/troubleshooting.md](../operations/troubleshooting.md)).
+`/healthz` does not touch riot-proxy (`src/routes/healthz/+server.ts:7-9`); `/champions` does, so a 503 there with a healthy `/healthz` means the site cannot use riot-proxy ([operations/troubleshooting.md](../operations/troubleshooting.md)).
 
 ## 9. Cloudflare Tunnel
 
@@ -177,5 +177,5 @@ Expect `cache-control: public, s-maxage=600, stale-while-revalidate=600` on `/ch
 
 ---
 
-**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L6-L9`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L5-L6`, `README.md:L89-L114`, `docs/DECISIONS.md:L171-L184,L500-L516`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
+**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L6-L9`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L7-L9`, `README.md:L89-L114`, `docs/DECISIONS.md:L171-L184,L500-L516`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
 **Last verified:** 2026-11-03 against commit `6d46c74` (citations only; build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)

@@ -39,13 +39,13 @@ Checked on 2026-10-20 with a local riot-proxy v2.7.0: a site line `proxy 401 GET
 ## Health checks
 
 ```sh
-curl -s http://127.0.0.1:3000/healthz                                       # {"ok":true}: the process is up
+curl -s http://127.0.0.1:3000/healthz                                       # {"ok":true,"version":"…"}: the process is up
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/champions    # 200: riot-proxy is usable
 curl -s http://127.0.0.1:8080/readyz                                        # riot-proxy's own readiness
 curl -sI https://ninjagoldfinch.lol/healthz | head -1                       # through Cloudflare
 ```
 
-`/healthz` never calls riot-proxy (`src/routes/healthz/+server.ts:5-6`), so a healthy `/healthz` with failing pages points at riot-proxy, the key, or Riot. The site has no readiness endpoint ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
+`/healthz` never calls riot-proxy (`src/routes/healthz/+server.ts:7-9`), so a healthy `/healthz` with failing pages points at riot-proxy, the key, or Riot. The site has no readiness endpoint ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
 
 ## Keys
 
@@ -165,5 +165,5 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L5-L6`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L7-L9`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
 **Last verified:** 2026-11-03 against commit `e183749`

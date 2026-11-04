@@ -41,7 +41,7 @@ Then verify:
 
 ```sh
 systemctl is-active ninjagoldfinch-lol
-curl -s http://127.0.0.1:3000/healthz                                    # {"ok":true}
+curl -s http://127.0.0.1:3000/healthz                                    # {"ok":true,"version":"…"}
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/champions # 200
 sudo journalctl -u ninjagoldfinch-lol --since '-5 min' --no-pager
 ```

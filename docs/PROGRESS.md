@@ -94,7 +94,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monitor use (`NinjaGoldfinch/ninja-actions`), with CI on pull requests and semver releases from `v1.0.0`.
 
 - [~] DEP-01 CI runs the gate (`scripts/check.sh`) on every pull request and on `main`; `CLAUDE.md`'s no-CI rule replaced (ADR-050)
-- [ ] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release
+- [~] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release (ADR-051)
 - [ ] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums`
 - [ ] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval
 - [ ] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol`

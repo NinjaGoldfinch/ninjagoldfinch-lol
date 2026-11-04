@@ -52,7 +52,7 @@ While riot-proxy is being restored the site stays up: `/healthz` answers, data p
 There is no scheduled restore test for the site. To test one without touching production:
 
 1. On a scratch Ubuntu 26.04 machine or VM, follow [install.md](./install.md) steps 1 to 8 with `PROXY_URL` pointing at a local riot-proxy started with `AUTH_DISABLED=true` ([workflows/development-setup.md](../workflows/development-setup.md#option-b-against-a-riot-proxy-you-run-yourself)), and any placeholder `PROXY_KEY`.
-2. Check `curl -s http://127.0.0.1:3000/healthz` returns `{"ok":true}` and `/champions` returns 200.
+2. Check `curl -s http://127.0.0.1:3000/healthz` returns `{"ok":true,…}` and `/champions` returns 200.
 3. Skip the Tunnel step; do not attach a second connector to the production Tunnel.
 
 Steps 5 to 8 of that procedure were run outside systemd on 2026-10-20 and behaved as written.
