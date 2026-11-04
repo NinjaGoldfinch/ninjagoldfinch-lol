@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { CDRAGON_ORIGIN, DDRAGON_ORIGIN } from '#lib/assets.ts';
-import { CSP_DIRECTIVES, SECURITY_HEADERS, setSecurityHeaders } from '#lib/server/security.ts';
+import {
+	CLOUDFLARE_INSIGHTS,
+	CSP_DIRECTIVES,
+	SECURITY_HEADERS,
+	setSecurityHeaders
+} from '#lib/server/security.ts';
 
 describe('setSecurityHeaders', () => {
 	it('sets every header with its exact value', () => {
@@ -35,7 +40,7 @@ describe('CSP_DIRECTIVES', () => {
 	it('blocks everything the site does not use', () => {
 		expect(CSP_DIRECTIVES).toEqual({
 			'default-src': ['self'],
-			'script-src': ['self'],
+			'script-src': ['self', 'https://static.cloudflareinsights.com'],
 			'style-src': ['self'],
 			'style-src-attr': ['unsafe-inline'],
 			'img-src': [
@@ -44,7 +49,7 @@ describe('CSP_DIRECTIVES', () => {
 				'https://ddragon.leagueoflegends.com',
 				'https://raw.communitydragon.org'
 			],
-			'connect-src': ['self'],
+			'connect-src': ['self', 'https://cloudflareinsights.com'],
 			'font-src': ['self'],
 			'object-src': ['none'],
 			'base-uri': ['self'],
@@ -56,6 +61,11 @@ describe('CSP_DIRECTIVES', () => {
 	it('takes the image hosts from assets.ts', () => {
 		expect(CSP_DIRECTIVES['img-src']).toContain(DDRAGON_ORIGIN);
 		expect(CSP_DIRECTIVES['img-src']).toContain(CDRAGON_ORIGIN);
+	});
+
+	it("allows only Cloudflare's analytics beyond the site's own origin for scripts and requests", () => {
+		expect(CSP_DIRECTIVES['script-src']).toEqual(['self', CLOUDFLARE_INSIGHTS.script]);
+		expect(CSP_DIRECTIVES['connect-src']).toEqual(['self', CLOUDFLARE_INSIGHTS.report]);
 	});
 
 	it('allows no inline or eval script, and inline styles only as attributes', () => {

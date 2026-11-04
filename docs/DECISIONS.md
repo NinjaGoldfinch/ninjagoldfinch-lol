@@ -842,3 +842,19 @@ Date: 2026-11-05 · Task: P5-03
 - A new third-party origin (an image host, analytics, a font) must be added to `CSP_DIRECTIVES`, or the browser blocks it. `tests/e2e/security.test.ts` fails on any CSP violation while the pages are used, with JavaScript and without.
 - `/` and `/about` now reach the Node process on an edge miss, once per 10 minutes per URL.
 - After the deploy, check through Cloudflare: `curl -sI https://ninjagoldfinch.lol/` and `/champions`.
+
+## ADR-056: the CSP allows Cloudflare Web Analytics
+
+Date: 2026-11-05 · Task: P5-03
+
+**Context.** Cloudflare adds its Web Analytics beacon to every page at the edge: a deferred `<script src="https://static.cloudflareinsights.com/beacon.min.js/…">` that reports page views, load timing and Core Web Vitals to `https://cloudflareinsights.com`, without cookies or storage. The site's code does not include it. After `v1.0.1` (ADR-055) the CSP blocked it in production, so Cloudflare recorded nothing. The owner wants the analytics on (2026-11-05).
+
+**Decision.**
+
+- `CLOUDFLARE_INSIGHTS` in `src/lib/server/security.ts` names the two origins. `script-src` adds `https://static.cloudflareinsights.com` and `connect-src` adds `https://cloudflareinsights.com`. Nothing else changes: still no `'unsafe-inline'` or `'unsafe-eval'` for scripts, and the beacon is an external script, so it needs no hash.
+
+**Consequences.**
+
+- Every page trusts one more script origin, Cloudflare's, which already serves the whole site.
+- The Web Analytics dashboard shows human page views (cached pages and client-side navigation included) and real visitors' Core Web Vitals, alongside SPD-07's server timings.
+- If Web Analytics is turned off in Cloudflare, these two entries can go.

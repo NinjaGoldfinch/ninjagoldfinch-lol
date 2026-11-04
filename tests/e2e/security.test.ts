@@ -22,11 +22,11 @@ const CSP = new RegExp(
 	'^' +
 		[
 			"default-src 'self'",
-			"connect-src 'self'",
+			"connect-src 'self' https://cloudflareinsights\\.com",
 			"font-src 'self'",
 			"img-src 'self' data: https://ddragon\\.leagueoflegends\\.com https://raw\\.communitydragon\\.org",
 			"object-src 'none'",
-			"script-src 'self' 'sha256-[A-Za-z0-9+/]+={0,2}'",
+			"script-src 'self' https://static\\.cloudflareinsights\\.com 'sha256-[A-Za-z0-9+/]+={0,2}'",
 			"style-src 'self'",
 			"style-src-attr 'unsafe-inline'",
 			"base-uri 'self'",

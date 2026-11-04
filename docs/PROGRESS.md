@@ -101,7 +101,7 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 
 ## P5 — Production
 
-- [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107
+- [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
 
 ## Brought forward
 
