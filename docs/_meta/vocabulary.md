@@ -18,7 +18,7 @@ The one list of names used across `docs/`. If a document needs a name that is no
 | Onidel Object Storage | Onidel's S3-compatible storage in Sydney; riot-proxy's archive store          | `Onidel Object Storage` |
 | Cloudflare R2         | Cloudflare's S3-compatible storage; riot-proxy's archive replica and backups  | `Cloudflare R2`         |
 | GitHub                | Hosts both repos and riot-proxy's releases                                    | `GitHub`                |
-| GitHub Actions        | riot-proxy's CI; ninjagoldfinch.lol has none                                  | `GitHub Actions`        |
+| GitHub Actions        | CI for both repositories; the site's runs the gate (ADR-050)                  | `GitHub Actions`        |
 | mock proxy            | `tests/mock-proxy/`, a stand-in for riot-proxy that replays `tests/fixtures/` | `mock proxy`            |
 | production host       | The Onidel ONI-4 VPS `ngf-prod-syd1` in Sydney that runs both services        | `ngf-prod-syd1`         |
 | monitoring host       | `ngf-mon-syd1`, the former production box, now running ninja-monitor          | `ngf-mon-syd1`          |

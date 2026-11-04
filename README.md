@@ -37,7 +37,7 @@ just dev     # dev server
 | `just fixture` | Record one riot-proxy response as a test fixture (spends Riot rate limit)                                                                                                                                  |
 | `just image`   | Build the Docker image (for the dormant preview VM; production runs without Docker)                                                                                                                        |
 
-There is no CI. The pre-push hook runs `just check`, and the pre-commit hook refuses commits on `main` and staged content that looks like a riot-proxy or Riot API key.
+CI runs the same gate as `just check` (`scripts/check.sh`) on every pull request and on `main` (`.github/workflows/ci.yml`, ADR-050). The pre-push hook runs `just check` too, and the pre-commit hook refuses commits on `main` and staged content that looks like a riot-proxy or Riot API key.
 
 ## riot-proxy
 

@@ -75,7 +75,7 @@ Everything else, Svelte and SvelteKit included, is bundled into `build/` at buil
 
 ## Updating dependencies
 
-There is no Dependabot configuration and no CI, so updates are ordinary tasks: change the range or run `pnpm update <pkg>`, commit `package.json` and `pnpm-lock.yaml`, and pass `just check` and `just e2e`. Record a reason in `docs/DECISIONS.md` when a pin or peer override changes (as ADR-005 and ADR-006 do).
+There is no Dependabot configuration, so updates are ordinary tasks (CI runs the gate on their pull request, ADR-050): change the range or run `pnpm update <pkg>`, commit `package.json` and `pnpm-lock.yaml`, and pass `just check` and `just e2e`. Record a reason in `docs/DECISIONS.md` when a pin or peer override changes (as ADR-005 and ADR-006 do).
 
 ---
 

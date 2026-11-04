@@ -70,6 +70,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 
 - [x] FIX-01 A bot laner's match row, with its role quest slot, keeps Details beside the items — #65
 - [x] FIX-02 The site icon is a ninja goldfinch on a lavender square, replacing the Svelte default — #94
+- [x] FIX-03 The site icon is a black-hooded ninja with a lavender eye band on a deep-purple square, visible on dark and light tabs — #97
 
 ## RV — fixes from the code review of 2026-11-03
 
@@ -86,6 +87,16 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] RV-11 Docs brought up to date with the ADRs; finished notes archived — #83
 - [x] RV-12 Image and deploy: healthcheck port and start period, quoting, `.env.example` — #84
 - [x] RV-13 Tests: no key or real PUUID in the fixtures; static data across patches and concurrent callers — #85
+
+## DEP — releases and deploys through the shared pipeline
+
+Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monitor use (`NinjaGoldfinch/ninja-actions`), with CI on pull requests and semver releases from `v1.0.0`.
+
+- [~] DEP-01 CI runs the gate (`scripts/check.sh`) on every pull request and on `main`; `CLAUDE.md`'s no-CI rule replaced (ADR-050)
+- [ ] DEP-02 `/healthz` reports the running version, so a deploy waits for the new release
+- [ ] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums`
+- [ ] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval
+- [ ] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol`
 
 ## Brought forward
 
