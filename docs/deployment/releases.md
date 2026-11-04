@@ -96,12 +96,14 @@ curl -fsSL https://raw.githubusercontent.com/NinjaGoldfinch/ninjagoldfinch-lol/v
 sudo systemctl daemon-reload
 sudo systemctl restart ninjagoldfinch-lol
 
-curl -s http://127.0.0.1:3000/healthz                      # {"ok":true,"version":"1.0.0"}
+# Node takes a second or so to listen: wait, as ninja-deploy does, before judging.
+for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz && break; sleep 1; done; echo
+                                                           # {"ok":true,"version":"1.0.0"}
 curl -sI https://ninjagoldfinch.lol/champions | head -1    # 200
 systemctl show ninjagoldfinch-lol -p ExecStart | grep -o '/srv/[^ ;]*'
 ```
 
-If `/healthz` does not answer `1.0.0` within a few seconds, go back to the checkout and read the journal:
+Checking straight after the restart gets no answer from `/healthz` and a 502 through Cloudflare while Node starts; that is not a failure. If `/healthz` has not answered `1.0.0` after the 30 s wait, go back to the checkout and read the journal:
 
 ```sh
 sudo rm /etc/systemd/system/ninjagoldfinch-lol.service.d/ninja-deploy.conf
@@ -127,4 +129,4 @@ cat /srv/ninjagoldfinch-lol/live.json                      # on the host
 ---
 
 **Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), owner-supplied unit (inventory section 14)
-**Last verified:** 2026-11-05, before the move
+**Last verified:** 2026-11-05, during the move: `v1.0.0` started from `/srv` and served pages within a second of the restart
