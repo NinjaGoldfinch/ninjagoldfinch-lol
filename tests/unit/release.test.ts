@@ -24,10 +24,20 @@ describe('the release workflow', () => {
 		expect(release).toMatch(/^ {6}- run: scripts\/package\.sh "\$GITHUB_REF_NAME" dist$/m);
 	});
 
-	it('publishes the tarball and its checksums for the tag, once checked', () => {
+	it('publishes both tarballs and their checksums for the tag, once checked', () => {
 		expect(release).toContain('sha256sum --strict -c SHA256SUMS');
 		expect(release).toContain('--verify-tag');
-		expect(release).toMatch(/^ {12}ninjagoldfinch-lol\.tar\.gz SHA256SUMS$/m);
+		expect(release).toMatch(
+			/^ {12}ninjagoldfinch-lol\.tar\.gz ninjagoldfinch-lol-staging\.tar\.gz SHA256SUMS$/m
+		);
+	});
+
+	it('attests and hands on both tarballs', () => {
+		for (const asset of ['ninjagoldfinch-lol', 'ninjagoldfinch-lol-staging']) {
+			expect([
+				...release.matchAll(new RegExp(`^ {12}dist/${asset}\\.tar\\.gz$`, 'gm'))
+			]).toHaveLength(2);
+		}
 	});
 
 	it('reads by default and writes only to publish', () => {

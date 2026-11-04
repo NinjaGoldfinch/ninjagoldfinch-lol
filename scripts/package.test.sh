@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Checks scripts/package.sh (ADR-052): it refuses a tag that is not package.json's
-# version, and the tarball it makes runs on its own, unpacked away from the
-# checkout with no node_modules, answering /healthz with that version and serving
-# a page from the mock riot-proxy.
+# Checks scripts/package.sh (ADR-052, ADR-057): it refuses a tag that is not
+# package.json's version, and each tarball it makes runs on its own, unpacked
+# away from the checkout with no node_modules: /healthz answers with that
+# version, a page is served from the mock riot-proxy, and a form post is
+# accepted from the tarball's own origin and refused from the other's.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -17,6 +18,8 @@ fail() { echo "package test: $*" >&2; exit 1; }
 free_port() { node -e 'const s = require("node:net").createServer().listen(0, () => { console.log(s.address().port); s.close(); })'; }
 
 version=$(node -p 'require("./package.json").version')
+prod=https://ninjagoldfinch.lol
+staging=https://staging.ninjagoldfinch.lol
 
 for tag in "v9.9.9" "$version" "v$version;id" ""; do
 	scripts/package.sh "$tag" "$tmp/refused" 2>/dev/null && fail "accepted tag '$tag'"
@@ -24,34 +27,55 @@ done
 [ ! -e "$tmp/refused" ] || fail "a refused tag left output behind"
 
 scripts/package.sh "v$version" "$tmp/dist" >/dev/null 2>&1 || fail "packaging v$version failed"
+[ "$(cut -d' ' -f3 "$tmp/dist/SHA256SUMS")" = "$(printf '%s\n' ninjagoldfinch-lol.tar.gz ninjagoldfinch-lol-staging.tar.gz)" ] ||
+	fail "SHA256SUMS must list the prod then the staging tarball: $(cat "$tmp/dist/SHA256SUMS")"
 (cd "$tmp/dist" && sha256sum --strict --quiet -c SHA256SUMS) || fail "SHA256SUMS does not match"
-[ "$(tar -tzf "$tmp/dist/ninjagoldfinch-lol.tar.gz" | cut -d/ -f1 | sort -u)" = ninjagoldfinch-lol ] ||
-	fail "the tarball must hold one top-level directory"
-
-mkdir "$tmp/release"
-tar -xzf "$tmp/dist/ninjagoldfinch-lol.tar.gz" -C "$tmp/release" --strip-components=1
-release=$tmp/release
-grep -Eqx "\{\"version\":\"v$version\",\"commit\":\"[0-9a-f]{40}\",\"built_at\":\"[0-9T:-]+Z\"\}" \
-	"$release/version.json" || fail "bad version.json: $(cat "$release/version.json")"
-[ ! -e "$release/node_modules" ] || fail "the release must not carry node_modules"
 
 proxy_port=$(free_port)
 node tests/mock-proxy/server.ts "$proxy_port" >/dev/null &
 pids+=($!)
-site_port=$(free_port)
-(cd "$tmp" && env -i PATH="$PATH" NODE_ENV=production PORT="$site_port" \
-	PROXY_URL="http://127.0.0.1:$proxy_port" PROXY_KEY=package-test-placeholder \
-	CDRAGON_URL="http://127.0.0.1:$proxy_port" node "$release/build" >"$tmp/site.log" 2>&1) &
-pids+=($!)
 
-body=''
-for _ in $(seq 50); do
-	body=$(curl -fsS --max-time 2 "http://127.0.0.1:$site_port/healthz" 2>/dev/null) && break
-	sleep 0.2
-done
-[ "$body" = "{\"ok\":true,\"version\":\"$version\"}" ] ||
-	fail "/healthz answered '$body'; server log: $(cat "$tmp/site.log")"
-status=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$site_port/champions")
-[ "$status" = 200 ] || fail "/champions answered $status; server log: $(cat "$tmp/site.log")"
+# <asset> <its origin> <the other origin>
+check() {
+	local asset=$1 origin=$2 other=$3 release port body status
+	[ "$(tar -tzf "$tmp/dist/$asset.tar.gz" | cut -d/ -f1 | sort -u)" = ninjagoldfinch-lol ] ||
+		fail "$asset: the tarball must hold one top-level directory"
+	release=$tmp/$asset
+	mkdir "$release"
+	tar -xzf "$tmp/dist/$asset.tar.gz" -C "$release" --strip-components=1
+	grep -Eqx "\{\"version\":\"v$version\",\"commit\":\"[0-9a-f]{40}\",\"built_at\":\"[0-9T:-]+Z\"\}" \
+		"$release/version.json" || fail "$asset: bad version.json: $(cat "$release/version.json")"
+	[ ! -e "$release/node_modules" ] || fail "$asset: the release must not carry node_modules"
+
+	port=$(free_port)
+	(cd "$tmp" && env -i PATH="$PATH" NODE_ENV=production PORT="$port" \
+		PROXY_URL="http://127.0.0.1:$proxy_port" PROXY_KEY=package-test-placeholder \
+		CDRAGON_URL="http://127.0.0.1:$proxy_port" node "$release/build" >"$tmp/$asset.log" 2>&1) &
+	pids+=($!)
+
+	body=''
+	for _ in $(seq 50); do
+		body=$(curl -fsS --max-time 2 "http://127.0.0.1:$port/healthz" 2>/dev/null) && break
+		sleep 0.2
+	done
+	[ "$body" = "{\"ok\":true,\"version\":\"$version\"}" ] ||
+		fail "$asset: /healthz answered '$body'; server log: $(cat "$tmp/$asset.log")"
+	status=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/champions")
+	[ "$status" = 200 ] || fail "$asset: /champions answered $status; server log: $(cat "$tmp/$asset.log")"
+
+	# The origin is fixed at build time (ADR-014): SvelteKit refuses a form post from any other.
+	post() {
+		curl -s -o /dev/null -w '%{http_code}' -X POST -H "Origin: $1" \
+			-H 'Content-Type: application/x-www-form-urlencoded' --data '' \
+			"http://127.0.0.1:$port/summoner/NinjaGoldfinch-OCENZ?/refresh"
+	}
+	status=$(post "$origin")
+	[ "$status" != 403 ] || fail "$asset: a form post from $origin was refused"
+	status=$(post "$other")
+	[ "$status" = 403 ] || fail "$asset: a form post from $other answered $status, not 403"
+}
+
+check ninjagoldfinch-lol "$prod" "$staging"
+check ninjagoldfinch-lol-staging "$staging" "$prod"
 
 echo "package test: ok"

@@ -98,6 +98,7 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 - [x] DEP-03 a `v*` tag builds a release: the site built for `https://ninjagoldfinch.lol` as a deploy tarball with `version.json`, and `sha256sums` (ADR-052) — #101
 - [x] DEP-04 `deploy.yml`: a release to `prod` through `ninja-actions/deploy@v1`, behind the owner's approval (ADR-053) — #102
 - [x] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol` (ADR-054) — #103, #105
+- [~] DEP-06 staging: each release also built for `https://staging.ninjagoldfinch.lol` and deployed there by `release.yml` with no approval; prod keeps its approval (ADR-057)
 
 ## P5 — Production
 
