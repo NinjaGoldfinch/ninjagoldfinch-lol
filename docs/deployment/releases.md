@@ -133,7 +133,7 @@ cat /srv/ninjagoldfinch-lol/live.json                      # on the host
 
 ## Staging
 
-Every release also deploys to staging, `https://staging.ninjagoldfinch.lol`, with no approval: `release.yml` calls `deploy.yml` with `env: staging` once the release is published (ADR-057). Prod still waits for the owner. Staging runs on `ngf-mon-syd1` (OVH, `ENV=staging` in `/etc/ninja-deploy/env`), next to ninja-monitor and the staging riot-proxy, behind Cloudflare Access on its own tunnel (`ngf-staging`, `staging.ninjagoldfinch.lol` → `127.0.0.1:3000`).
+Every release also deploys to staging, `https://staging.ninjagoldfinch.lol`, with no approval: `release.yml` calls `deploy.yml` with `env: staging` once the release is published (ADR-057). Prod still waits for the owner. Staging runs on `ngf-mon-syd1` (OVH, `ENV=staging` in `/etc/ninja-deploy/env`), next to ninja-monitor, behind Cloudflare Access on its own tunnel (`ngf-staging`, `staging.ninjagoldfinch.lol` → `127.0.0.1:3000`). It reads its data from production riot-proxy at `https://api.ninjagoldfinch.lol`, with a key of its own, `ninjagoldfinch-lol-staging`, quota 120 a minute (ADR-058).
 
 The origin is fixed at build time (ADR-014), so each release carries two tarballs from the same commit, listed in one `SHA256SUMS`: `ninjagoldfinch-lol.tar.gz` for `https://ninjagoldfinch.lol` and `ninjagoldfinch-lol-staging.tar.gz` for `https://staging.ninjagoldfinch.lol`. `deploy.yml` picks the tarball by environment; `/healthz` reports the same version from both.
 
@@ -167,7 +167,7 @@ rm /tmp/deploy-key /tmp/deploy-key.pub
 
 The host key's SHA256 fingerprint is `mmH6z4Rh/xdv/rweuR7awTeUy41kan3pGQxPGWQn5gU`; check the line with `ssh-keyscan -t ed25519 51.161.153.34 | ssh-keygen -lf -`.
 
-**2. The site on `ngf-mon-syd1`.** A fresh install: no checkout, the unit runs the release directly. The site needs a key of its own from the staging riot-proxy, never the production one. Until the staging riot-proxy exists, use a placeholder: with `NODE_ENV=production` the site refuses to start without some `PROXY_KEY`, but `/healthz` never calls riot-proxy, so the site deploys and passes its health check while data pages answer 503 "Temporarily unavailable" (checked 2026-11-05 with nothing on the proxy port). Step 5 swaps in the real key.
+**2. The site on `ngf-mon-syd1`.** A fresh install: no checkout, the unit runs the release directly. The site needs a riot-proxy key of its own, never production's `ninjagoldfinch-lol-prod`. Install it with a placeholder first: with `NODE_ENV=production` the site refuses to start without some `PROXY_KEY`, but `/healthz` never calls riot-proxy, so the site deploys and passes its health check while data pages answer 503 "Temporarily unavailable" (checked 2026-11-05 with nothing on the proxy port). Step 5 swaps in the real key.
 
 ```sh
 node --version                                            # v22.18 or later
@@ -229,19 +229,37 @@ for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz 2>/dev/null && br
 cat /srv/ninjagoldfinch-lol/live.json                     # "env":"staging"
 ```
 
-With the placeholder key, `/` and `/about` render and data pages such as `/champions` answer 503; the journal logs `proxy unreachable` until the staging riot-proxy runs.
+With the placeholder key, `/` and `/about` render and data pages such as `/champions` answer 503; the journal logs `proxy unreachable` until step 5.
 
-**5. The real key, once the staging riot-proxy exists.** Make the site a key on the staging riot-proxy (`riot-proxy key create --name ninjagoldfinch-lol-staging`, [integration/authentication.md](../integration/authentication.md)), then on the box:
+**5. The real key, from production riot-proxy** (ADR-058). On `ngf-prod-syd1`, run riot-proxy's CLI as its unit does: user `riot-proxy`, `/etc/riot-proxy/env`, working directory `/var/lib/riot-proxy` (the env file sets no `DATA_DIR`, so the database is `./data` there; any other directory makes a new, empty one). Check with `key list` first that it sees the live consumers, then create the key and keep the `rpx_` value it prints once:
 
 ```sh
-curl -s http://127.0.0.1:8080/readyz; echo               # the staging riot-proxy answers
-sudoedit /etc/ninjagoldfinch-lol/env                      # PROXY_KEY=<the new staging key>
+rp() {
+  sudo systemd-run --pipe --wait --quiet -p User=riot-proxy -p EnvironmentFile=/etc/riot-proxy/env \
+    -p WorkingDirectory=/var/lib/riot-proxy /srv/riot-proxy/current/riot-proxy "$@"
+}
+rp key list                                                # ninjagoldfinch-lol-prod and the others
+rp key create --name ninjagoldfinch-lol-staging --quota 120
+```
+
+Then on `ngf-mon-syd1`, test the key and switch the site to it:
+
+```sh
+read -rsp 'staging key: ' K; echo                        # not echoed, not in history
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $K" \
+  https://api.ninjagoldfinch.lol/v1/static/versions      # 200
+unset K
+sudoedit /etc/ninjagoldfinch-lol/env
+#   PROXY_URL=https://api.ninjagoldfinch.lol
+#   PROXY_KEY=<the ninjagoldfinch-lol-staging key>
 sudo systemctl restart ninjagoldfinch-lol
 for i in $(seq 30); do curl -fsS http://127.0.0.1:3000/healthz 2>/dev/null && break; sleep 1; done; echo
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/champions   # 200
 ```
 
+To cut staging off without touching the live site: `rp key revoke ninjagoldfinch-lol-staging` on `ngf-prod-syd1`. If a staging riot-proxy is set up later, the switch is the same edit: `PROXY_URL=http://127.0.0.1:8080` and a key made on it.
+
 ---
 
-**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
+**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-05, during the move: `v1.0.0` started from `/srv` and served pages within a second of the restart

@@ -870,7 +870,7 @@ Date: 2026-11-05 · Task: DEP-06
 - `scripts/package.sh` builds the same commit twice: `ninjagoldfinch-lol.tar.gz` for `https://ninjagoldfinch.lol` and `ninjagoldfinch-lol-staging.tar.gz` for `https://staging.ninjagoldfinch.lol`, same layout and `version.json`, one `SHA256SUMS` listing both. The two origins are fixed in the script; the `ORIGIN` override for hand builds (ADR-052) goes.
 - `release.yml` attests and publishes both, then calls `deploy.yml` with `env: staging` and the tag. The calling job gets only `contents: read`. It passes `secrets: inherit`: a called workflow sees only the secrets its caller passes on, even those of the environment its own job runs in. Without it, `v1.0.3`'s staging deploy got the `staging` environment's variables and an empty `DEPLOY_SSH_KEY`, and failed; a manual run of `deploy.yml` with the same inputs deployed. The repository has no repository or organisation secrets, so the key is all that reaches the deploy.
 - `deploy.yml` takes `staging` or `prod` (staging by default, as ninja-monitor's) by hand, and `env` and `version` through `workflow_call`. It picks the tarball by environment. A first job refuses any other environment name, because a called workflow takes any string and GitHub would create an unknown environment, unprotected, before the deploy job could refuse it. The concurrency group moves to the deploy job, one deploy per environment at a time either way.
-- The `staging` environment has no reviewer and deploys from `main` (by hand) and from `v*` tags (the release run). The host install on `ngf-mon-syd1` is fresh, with no checkout: production's unit with `WorkingDirectory=/srv/ninjagoldfinch-lol/current`, so it needs no drop-in, and a key from the staging riot-proxy. Both are owner work (`docs/deployment/releases.md`). Until the staging riot-proxy exists the site runs there with a placeholder `PROXY_KEY`: it starts, `/healthz` (which never calls riot-proxy) passes the deploy's health check, and data pages answer 503; the real key replaces it later.
+- The `staging` environment has no reviewer and deploys from `main` (by hand) and from `v*` tags (the release run). The host install on `ngf-mon-syd1` is fresh, with no checkout: production's unit with `WorkingDirectory=/srv/ninjagoldfinch-lol/current`, so it needs no drop-in, and a key from the staging riot-proxy. Both are owner work (`docs/deployment/releases.md`). ADR-058 replaces the staging riot-proxy with production riot-proxy and a key of staging's own, until a staging riot-proxy is needed. Until the staging riot-proxy exists the site runs there with a placeholder `PROXY_KEY`: it starts, `/healthz` (which never calls riot-proxy) passes the deploy's health check, and data pages answer 503; the real key replaces it later.
 
 **Consequences.**
 
@@ -879,3 +879,20 @@ Date: 2026-11-05 · Task: DEP-06
 - A release takes one more build (about 3 s). The package test (`scripts/package.test.sh`, in the gate) runs both tarballs and checks that each accepts a form post from its own origin and refuses one from the other's.
 - CI checks against the public staging hostname would need a Cloudflare Access service token; checks from the box use loopback.
 - `tests/unit/deploy-workflow.test.ts` and `tests/unit/release.test.ts` pin the two tarballs, the staging job and its inputs, the environment check and the asset choice.
+
+## ADR-058: staging reads from production riot-proxy, with its own key
+
+Date: 2026-11-05 · Task: DEP-06
+
+**Context.** ADR-057 had staging reach a staging riot-proxy on loopback. None exists, and nobody owns setting one up: it would need its own Riot API key (two proxies sharing one would each spend the other's Riot rate limit unseen), memory the shared 3.7 GB staging box may not have (production riot-proxy peaked at 7.3 GB on 2026-11-03), and its own database and backfill. Production riot-proxy is already public at `https://api.ninjagoldfinch.lol` (its own tunnel, key authentication, a WAF over the admin and metrics paths), and the site accepts an `https` `PROXY_URL`. The owner chose to point staging at it until a staging riot-proxy is needed (2026-11-05).
+
+**Decision.**
+
+- The staging site uses `PROXY_URL=https://api.ninjagoldfinch.lol` with a consumer key of its own on production riot-proxy, `ninjagoldfinch-lol-staging`, quota 120 a minute (production's is 600), made with riot-proxy's CLI run as its unit runs (`docs/deployment/releases.md#staging`, step 5). Production's key is never shared.
+- Nothing in the code or the pipeline changes: the setting lives in staging's `/etc/ninjagoldfinch-lol/env`.
+
+**Consequences.**
+
+- Staging shows real data now, behind Access. Its calls, Refresh included, spend production riot-proxy's quota and Riot rate limit, capped by the key's quota; revoking the key cuts staging off without touching the live site.
+- Staging tests the site against production data, not riot-proxy changes; that still needs a staging riot-proxy. Switching to one is an env edit (`PROXY_URL=http://127.0.0.1:8080` and its key).
+- Checked on 2026-11-05: staging at `1.0.3` answered `/healthz`, `/champions` and `/champions/ahri` with 200 through the staging key.
