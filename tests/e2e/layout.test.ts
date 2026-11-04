@@ -19,24 +19,37 @@ test('the accent is light purple', async ({ page }) => {
 	await expect(button).toHaveCSS('background-color', 'oklch(0.79 0.12 302)');
 });
 
-test('the site icon is the lavender N on deep purple, not the Svelte default', async ({ page }) => {
+test('the site icon is the lavender N on deep purple, not the Svelte default', async ({
+	page,
+	request
+}) => {
 	await page.goto('/');
 	const href = await page.locator('link[rel="icon"]').getAttribute('href');
 	expect(href).toBeTruthy();
-	// Vite may inline a small SVG as a data: URL and rewrite its quotes, so
-	// fetch it from the page and read the parsed document.
-	const icon = await page.evaluate(async (url) => {
-		const response = await fetch(url);
-		const svg = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
-		return {
-			type: response.headers.get('content-type'),
-			backing: svg.querySelector('svg > rect')?.getAttribute('fill'),
-			paths: [...svg.querySelectorAll('path')].map((path) => ({
-				fill: path.getAttribute('fill'),
-				stroke: path.getAttribute('stroke')
-			}))
-		};
-	}, href ?? '');
+	// Vite may inline a small SVG as a data: URL and rewrite its quotes. The
+	// page's CSP lets it fetch only its own origin (connect-src 'self'), so read
+	// the icon here and parse it in the page.
+	const url = href ?? '';
+	const data = /^data:([^,]*),(.*)$/s.exec(url);
+	const { type, text } = data
+		? { type: data[1], text: decodeURIComponent(data[2]) }
+		: await request
+				.get(url)
+				.then(async (r) => ({ type: r.headers()['content-type'], text: await r.text() }));
+	const icon = await page.evaluate(
+		({ type, text }) => {
+			const svg = new DOMParser().parseFromString(text, 'image/svg+xml');
+			return {
+				type,
+				backing: svg.querySelector('svg > rect')?.getAttribute('fill'),
+				paths: [...svg.querySelectorAll('path')].map((path) => ({
+					fill: path.getAttribute('fill'),
+					stroke: path.getAttribute('stroke')
+				}))
+			};
+		},
+		{ type, text }
+	);
 	expect(icon.type).toContain('image/svg+xml');
 	// The deep-purple backing square, a dark outline under the N, then the
 	// lavender N on top.

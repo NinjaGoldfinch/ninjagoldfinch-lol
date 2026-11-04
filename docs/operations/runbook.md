@@ -103,7 +103,7 @@ Observed on 2026-10-20 with the production build, before RV-03; RV-03 changed th
 2. `sudo journalctl -u riot-proxy --since '-15 min'`.
 3. Fix or restart riot-proxy per its own runbook. The site needs no restart; it recovers on the next request.
 
-Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:18-29`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
+Pages already at the edge keep being served until they expire, which hides short outages for popular pages. Errors are never cached, except 404s for 60 s, and nor are redirects or pages with an optional part missing (`src/hooks.server.ts:20-32`, ADR-045). A page rendered while riot-proxy's analytics or the timeline were failing is therefore tried again on the next view.
 
 ## Riot outage or Riot key suspended
 

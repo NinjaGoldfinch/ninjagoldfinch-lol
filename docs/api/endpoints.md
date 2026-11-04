@@ -2,9 +2,9 @@
 
 Every route ninjagoldfinch.lol serves, grouped by resource: what it does, its parameters, responses, cache policy and the riot-proxy calls behind it. The machine-readable version is [openapi.yaml](./openapi.yaml).
 
-No route needs authentication. Responses are HTML unless stated. Every page also answers at `<path>/__data.json` with the same load, which SvelteKit uses for client-side navigation. It carries the page's `Cache-Control` once the load has called `setHeaders`; otherwise SvelteKit's `private, no-store`, which is what a redirect or an error in the load gets (both come back as a 200 with a redirect or error node). Header values below were observed by running `node build` against the mock proxy on 2026-10-19, and for redirects and `__data.json` again on 2026-11-03.
+No route needs authentication. Responses are HTML unless stated. Every page also answers at `<path>/__data.json` with the same load, which SvelteKit uses for client-side navigation. It carries the page's `Cache-Control` once the load has called `setHeaders`; otherwise SvelteKit's `private, no-store`, which is what a redirect or an error in the load gets (both come back as a 200 with a redirect or error node). Header values below were observed by running `node build` against the mock proxy on 2026-10-19, and for redirects and `__data.json` again on 2026-11-03. Every response that passes through `handle`, pages, redirects, errors and `/healthz` alike, also carries the security headers, and every page a `Content-Security-Policy` ([../deployment/security.md](../deployment/security.md#response-headers), ADR-055).
 
-Error responses are the same for every page and are described in [errors.md](./errors.md): 404 `public, s-maxage=60`; 429 and 503 `no-store`. Every redirect is `no-store`: the `handle` hook gives `no-store` to any response no load set a policy for (`src/hooks.server.ts:22-27`, ADR-045).
+Error responses are the same for every page and are described in [errors.md](./errors.md): 404 `public, s-maxage=60`; 429 and 503 `no-store`. Every redirect is `no-store`: the `handle` hook gives `no-store` to any response no load set a policy for (`src/hooks.server.ts:24-29`, ADR-045).
 
 ## Health
 
@@ -26,11 +26,11 @@ content-type: application/json
 
 ## Static pages
 
-| Route             | Handler                       | Notes                                                                                                   |
-| ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET /`           | `src/routes/+page.ts:3`       | Search form and recent searches from `localStorage`. Prerendered at build time, served as a static file |
-| `GET /about`      | `src/routes/about/+page.ts:2` | Prerendered at build time, served as a static file                                                      |
-| `GET /robots.txt` | `static/robots.txt`           | Static                                                                                                  |
+| Route             | Handler                            | Notes                                                                                                                    |
+| ----------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `GET /`           | `src/routes/+page.server.ts`       | Search form and recent searches from `localStorage`. `static` policy: `public, s-maxage=600, stale-while-revalidate=600` |
+| `GET /about`      | `src/routes/about/+page.server.ts` | `static` policy, as `/`                                                                                                  |
+| `GET /robots.txt` | `static/robots.txt`                | Static                                                                                                                   |
 
 Every page's layout carries the header search form and Riot's legal notice (`src/routes/+layout.svelte`, `src/lib/legal.ts:3-4`).
 
@@ -206,9 +206,9 @@ location: /champions/ahri?rank=emerald+
 
 ## Unknown paths
 
-Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=60` (set by `src/hooks.server.ts:18-29`).
+Any other path is a SvelteKit `404` page with `Cache-Control: public, s-maxage=60` (set by `src/hooks.server.ts:20-32`).
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L7-L9`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L33-L69`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L71-L155`, `src/lib/server/match.ts:L34-L85`, `src/lib/server/champions.ts:L33-L62`, `src/lib/server/champion-page.ts:L82-L186`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L13-L195`, `src/lib/domain/champion-page.ts:L212-L305`, `src/hooks.server.ts:L18-L29`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L617-L630`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
+**Sources:** `src/routes/healthz/+server.ts:L7-L9`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L14-L47`, `src/routes/summoner/[riotId]/+page.server.ts:L8-L38`, `src/routes/summoner/[region]/[riotId]/+server.ts:L9-L13`, `src/routes/match/[matchId]/+page.server.ts:L8-L21`, `src/routes/match/[matchId]/+page.svelte:L33-L69`, `src/routes/match/[region]/[matchId]/+server.ts:L8-L11`, `src/routes/champions/+page.server.ts:L7-L20`, `src/routes/champions/[key]/+page.server.ts:L9-L32`, `src/lib/server/profile.ts:L71-L155`, `src/lib/server/match.ts:L34-L85`, `src/lib/server/champions.ts:L33-L62`, `src/lib/server/champion-page.ts:L82-L186`, `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/domain/riot-id.ts:L12-L18`, `src/lib/domain/regions.ts:L46-L50`, `src/lib/domain/champion-stats.ts:L13-L195`, `src/lib/domain/champion-page.ts:L212-L305`, `src/hooks.server.ts:L20-L32`, `src/lib/legal.ts:L3-L4`, `docs/DECISIONS.md:L617-L630`; probes of `node build` against the mock proxy, 2026-10-19 and 2026-11-03
 **Last verified:** 2026-11-03 against commit `ea998cb`

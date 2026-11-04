@@ -70,8 +70,8 @@ Probed with the production build (`node build`) against the mock proxy on port 4
 
 | Method | Path                                  | File:line                                               | Behaviour / Cache-Control observed                                                                                                       |
 | ------ | ------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/`                                   | `src/routes/+page.ts:3` (prerendered)                   | 200 static file, no `cache-control`                                                                                                      |
-| GET    | `/about`                              | `src/routes/about/+page.ts:2` (prerendered)             | 200 static file, no `cache-control`                                                                                                      |
+| GET    | `/`                                   | `src/routes/+page.server.ts`                            | 200, `static`: `public, s-maxage=600, stale-while-revalidate=600` (ADR-055)                                                              |
+| GET    | `/about`                              | `src/routes/about/+page.server.ts`                      | 200, `static`: `public, s-maxage=600, stale-while-revalidate=600` (ADR-055)                                                              |
 | GET    | `/healthz`                            | `src/routes/healthz/+server.ts:8`                       | 200 `{"ok":true,"version":"…"}`, `no-store`                                                                                              |
 | GET    | `/search`                             | `src/routes/search/+page.server.ts:18-47`               | 200 or 303 to a profile or champion page; `no-store`                                                                                     |
 | GET    | `/summoner/{riotId}`                  | `src/routes/summoner/[riotId]/+page.server.ts:14-28`    | 200 `public, s-maxage=60, stale-while-revalidate=300`; 307 to clean query, `no-store`; 404                                               |
@@ -83,7 +83,7 @@ Probed with the production build (`node build`) against the mock proxy on port 4
 | GET    | `/champions/{key}`                    | `src/routes/champions/[key]/+page.server.ts:9-32`       | 200 analytics policy, `no-store` if a part failed; 308 to canonical slug, 307 to canonical query, both `no-store`                        |
 | GET    | `{page}/__data.json`                  | SvelteKit (client navigation data)                      | The page's policy once the load called `setHeaders`; otherwise SvelteKit's `private, no-store`, including a redirect or error node (200) |
 | GET    | `/robots.txt`, `/favicon…`, `/_app/*` | `static/`, build output                                 | Static                                                                                                                                   |
-| any    | unknown path                          | SvelteKit                                               | 404 `public, s-maxage=60` (set by `src/hooks.server.ts:18-29`)                                                                           |
+| any    | unknown path                          | SvelteKit                                               | 404 `public, s-maxage=60` (set by `src/hooks.server.ts:20-32`)                                                                           |
 
 No JSON API, RPC, websocket or queue consumer. `/healthz` is the only non-HTML endpoint written by hand.
 
@@ -118,7 +118,7 @@ Logging on failures: `proxy <status> <method> <path> request-id=<X-Request-Id>` 
 | Process memory         | Per-request start times for slow-call logging                              | One request                                                                          | `src/lib/server/proxy.ts:40`                              |
 | Process memory         | Per-request list of riot-proxy calls and their times (`AsyncLocalStorage`) | One request                                                                          | `src/lib/server/timing.ts:26,67-81`                       |
 | Browser `localStorage` | `recent-searches` (Riot IDs, up to eight)                                  | Visitor-controlled                                                                   | `src/lib/recent-storage.ts:6-22`, `docs/DECISIONS.md:100` |
-| Edge (Cloudflare)      | Rendered pages per `Cache-Control`                                         | Policy table                                                                         | `src/lib/server/cache.ts:5-16`                            |
+| Edge (Cloudflare)      | Rendered pages per `Cache-Control`                                         | Policy table                                                                         | `src/lib/server/cache.ts:5-18`                            |
 
 No database, migrations, on-disk files, Redis or object storage in this repo.
 

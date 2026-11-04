@@ -12,7 +12,7 @@ The site shows one of three states for any failure, and never passes riot-proxy'
 | 429    | Too many requests       | "Riot's API is busy. Try again in N seconds." (or "a minute") | `no-store`            |
 | 503    | Temporarily unavailable | "Player data cannot be loaded right now. Try again shortly."  | `no-store`            |
 
-Texts from `src/lib/domain/error-view.ts:7-24`; the wait is formatted as seconds under a minute, then whole minutes (`:26-31`). Cache policies from `src/lib/server/cache.ts:29-34`, applied by the `handle` hook to every response, whatever the load set. The 404 is cached briefly so repeated misses do not all reach riot-proxy.
+Texts from `src/lib/domain/error-view.ts:7-24`; the wait is formatted as seconds under a minute, then whole minutes (`:26-31`). Cache policies from `src/lib/server/cache.ts:31-36`, applied by the `handle` hook to every response, whatever the load set. The 404 is cached briefly so repeated misses do not all reach riot-proxy.
 
 The page is `src/routes/+error.svelte:6-15`: a heading, the text and a "Back to search" link. Any other status SvelteKit produces (for example 403 or 415 on a bad form post) is described with the 503 text, because `describeError` treats every status other than 404 and 429 alike.
 

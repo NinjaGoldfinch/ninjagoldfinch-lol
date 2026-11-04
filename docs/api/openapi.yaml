@@ -45,7 +45,7 @@ paths:
     get:
       tags: [pages]
       operationId: getHome
-      summary: Home page with the search form, prerendered at build time
+      summary: Home page with the search form
       description: Recent searches are filled in by the browser.
       responses:
         '200':
@@ -54,7 +54,7 @@ paths:
     get:
       tags: [pages]
       operationId: getAbout
-      summary: About page, prerendered at build time
+      summary: About page
       responses:
         '200':
           $ref: '#/components/responses/Html'

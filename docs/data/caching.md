@@ -13,25 +13,26 @@ Every cache between Riot and a visitor that affects what ninjagoldfinch.lol show
 
 ## Edge cache (Cloudflare)
 
-The site sets `Cache-Control` on every page load from five policies (`src/lib/server/cache.ts:5-16`):
+The site sets `Cache-Control` on every page load from six policies (`src/lib/server/cache.ts:5-18`):
 
 | Policy      | Header                                                 | Used for                                                                                                                                    |
 | ----------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `profile`   | `public, s-maxage=60, stale-while-revalidate=300`      | `/summoner/{riotId}` with match history                                                                                                     |
 | `match`     | `public, s-maxage=86400, stale-while-revalidate=86400` | `/match/{matchId}` with every part loaded                                                                                                   |
+| `static`    | `public, s-maxage=600, stale-while-revalidate=600`     | `/` and `/about`, which call no riot-proxy route (ADR-055)                                                                                  |
 | `analytics` | `public, s-maxage=600, stale-while-revalidate=600`     | `/champions`, `/champions/{key}`, with every part loaded                                                                                    |
 | `notFound`  | `public, s-maxage=60`                                  | every 404                                                                                                                                   |
 | `none`      | `no-store`                                             | `/healthz`, `/search`, form posts, errors other than 404, redirects, any response no load gave a policy, a page with a part missing (below) |
 
 Rules:
 
-- The `handle` hook overrides whatever a load set: non-GET/HEAD responses are `none`, 404 is `notFound`, any other status of 400 or above is `none` (`src/lib/server/cache.ts:24-34`, `src/hooks.server.ts:18-29`). A rate-limit page is therefore never served to the next visitor.
-- After those rules, a response with no `Cache-Control` gets `none` (`src/hooks.server.ts:22-27`, ADR-045). That covers redirects thrown before a load set a policy: the profile's and `/champions`' query tidying (307), a champion's name (308) and query (307), and the old region URLs (308). `/search` sets `none` itself before its 303s (`src/routes/search/+page.server.ts:19`).
+- The `handle` hook overrides whatever a load set: non-GET/HEAD responses are `none`, 404 is `notFound`, any other status of 400 or above is `none` (`src/lib/server/cache.ts:26-36`, `src/hooks.server.ts:20-32`). A rate-limit page is therefore never served to the next visitor.
+- After those rules, a response with no `Cache-Control` gets `none` (`src/hooks.server.ts:24-29`, ADR-045). That covers redirects thrown before a load set a policy: the profile's and `/champions`' query tidying (307), a champion's name (308) and query (307), and the old region URLs (308). `/search` sets `none` itself before its 303s (`src/routes/search/+page.server.ts:19`).
 - A page with a part missing gets `none`, so the gap is not kept at the edge: a profile without its match history; a match without its timeline, Data Dragon lookups or stat shards; `/champions` without its patch list or lookups; a champion page without its set builds, matchups or patch list. The loads return `complete` for this (`src/lib/server/match.ts:76-84`, `src/lib/server/champions.ts:53`, `src/lib/server/champion-page.ts:173`, ADR-045).
 - `s-maxage` applies to shared caches only, so browsers revalidate pages themselves.
 - Each URL, query included, is its own entry; Cloudflare's cache key includes the query string (checked from outside, `docs/DECISIONS.md:579`). Canonical-URL redirects keep one entry per view (see [../api/pagination-filtering-and-versioning.md](../api/pagination-filtering-and-versioning.md)).
 - Match pages' `player`, `tab` and `build` parameters create separate entries for the same data (ADR-024).
-- `/` and `/about` are prerendered files with an ETag, served before `handle` runs, so the `none` default does not reach them (`src/routes/+page.ts:3`, `src/routes/about/+page.ts:2`). Neither calls riot-proxy.
+- `/` and `/about` are rendered per request with the `static` policy (`src/routes/+page.server.ts`, `src/routes/about/+page.server.ts`). Until ADR-055 they were prerendered files, served before `handle` and without the security headers. Neither calls riot-proxy.
 - `__data.json` answers come from SvelteKit with `private, no-store`, even when a load threw: a redirect, or an error in a load, is a 200 carrying a redirect or error node (`node_modules/@sveltejs/kit/src/runtime/server/data/index.js:89-148`). Headers a load set with `setHeaders` are then copied onto the response, replacing that (`node_modules/@sveltejs/kit/src/runtime/server/respond.js:212-237,513-516`). So a data answer carries its page's policy when the load got as far as `setHeaders`, and `private, no-store` otherwise. The profile's was observed to match its page.
 - `/_app/immutable/*` is served with `public,max-age=31536000,immutable` by adapter-node (observed 2026-10-19).
 

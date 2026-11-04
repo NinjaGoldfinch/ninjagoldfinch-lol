@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { CSP_DIRECTIVES } from './src/lib/server/security.ts';
 
 export default defineConfig({
 	plugins: [
@@ -14,6 +15,8 @@ export default defineConfig({
 			},
 			// scripts/package.sh builds a release outside the checkout's build/ (ADR-052).
 			adapter: adapter({ out: process.env.BUILD_OUT ?? 'build' }),
+			// Hashes, not nonces: pages are cached at the edge and shared (ADR-055).
+			csp: { mode: 'hash', directives: CSP_DIRECTIVES },
 			// adapter-node 6 no longer reads ORIGIN at runtime; without this it guesses
 			// the origin from the Host header and assumes https. Set at build time.
 			// ADR-014.

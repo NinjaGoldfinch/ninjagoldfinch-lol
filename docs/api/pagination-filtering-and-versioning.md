@@ -43,7 +43,7 @@ Rank encoding (ADR-042, `docs/DECISIONS.md:574`): `?rank=diamond+`, `?rank=diamo
 
 Champion page extras: `vs=<champion key>` and `lane=<role>` pick builds against a lane opponent; `vs` is read without regard to case and written lower case, an unknown `vs` drops the pick, an unknown `lane` only the lane, and `lane` is dropped when `role` is set (`src/lib/domain/champion-page.ts:212-244`). `build=<n>` (1-based) picks a build tab and is kept in the canonical URL but not read by the load (`src/routes/champions/[key]/+page.server.ts:15-26`).
 
-Redirect status: `/champions` uses `307` (`src/routes/champions/+page.server.ts:14`). `/champions/{key}` uses `308` for a non-canonical key such as `Ahri` or `wukong`, carrying the canonical query, and `307` when only the query needs tidying (`src/routes/champions/[key]/+page.server.ts:21-26`, ADR-045). The query redirect is temporary because a default or a champion the lookups do not know yet can change. Every redirect is sent `no-store` (`src/hooks.server.ts:22-27`).
+Redirect status: `/champions` uses `307` (`src/routes/champions/+page.server.ts:14`). `/champions/{key}` uses `308` for a non-canonical key such as `Ahri` or `wukong`, carrying the canonical query, and `307` when only the query needs tidying (`src/routes/champions/[key]/+page.server.ts:21-26`, ADR-045). The query redirect is temporary because a default or a champion the lookups do not know yet can change. Every redirect is sent `no-store` (`src/hooks.server.ts:24-29`).
 
 Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, the detail for `limit=10`, matchups for `limit=200` (`src/lib/domain/champion-stats.ts:191-194`, `src/lib/server/champion-page.ts:123,132`).
 
