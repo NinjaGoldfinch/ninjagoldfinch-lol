@@ -51,7 +51,8 @@ export const variables = defineEnvVars({
 		schema: atStartup(parseStatusInterval)
 	},
 	EVENTS_URL: {
-		description: 'URL that state-change events are POSTed to. Optional; no events without it.',
+		description:
+			'URL that state-change events are POSTed to, without a username or password. Optional; no events without it.',
 		schema: atStartup(parseEventsUrl)
 	},
 	STATE_DIRECTORY: {

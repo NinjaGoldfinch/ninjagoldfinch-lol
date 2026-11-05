@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { hostname, tmpdir } from 'node:os';
@@ -318,6 +318,27 @@ describe('EventQueue', () => {
 		expect(sent.map((e) => e.detail.n)).toEqual([...Array(QUEUE_LIMIT + 1).keys()]);
 	});
 
+	it('carries on to the next event when sending one throws, and logs it', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const sent: string[] = [];
+		const broke = new Error('send broke');
+		const queue = new EventQueue(URL, async (_url, event) => {
+			if (event.event === 'proxy_unreachable') throw broke;
+			sent.push(event.event);
+		});
+		queue.push('proxy_unreachable', { reason: 'unreachable' });
+		queue.push('proxy_recovered', { reason: 'ready' });
+		queue.push('deployed', { from: '1.1.0', to: '1.2.0' });
+		await queue.idle();
+		expect(sent).toEqual(['proxy_recovered', 'deployed']);
+		expect(error).toHaveBeenCalledTimes(1);
+		expect(error).toHaveBeenCalledWith('event proxy_unreachable dropped:', broke);
+		// The worker is not left dead: a later event is still sent.
+		queue.push('proxy_recovered');
+		await queue.idle();
+		expect(sent).toEqual(['proxy_recovered', 'deployed', 'proxy_recovered']);
+	});
+
 	it('starts again for events pushed after it went idle', async () => {
 		const sent: string[] = [];
 		const queue = new EventQueue(URL, async (_url, event) => {
@@ -433,6 +454,105 @@ describe('the raised alarm, kept across restarts', () => {
 		expect(after.pushed).toEqual([]);
 		await after.watch(check('ok', 'ready'));
 		expect(after.pushed.map(([event]) => event)).toEqual(['proxy_recovered']);
+	});
+
+	// A write that fails leaves the record as it was, so the next start goes by
+	// a record that is one change behind (ADR-063).
+	describe('when the record cannot be written', () => {
+		/** Makes the next writes of the record fail; returns how to let them through again. */
+		const blockWrites = () => {
+			const inTheWay = join(dir, 'proxy-alarm.json.tmp');
+			mkdirSync(inTheWay);
+			return () => rmSync(inTheWay, { recursive: true });
+		};
+		const down = async (watch: (check: Check) => Promise<void>, times = UNREACHABLE_AFTER) => {
+			for (let i = 0; i < times; i++) await watch(check('down', 'unreachable'));
+		};
+		/** An outage whose proxy_unreachable was sent and not recorded; the server then stops. */
+		const raiseUnrecorded = async () => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+			const unblock = blockWrites();
+			const before = start();
+			await down(before.watch);
+			expect(before.pushed.map(([event]) => event)).toEqual(['proxy_unreachable']);
+			expect(error).toHaveBeenCalledWith(
+				expect.stringMatching(/^could not record the alarm in /),
+				expect.anything()
+			);
+			expect(await readRaised(dir)).toBe(false);
+			unblock();
+		};
+		/** An outage that ended: proxy_recovered was sent and not recorded; the server then stops. */
+		const clearUnrecorded = async () => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+			const before = start();
+			await down(before.watch);
+			const unblock = blockWrites();
+			await before.watch(check('ok', 'ready'));
+			expect(before.pushed.map(([event]) => event)).toEqual([
+				'proxy_unreachable',
+				'proxy_recovered'
+			]);
+			expect(error).toHaveBeenCalledWith(
+				expect.stringMatching(/^could not record the alarm in /),
+				expect.anything()
+			);
+			expect(await readRaised(dir)).toBe(true);
+			unblock();
+		};
+
+		it('a raise not recorded: the next start sends proxy_unreachable again if still down', async () => {
+			await raiseUnrecorded();
+			const after = start();
+			await down(after.watch);
+			await after.watch(check('ok', 'ready'));
+			expect(after.pushed.map(([event]) => event)).toEqual([
+				'proxy_unreachable',
+				'proxy_recovered'
+			]);
+		});
+
+		it('a raise not recorded: the next start sends no proxy_recovered if riot-proxy is back', async () => {
+			await raiseUnrecorded();
+			const after = start();
+			await after.watch(check('ok', 'ready'));
+			expect(after.pushed).toEqual([]);
+		});
+
+		it('a clear not recorded: the next start sends proxy_recovered again on its first ok', async () => {
+			await clearUnrecorded();
+			const after = start();
+			await after.watch(check('ok', 'ready'));
+			expect(after.pushed).toEqual([['proxy_recovered', { reason: 'ready' }]]);
+			expect(await readRaised(dir)).toBe(false);
+		});
+
+		it('a clear not recorded: the next start sends no proxy_unreachable for a new outage', async () => {
+			await clearUnrecorded();
+			const after = start();
+			await down(after.watch, UNREACHABLE_AFTER + 2);
+			expect(after.pushed).toEqual([]);
+			await after.watch(check('ok', 'ready'));
+			expect(after.pushed.map(([event]) => event)).toEqual(['proxy_recovered']);
+		});
+
+		it('in the same process a failed write changes nothing: the alarm is in memory', async () => {
+			vi.spyOn(console, 'error').mockImplementation(() => {});
+			dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+			blockWrites();
+			const { watch, pushed } = start();
+			await down(watch);
+			await down(watch);
+			await watch(check('ok', 'ready'));
+			await down(watch);
+			expect(pushed.map(([event]) => event)).toEqual([
+				'proxy_unreachable',
+				'proxy_recovered',
+				'proxy_unreachable'
+			]);
+		});
 	});
 
 	it('keeps the alarm in the process only, without a directory', async () => {

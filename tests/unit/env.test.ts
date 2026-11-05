@@ -129,6 +129,54 @@ describe('parseEventsUrl', () => {
 		expect(() => parseEventsUrl('bot.example/events')).toThrow('EVENTS_URL');
 		expect(() => parseEventsUrl('ftp://bot.example/events')).toThrow('EVENTS_URL');
 	});
+
+	/** The message `parseEventsUrl` refuses a value with. */
+	const refusal = (value: string): string => {
+		try {
+			parseEventsUrl(value);
+		} catch (e) {
+			return e instanceof Error ? e.message : String(e);
+		}
+		throw new Error(`accepted ${value}`);
+	};
+
+	// fetch refuses such a URL, and its error holds the whole URL (ADR-063).
+	it.each([
+		'https://bot:made-up-password@bot.example/events',
+		'https://bot@bot.example/events',
+		'https://:made-up-password@bot.example/events',
+		' http://bot:made-up-password@127.0.0.1:8090/events '
+	])('refuses a username or password, without showing the value: %s', (value) => {
+		const message = refusal(value);
+		expect(message).toMatch(/^EVENTS_URL must not have a username or password/);
+		expect(message).not.toContain('made-up-password');
+		expect(message).not.toContain('bot');
+	});
+
+	it('accepts a token in the path or the query string', () => {
+		for (const url of [
+			'https://bot.example/events?token=made-up-token',
+			'https://bot.example/hooks/made-up-token/events'
+		]) {
+			expect(parseEventsUrl(url)).toBe(url);
+		}
+	});
+
+	it('does not show a value it refuses, which may hold a token', () => {
+		for (const value of [
+			'bot.example/events?token=made-up-token',
+			'ftp://bot.example/events?token=made-up-token',
+			'htps://bot:made-up-token@bot.example/events',
+			'made-up-token:bot.example/events'
+		]) {
+			const message = refusal(value);
+			expect(message).toMatch(/^EVENTS_URL must .* \(value not shown\)$/);
+			expect(message).not.toContain('made-up-token');
+			expect(message).not.toContain('bot.example');
+		}
+		// The other URLs hold no secret and still show a mistyped value.
+		expect(() => parseProxyUrl('//riot-proxy:8080')).toThrow('got "//riot-proxy:8080"');
+	});
 });
 
 describe('parseStateDirectory', () => {
