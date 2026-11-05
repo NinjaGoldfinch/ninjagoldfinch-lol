@@ -1,0 +1,21 @@
+{
+	"request": {
+		"method": "GET",
+		"path": "/readyz"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json",
+			"x-request-id": "01M4FFMAA949SQ80PXK1S1TVDT"
+		},
+		"body": {
+			"ok": true,
+			"sqlite": true,
+			"limiter": true,
+			"keyScope": "placeholder-scope",
+			"sqliteReaders": 4,
+			"sqliteReadersFree": 4
+		}
+	}
+}

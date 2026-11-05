@@ -1,6 +1,13 @@
 import { building } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
-import { parseCdragonUrl, parseProxyKey, parseProxyUrl } from '#lib/server/env.ts';
+import {
+	parseCdragonUrl,
+	parseProxyKey,
+	parseProxyUrl,
+	parseStatusCidrs,
+	parseStatusInterval,
+	parseStatusToken
+} from '#lib/server/env.ts';
 
 // SvelteKit also runs these validators while `vite build` analyses routes,
 // where the runtime environment is absent and NODE_ENV is always production.
@@ -27,5 +34,18 @@ export const variables = defineEnvVars({
 	PROXY_KEY: {
 		description: 'riot-proxy consumer key. Secret. Required when NODE_ENV=production.',
 		schema: atStartup((value) => parseProxyKey(value, process.env.NODE_ENV === 'production'))
+	},
+	STATUS_TOKEN: {
+		description:
+			'Bearer token for GET /api/status. Secret. Optional; without it only local requests may read it.',
+		schema: atStartup(parseStatusToken)
+	},
+	STATUS_ALLOW_CIDR: {
+		description: 'Comma-separated CIDRs that may read GET /api/status without the token. Optional.',
+		schema: atStartup(parseStatusCidrs)
+	},
+	STATUS_CHECK_INTERVAL_S: {
+		description: 'Seconds between the background status checks. Optional; 30 by default.',
+		schema: atStartup(parseStatusInterval)
 	}
 });

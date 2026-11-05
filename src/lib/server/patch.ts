@@ -153,6 +153,11 @@ export function clearPatchVersions(): void {
 	refreshing = undefined;
 }
 
+/** The patch pages are using and when it was loaded; undefined before the first load. */
+export function heldPatch(): { current: string; at: number } | undefined {
+	return held && { current: held.versions.current, at: held.at };
+}
+
 /** For tests: the refresh in flight, if any. */
 export function patchRefresh(): Promise<void> | undefined {
 	return refreshing;

@@ -1,5 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { metrics } from '#lib/server/metrics.ts';
 import { SECURITY_HEADERS } from '#lib/server/security.ts';
 import { handle, handleError } from '../../src/hooks.server';
 
@@ -129,5 +130,34 @@ describe('handle timing', () => {
 		expect(warn).toHaveBeenCalledWith(
 			expect.stringMatching(/^slow load \/summoner\/\[riotId\] \d+ms: no riot-proxy calls$/)
 		);
+	});
+});
+
+describe('handle request counts', () => {
+	const run = (url: string, resolve: () => Promise<Response>) =>
+		handle({
+			event: { ...event, request: new Request(url), url: new URL(url) } as RequestEvent,
+			resolve
+		});
+	const counts = () => metrics.snapshot();
+
+	it('counts every request, its 5xx, and the API routes', async () => {
+		const before = counts();
+		await run('http://localhost/champions', async () => new Response('x'));
+		await run('http://localhost/api/version', async () => new Response('x'));
+		await run('http://localhost/match/OC1_1', async () => new Response('x', { status: 503 }));
+		const after = counts();
+
+		expect(after.http_requests_total).toBe((before.http_requests_total ?? 0) + 3);
+		expect(after.http_errors_total).toBe((before.http_errors_total ?? 0) + 1);
+		expect(after.api_requests_total).toBe((before.api_requests_total ?? 0) + 1);
+	});
+
+	it('counts a request that threw as an error', async () => {
+		const before = counts();
+		await expect(
+			run('http://localhost/x', () => Promise.reject(new Error('boom')))
+		).rejects.toThrow('boom');
+		expect(counts().http_errors_total).toBe((before.http_errors_total ?? 0) + 1);
 	});
 });

@@ -3,7 +3,8 @@
 # package.sh refuses a tag that is not package.json's version, and each tarball
 # it makes runs on its own, unpacked away from the checkout with no node_modules:
 # /healthz and /api/version answer with that version (/api/version also with the
-# commit), the smoke test passes against the mock riot-proxy, and a form post is
+# commit), /api/status answers a local request and refuses Cloudflare's without
+# a token, the smoke test passes against the mock riot-proxy, and a form post is
 # accepted from the tarball's own origin and refused from the other's.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -67,6 +68,21 @@ check() {
 		fail "$asset: /api/version answered '$body'"
 	grep -q "ninjagoldfinch-lol $version commit " "$tmp/$asset.log" ||
 		fail "$asset: no build identity in the start-up log: $(cat "$tmp/$asset.log")"
+	# /api/status (ADR-062): a request on the host itself needs no token, and its
+	# riot_proxy check reaches the mock riot-proxy in the background; one through
+	# Cloudflare is refused without the token.
+	for _ in $(seq 25); do
+		body=$(curl -fsS --max-time 2 "http://127.0.0.1:$port/api/status")
+		printf '%s' "$body" | grep -q '"name":"riot_proxy","status":"ok"' && break
+		sleep 0.2
+	done
+	printf '%s' "$body" | grep -q '"name":"riot_proxy","status":"ok"' ||
+		fail "$asset: /api/status never saw riot-proxy ok: $body"
+	printf '%s' "$body" | grep -q "\"service\":\"ninjagoldfinch-lol\",\"host\":\"[^\"]*\",\"version\":\"$version\"" ||
+		fail "$asset: /api/status does not report the release: $body"
+	status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Cf-Connecting-Ip: 198.51.100.7' \
+		"http://127.0.0.1:$port/api/status")
+	[ "$status" = 401 ] || fail "$asset: /api/status through Cloudflare without a token answered $status"
 	# The smoke test deploy.yml runs on staging (ADR-060), with a stand-in Access token.
 	CF_ACCESS_CLIENT_ID=package-test CF_ACCESS_CLIENT_SECRET=package-test \
 		scripts/smoke.sh "http://127.0.0.1:$port" "v$version" >/dev/null ||

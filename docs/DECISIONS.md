@@ -956,3 +956,25 @@ Date: 2026-11-05 · Task: STAT-01
 - The package test checks that each tarball answers `/api/version` with the release and `HEAD`'s short sha, and logs them at start-up.
 - `/api/version` reveals only what a release tag already makes public.
 - `/api/status` (STAT-02) reports the same `BUILD`.
+
+## ADR-062: /api/status, to the shared status contract, behind a token
+
+Date: 2026-11-05 · Task: STAT-02
+
+**Context.** The owner's status bot polls a `GET /status` on every ninjagoldfinch service, to one contract: build identity, uptime, background checks and flat numeric metrics, answered from memory in under 50 ms, `200` even when down. The site has no crawler, database or object storage; riot-proxy reports those (owner, 2026-11-05). What the site can report is its own traffic, its calls to riot-proxy, and whether riot-proxy will serve it. riot-proxy has no `/status` in the committed spec (2.7.0); it has `/readyz`, which answers 200 when ready and 503 with the same body when not. Production listens on `127.0.0.1` and every request reaches it through `cloudflared`, also on loopback, with `ADDRESS_HEADER` unset (ADR-038), so a rule that trusts loopback would trust the internet.
+
+**Decision.**
+
+- `GET /api/status` answers the contract (`service: ninjagoldfinch-lol`, `host` from the hostname) from `src/lib/server/status.ts`, reading held check results, `BUILD` (ADR-061) and in-memory counters only. `no-store`.
+- Checks run from the `init` hook at start-up and every `STATUS_CHECK_INTERVAL_S` (30 s by default), never from a request:
+  - `riot_proxy`: `GET /readyz` with the site's key, through `proxy.ts`'s `createProxyClient` with a 5 s deadline. 200 is `ok`; anything else is `down`, with a detail: `unreachable`, `not ready: sqlite, limiter`, `key refused (401)` or `answered <status>`. When riot-proxy's spec gains `/status`, the check moves to it and mirrors its `status`.
+  - `static_data`: `ok` once a patch and its lookups are held, `degraded` before.
+- Metrics, in `src/lib/server/metrics.ts`: `http_requests_total`, `http_errors_total` (5xx) and `api_requests_total` (`/api/…`), counted in `handle`; `proxy_requests_total`, `proxy_errors_total` (no answer, 429 or 5xx; a 404 is an answer), and `proxy_latency_ms_p50`/`_p95` over 5 minutes from a ring of the last 4096 calls, counted on the pages' client only; and `patch_age_s`. The contract's `metrics` holds numbers only, so the patch's age is a gauge rather than a timestamp.
+- Access: `Authorization: Bearer <STATUS_TOKEN>` (16 characters at least, compared in constant time), or no token from loopback or `STATUS_ALLOW_CIDR`. A request with `Cf-Connecting-Ip` always needs the token: Cloudflare sets that header on every request it forwards, whatever the visitor sent, and the tunnel is the only way in. Anything else gets `401` with `WWW-Authenticate: Bearer`.
+
+**Consequences.**
+
+- Stopping riot-proxy turns `riot_proxy` `down` within one interval plus the 5 s deadline, 35 s by default.
+- The check logs through the client's usual failure lines, once an interval while riot-proxy is down.
+- The mock riot-proxy answers `/readyz` from a synthetic fixture. The package test reads `/api/status` from each tarball on loopback, waits for `riot_proxy` `ok` and the release's version, and checks that a request through Cloudflare without the token gets `401`.
+- The bot reaches `/api/status` through Cloudflare with the token. The owner adds `STATUS_TOKEN` to each host's env file; until then only the host itself can read it.
