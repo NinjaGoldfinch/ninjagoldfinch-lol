@@ -73,6 +73,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-03 The site icon is a black-hooded ninja with a lavender eye band on a deep-purple square, visible on dark and light tabs — #97
 - [x] FIX-04 The site icon is a lavender N with a dark outline on a deep-purple square — #98
 - [x] FIX-05 The browser tests wait for the page to hydrate before using a filter that applies on change — #123
+- [x] FIX-06 The deploy test's scratch repo ignores a hook's GIT_DIR, so a push from a worktree no longer marks the real repo bare or commits into it — #124
 
 ## RV — fixes from the code review of 2026-11-03
 
@@ -108,7 +109,7 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 Owner request 2026-11-05: the site answers the shared status contract the status bot polls, as riot-proxy does. Frontend only: the crawler, database and object storage are riot-proxy's, so they are not reported here (owner, 2026-11-05).
 
 - [x] STAT-01 the build's version, commit and time baked in by `scripts/package.sh`, logged at start-up; a public `GET /api/version` (ADR-061) — #120
-- [ ] STAT-02 `GET /api/status` to the shared contract: request and riot-proxy counters, riot-proxy latency, a background `riot_proxy` check; a bearer token, or a local request
+- [x] STAT-02 `GET /api/status` to the shared contract: request and riot-proxy counters, riot-proxy latency, a background `riot_proxy` check; a bearer token, or a local request (ADR-062) — #122
 - [x] STAT-03 events to an optional URL: `proxy_unreachable`, `proxy_recovered` and `deployed` (ADR-063) — #126
 
 ## P5 — Production
