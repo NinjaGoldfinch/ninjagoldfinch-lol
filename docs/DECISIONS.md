@@ -937,3 +937,22 @@ Date: 2026-11-05 · Task: DEP-08
 - A failed smoke test leaves `staging/smoke` at failure, and the release run fails. Rerunning the staging deploy after a fix sets it again.
 - This needs the action with ninja-actions #14 at `v1`. An input the action does not know is ignored with a warning, which would skip the check, so this is merged only after `v1` moves. It also needs the Access token in the `staging` environment.
 - `tests/unit/deploy-workflow.test.ts` pins the gate's inputs, the break-glass input (manual only), the smoke step (staging only, after the deploy, with the token), the status it records and the permission; `scripts/package.test.sh` runs the script.
+
+## ADR-061: the build's identity is baked in, and /api/version is public
+
+Date: 2026-11-05 · Task: STAT-01
+
+**Context.** The owner is building a status bot that polls every ninjagoldfinch service, to a shared status contract: `version`, `commit` and `built_at` injected at build time, never read from git at runtime. Until the bot can authenticate, it should see a deploy by a public version changing. `/healthz` already reports package.json's version, which ninja-deploy matches against the tag (ADR-051), but not the commit, and `version.json` sits beside the build where the server does not read it. This site has no crawler, database or object storage of its own: those live in riot-proxy, so the site's status covers the frontend only (owner, 2026-11-05).
+
+**Decision.**
+
+- `scripts/package.sh` passes `BUILD_VERSION` (package.json's version, which equals the tag) and `BUILD_COMMIT` (the short sha) to `vite build`. `vite.config.ts` bakes them into the server as `__BUILD__`, with the build time. A build without both, such as `just dev`, a plain `pnpm build` or the tests, reports `dev` for version and commit.
+- `src/lib/server/version.ts` exports `BUILD`, the one source for the status endpoints. `/healthz` keeps package.json's version, unchanged, because ninja-deploy reads it.
+- The server logs `ninjagoldfinch-lol <version> commit <sha> built <time>` from the `init` hook.
+- `GET /api/version` answers `{"version","commit"}` and nothing else, public and `no-store`.
+
+**Consequences.**
+
+- The package test checks that each tarball answers `/api/version` with the release and `HEAD`'s short sha, and logs them at start-up.
+- `/api/version` reveals only what a release tag already makes public.
+- `/api/status` (STAT-02) reports the same `BUILD`.

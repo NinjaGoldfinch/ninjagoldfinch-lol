@@ -4,13 +4,17 @@ import { CACHE_POLICIES, responseCachePolicy } from '#lib/server/cache.ts';
 import { warmPatch } from '#lib/server/patch.ts';
 import { setSecurityHeaders } from '#lib/server/security.ts';
 import { timeLoad } from '#lib/server/timing.ts';
+import { BUILD } from '#lib/server/version.ts';
 
 // At start-up, load the current patch, its lookups and stat shards in the
 // background, so the first visitor after a deploy doesn't wait for them
 // (SPD-09). Not awaited: requests that arrive first share the same loads.
-// Skipped while `vite build` runs, which has no riot-proxy.
+// Skipped while `vite build` runs, which has no riot-proxy. The build's identity
+// goes to the log first, so a journal shows which release a line came from.
 export const init: ServerInit = () => {
-	if (!building) void warmPatch();
+	if (building) return;
+	console.log(`ninjagoldfinch-lol ${BUILD.version} commit ${BUILD.commit} built ${BUILD.built_at}`);
+	void warmPatch();
 };
 
 // Errors and form posts must never be cached at the edge, whatever a load set,

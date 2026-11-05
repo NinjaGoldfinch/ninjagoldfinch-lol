@@ -1,6 +1,9 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
+	/** Set by vite.config.ts from the environment `vite build` ran in (ADR-061). */
+	const __BUILD__: { version?: string; commit?: string; builtAt: string };
+
 	namespace App {
 		interface Error {
 			/** Seconds to wait before retrying, when riot-proxy says. */

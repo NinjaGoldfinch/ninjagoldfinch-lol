@@ -5,6 +5,16 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { CSP_DIRECTIVES } from './src/lib/server/security.ts';
 
 export default defineConfig({
+	// The build's identity, baked in: scripts/package.sh sets BUILD_VERSION,
+	// BUILD_COMMIT and BUILD_TIME (its version.json's); any other build reports
+	// `dev`, built now (ADR-061).
+	define: {
+		__BUILD__: JSON.stringify({
+			version: process.env.BUILD_VERSION,
+			commit: process.env.BUILD_COMMIT,
+			builtAt: process.env.BUILD_TIME || new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+		})
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({

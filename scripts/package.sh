@@ -48,7 +48,8 @@ for target in "${targets[@]}"; do
 	read -r asset origin <<<"$target"
 	stage=$work/$asset/$name
 	mkdir -p "$stage"
-	BUILD_OUT="$stage/build" ORIGIN="$origin" pnpm build
+	BUILD_OUT="$stage/build" ORIGIN="$origin" BUILD_VERSION="$version" \
+		BUILD_COMMIT="${commit:0:7}" BUILD_TIME="$built_at" pnpm build
 	cp package.json LICENSE "$stage/"
 	printf '{"version":"%s","commit":"%s","built_at":"%s"}\n' \
 		"$tag" "$commit" "$built_at" > "$stage/version.json"

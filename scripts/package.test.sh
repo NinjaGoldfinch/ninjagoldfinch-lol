@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Checks scripts/package.sh (ADR-052, ADR-057) and scripts/smoke.sh (ADR-060):
 # package.sh refuses a tag that is not package.json's version, and each tarball
-# it makes runs on its own, unpacked
-# away from the checkout with no node_modules: /healthz answers with that
-# version, the smoke test passes against the mock riot-proxy, and a form post is
+# it makes runs on its own, unpacked away from the checkout with no node_modules:
+# /healthz and /api/version answer with that version (/api/version also with the
+# commit), the smoke test passes against the mock riot-proxy, and a form post is
 # accepted from the tarball's own origin and refused from the other's.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -61,6 +61,12 @@ check() {
 	done
 	[ "$body" = "{\"ok\":true,\"version\":\"$version\"}" ] ||
 		fail "$asset: /healthz answered '$body'; server log: $(cat "$tmp/$asset.log")"
+	# The build's identity is baked in (ADR-061): the release and its commit, not `dev`.
+	body=$(curl -fsS --max-time 2 "http://127.0.0.1:$port/api/version")
+	[ "$body" = "{\"version\":\"$version\",\"commit\":\"$(git rev-parse --short=7 HEAD)\"}" ] ||
+		fail "$asset: /api/version answered '$body'"
+	grep -q "ninjagoldfinch-lol $version commit " "$tmp/$asset.log" ||
+		fail "$asset: no build identity in the start-up log: $(cat "$tmp/$asset.log")"
 	# The smoke test deploy.yml runs on staging (ADR-060), with a stand-in Access token.
 	CF_ACCESS_CLIENT_ID=package-test CF_ACCESS_CLIENT_SECRET=package-test \
 		scripts/smoke.sh "http://127.0.0.1:$port" "v$version" >/dev/null ||
