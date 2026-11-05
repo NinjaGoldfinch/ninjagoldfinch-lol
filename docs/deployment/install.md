@@ -126,7 +126,7 @@ sudo systemctl enable --now ninjagoldfinch-lol
 
 Notes on the unit:
 
-- `ProtectSystem=strict` makes the file system read-only for the service. That suits the site, which writes nothing to disk ([data/caching.md](../data/caching.md)); a future feature that writes files would need `ReadWritePaths=`.
+- `ProtectSystem=strict` makes the file system read-only for the service. The site writes to one place only, its state directory `/var/lib/ninjagoldfinch-lol/`: two small files for the events (ADR-063). `StateDirectory=ninjagoldfinch-lol` makes that directory and keeps it writable under `ProtectSystem=strict`; it is not in the unit above but in the drop-in that runs a release ([releases.md](./releases.md#the-state-directory-for-events-once)). Without it the site runs as before and sends no `deployed` event. Everything else it holds is in memory ([data/caching.md](../data/caching.md)).
 - `After=riot-proxy.service` orders start-up but does not require riot-proxy; if riot-proxy is down the site still starts and serves 503 for data pages.
 - `ExecStart=/usr/bin/node` assumes Ubuntu's package; adjust if Node lives elsewhere (`command -v node`).
 

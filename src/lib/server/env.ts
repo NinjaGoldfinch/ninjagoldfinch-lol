@@ -26,16 +26,28 @@ export function parseCdragonUrl(value: string | undefined): string {
 	return value ? httpUrl('CDRAGON_URL', value).replace(/\/+$/, '') : DEFAULT_CDRAGON_URL;
 }
 
-function httpUrl(name: string, value: string): string {
+/**
+ * An absolute http or https URL. `secret` is for a URL that may carry a token:
+ * the messages then leave the value out, since they go to the log.
+ */
+function httpUrl(name: string, value: string, secret = false): string {
 	let url: URL;
 	try {
 		url = new URL(value);
 	} catch {
-		throw new Error(`${name} must be an absolute URL, got "${value}"`);
+		throw new Error(
+			secret
+				? `${name} must be an absolute URL (value not shown)`
+				: `${name} must be an absolute URL, got "${value}"`
+		);
 	}
 
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-		throw new Error(`${name} must use http or https, got "${url.protocol}"`);
+		throw new Error(
+			secret
+				? `${name} must use http or https (value not shown)`
+				: `${name} must use http or https, got "${url.protocol}"`
+		);
 	}
 
 	return value;
@@ -110,4 +122,40 @@ export function parseStatusInterval(value: string | undefined): number {
 		throw new Error(`STATUS_CHECK_INTERVAL_S must be whole seconds from 5 to 3600, got "${value}"`);
 	}
 	return seconds;
+}
+
+/**
+ * Where events are POSTed (ADR-063). Optional: without it, no events are
+ * sent. A username or password in it is refused: `fetch` cannot send to such
+ * a URL, and its error would put the whole URL in the log with each dropped
+ * event. A receiver's token goes in the path or the query string, so no
+ * message here shows the value.
+ */
+export function parseEventsUrl(value: string | undefined): string | undefined {
+	if (!value?.trim()) return undefined;
+	const url = httpUrl('EVENTS_URL', value.trim(), true);
+	const { username, password } = new URL(url);
+	if (username || password) {
+		throw new Error(
+			'EVENTS_URL must not have a username or password (value not shown); put a token in the path or the query string'
+		);
+	}
+	return url;
+}
+
+/**
+ * A writable directory for the version the last start recorded, for the
+ * `deployed` event, and for whether `proxy_unreachable` is raised (ADR-063).
+ * systemd sets STATE_DIRECTORY from the unit's `StateDirectory=`. Optional:
+ * without it, no `deployed` event is sent, and the alarm is not kept across
+ * restarts.
+ */
+export function parseStateDirectory(value: string | undefined): string | undefined {
+	const dir = value?.trim() || undefined;
+	// systemd lists several directories with colons when the unit names several.
+	const first = dir?.split(':')[0];
+	if (first !== undefined && !first.startsWith('/')) {
+		throw new Error(`STATE_DIRECTORY must be an absolute path, got "${value}"`);
+	}
+	return first;
 }

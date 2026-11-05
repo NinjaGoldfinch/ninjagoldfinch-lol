@@ -1,7 +1,8 @@
 import { building } from '$app/env';
-import { STATUS_CHECK_INTERVAL_S } from '$app/env/private';
+import { EVENTS_URL, STATE_DIRECTORY, STATUS_CHECK_INTERVAL_S } from '$app/env/private';
 import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
 import { CACHE_POLICIES, responseCachePolicy } from '#lib/server/cache.ts';
+import { EventQueue, proxyWatch, recordStart } from '#lib/server/events.ts';
 import { countRequest } from '#lib/server/metrics.ts';
 import { warmPatch } from '#lib/server/patch.ts';
 import { probeClient } from '#lib/server/proxy.ts';
@@ -15,12 +16,17 @@ import { BUILD } from '#lib/server/version.ts';
 // (SPD-09). Not awaited: requests that arrive first share the same loads.
 // Skipped while `vite build` runs, which has no riot-proxy. The build's identity
 // goes to the log first, so a journal shows which release a line came from. The
-// status checks start here too (ADR-062).
+// status checks start here too (ADR-062), and send an event when riot-proxy
+// goes or comes back, and when this start is a new version (ADR-063).
 export const init: ServerInit = () => {
 	if (building) return;
 	console.log(`ninjagoldfinch-lol ${BUILD.version} commit ${BUILD.commit} built ${BUILD.built_at}`);
 	void warmPatch();
-	startChecks(probeClient, STATUS_CHECK_INTERVAL_S);
+	const events = new EventQueue(EVENTS_URL);
+	startChecks(probeClient, STATUS_CHECK_INTERVAL_S, proxyWatch(STATE_DIRECTORY, events));
+	void recordStart(STATE_DIRECTORY, BUILD).then((change) => {
+		if (change) events.push('deployed', change);
+	});
 };
 
 // Errors and form posts must never be cached at the edge, whatever a load set,

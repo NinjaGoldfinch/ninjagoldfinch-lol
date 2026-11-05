@@ -65,7 +65,7 @@ An uncached profile page or Refresh can make riot-proxy call Riot. The productio
 | `build/`                                                       | 2.9 MB                                                           |
 | `.git`                                                         | 8.7 MB                                                           |
 
-So the site needs about 200–400 MB, constant over time, plus the journal. It writes nothing else. Production installs dev dependencies too, because it builds on the host (`README.md:109-110`).
+So the site needs about 200–400 MB, constant over time, plus the journal. Besides that it writes two files of under 100 bytes each in `/var/lib/ninjagoldfinch-lol/` (ADR-063). Production installs dev dependencies too, because it builds on the host (`README.md:109-110`).
 
 The shared 120 GB is riot-proxy's problem to manage: its database was 22 GB at the move and had doubled in a day, which is why raw bodies moved to object storage (`riot-proxy:docs/DECISIONS.md:1510,1513`). ninja-monitor alerts at 70 % and 85 % disk (`riot-proxy:docs/design/12-object-storage-and-hosting.md:836`).
 
