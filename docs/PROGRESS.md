@@ -100,7 +100,7 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 - [x] DEP-05 release `v1.0.0`, and the production host moved from its checkout to `/srv/ninjagoldfinch-lol` (ADR-054) — #103, #105
 - [x] DEP-06 staging: each release also built for `https://staging.ninjagoldfinch.lol` and deployed there by `release.yml` with no approval; prod keeps its approval (ADR-057); staging reads from production riot-proxy with its own key (ADR-058) — #112, #113, #114, #115
 - [x] DEP-07 the browser tests (`just e2e`) run in CI, on a hosted runner, before every release (ADR-059) — #117
-- [~] DEP-08 a smoke test of staging after each staging deploy, recorded as `staging/smoke`; prod takes only a version that passed it or was live in prod (ADR-060)
+- [x] DEP-08 a smoke test of staging after each staging deploy, recorded as `staging/smoke`; prod takes only a version that passed it or was live in prod (ADR-060) — #118. First run 2026-11-05: `v1.0.4` on staging passed `/healthz` and all six pages through Access ([run 41926211650](https://github.com/NinjaGoldfinch/ninjagoldfinch-lol/actions/runs/41926211650)); `v1.0.0`–`v1.0.2` marked `prod/deployed`
 
 ## P5 — Production
 
