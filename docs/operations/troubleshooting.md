@@ -4,27 +4,29 @@ Symptom, likely cause, how to confirm it, and the fix, for the failures ninjagol
 
 Start from the symptom table, then read the entry.
 
-| #   | Symptom                                                          | Likely cause                                                  |
-| --- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1   | Service exits at start; unit restarting every 2 s                | Missing or invalid setting                                    |
-| 2   | `/healthz` 200, data pages 503 "Temporarily unavailable" at once | riot-proxy not running                                        |
-| 3   | Data pages 503 after exactly 5 s or 30 s                         | riot-proxy hung or overloaded                                 |
-| 4   | Every data page 503, journal full of `proxy 401`                 | Wrong or revoked `PROXY_KEY`                                  |
-| 5   | Profiles and new matches 503, champion pages fine                | Riot rejects riot-proxy's Riot key                            |
-| 6   | "Too many requests, try again in N seconds"                      | Site quota or Riot budget exhausted                           |
-| 7   | Refresh button gives 403                                         | Build `ORIGIN` does not match the public URL                  |
-| 8   | A real player's profile shows "Not found"                        | Riot ID typed or linked wrongly, or riot-proxy says not found |
-| 9   | Profile loads, match list says unavailable                       | Optional match-list call failed                               |
-| 10  | Match page without gold chart, item or skill order               | Timeline call failed (optional)                               |
-| 11  | Match page runes without stat shards                             | CommunityDragon unreachable                                   |
-| 12  | Champion pages 503, profile and match pages fine                 | Data Dragon lookups failing                                   |
-| 13  | First view of a champion page slow, `proxy slow … x-cache=MISS`  | Cold analytics slice in riot-proxy                            |
-| 14  | Old patch icons or names after a new patch                       | Patch refresh pending, or the new patch's lookups failing     |
-| 15  | Requests fail for a few seconds during a deploy                  | Building in the live checkout                                 |
-| 16  | e2e: elements "not visible"; text has zero height                | Chromium system fonts missing                                 |
-| 17  | e2e or local page 503/500; mock logs `no fixture for`            | Missing fixture                                               |
-| 18  | Dev server: `ECONNREFUSED 192.168.68.46:8080`                    | `.env` points at the dormant LAN proxy                        |
-| 19  | `pnpm install` refuses to run                                    | Node or pnpm version                                          |
+| #   | Symptom                                                              | Likely cause                                                      |
+| --- | -------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1   | Service exits at start; unit restarting every 2 s                    | Missing or invalid setting                                        |
+| 2   | `/healthz` 200, data pages 503 "Temporarily unavailable" at once     | riot-proxy not running                                            |
+| 3   | Data pages 503 after exactly 5 s or 30 s                             | riot-proxy hung or overloaded                                     |
+| 4   | Every data page 503, journal full of `proxy 401`                     | Wrong or revoked `PROXY_KEY`                                      |
+| 5   | Profiles and new matches 503, champion pages fine                    | Riot rejects riot-proxy's Riot key                                |
+| 6   | "Too many requests, try again in N seconds"                          | Site quota or Riot budget exhausted                               |
+| 7   | Refresh button gives 403                                             | Build `ORIGIN` does not match the public URL                      |
+| 8   | A real player's profile shows "Not found"                            | Riot ID typed or linked wrongly, or riot-proxy says not found     |
+| 9   | Profile loads, match list says unavailable                           | Optional match-list call failed                                   |
+| 10  | Match page without gold chart, item or skill order                   | Timeline call failed (optional)                                   |
+| 11  | Match page runes without stat shards                                 | CommunityDragon unreachable                                       |
+| 12  | Champion pages 503, profile and match pages fine                     | Data Dragon lookups failing                                       |
+| 13  | First view of a champion page slow, `proxy slow … x-cache=MISS`      | Cold analytics slice in riot-proxy                                |
+| 14  | Old patch icons or names after a new patch                           | Patch refresh pending, or the new patch's lookups failing         |
+| 15  | Requests fail for a few seconds during a deploy                      | Building in the live checkout                                     |
+| 16  | e2e: elements "not visible"; text has zero height                    | Chromium system fonts missing                                     |
+| 17  | e2e or local page 503/500; mock logs `no fixture for`                | Missing fixture                                                   |
+| 18  | Dev server: `ECONNREFUSED 192.168.68.46:8080`                        | `.env` points at the dormant LAN proxy                            |
+| 19  | `pnpm install` refuses to run                                        | Node or pnpm version                                              |
+| 20  | `status checks failed:` or `riot_proxy check failed:` in the journal | A bug in the status checks or the proxy alarm                     |
+| 21  | No events at the receiver, or `event … dropped` in the journal       | `EVENTS_URL` unset or wrong, receiver down, or no state directory |
 
 ## 1. Service exits at start
 
@@ -45,13 +47,13 @@ PROXY_KEY
   - PROXY_KEY is required when NODE_ENV=production
 ```
 
-Other messages from the same validators: `PROXY_URL is required, e.g. http://riot-proxy:8080`, `PROXY_URL must be an absolute URL, got "…"`, `… must use http or https, got "…"` (`src/lib/server/env.ts:10-55`). `EADDRINUSE` means something else holds `PORT`.
+Other messages from the same validators: `PROXY_URL is required, e.g. http://riot-proxy:8080`, `PROXY_URL must be an absolute URL, got "…"`, `… must use http or https, got "…"`, and one for each optional setting that is set wrongly, such as `STATUS_TOKEN must be at least 16 characters…` or `STATE_DIRECTORY must be an absolute path…`; for `EVENTS_URL` the value is not shown, as it may hold a token (`src/lib/server/env.ts:11-161`). `EADDRINUSE` means something else holds `PORT`.
 
 **Fix.** Correct `/etc/ninjagoldfinch-lol/env` ([deployment/configuration.md](../deployment/configuration.md)), then `sudo systemctl restart ninjagoldfinch-lol`. For `EADDRINUSE`, `sudo ss -ltnp | grep ':3000 '`.
 
 ## 2. Data pages 503 at once, `/healthz` fine
 
-**Cause.** riot-proxy is not listening. The connection is refused; the proxy client logs `proxy unreachable` and fails the call as 503, "Temporarily unavailable" (`src/lib/server/proxy.ts:125-129`). **Observed** on 2026-10-20, before RV-03: `/champions`, `/summoner/…`, `/match/…` answered in under 0.05 s, then with status 500; RV-03 made it 503.
+**Cause.** riot-proxy is not listening. The connection is refused; the proxy client logs `proxy unreachable` and fails the call as 503, "Temporarily unavailable" (`src/lib/server/proxy.ts:126-130`). **Observed** on 2026-10-20, before RV-03: `/champions`, `/summoner/…`, `/match/…` answered in under 0.05 s, then with status 500; RV-03 made it 503.
 
 **Confirm.**
 
@@ -65,7 +67,7 @@ systemctl status riot-proxy
 
 ## 3. Data pages 503 after 5 s or 30 s
 
-**Cause.** riot-proxy accepts connections but does not answer in time. Each call has a deadline: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for player and match routes; a spent deadline is a 503 (`src/lib/server/proxy.ts:69-135`, ADR-040). **Observed**: `/champions` 503 at 5.02 s; `/match/…` and `/summoner/…` 503 at 30.0 s. Before RV-03 a call's deadline could fail to fire, and one match page never finished; that was fixed ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md#deadlines-and-failures)).
+**Cause.** riot-proxy accepts connections but does not answer in time. Each call has a deadline: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for player and match routes; a spent deadline is a 503 (`src/lib/server/proxy.ts:70-136`, ADR-040). **Observed**: `/champions` 503 at 5.02 s; `/match/…` and `/summoner/…` 503 at 30.0 s. Before RV-03 a call's deadline could fail to fire, and one match page never finished; that was fixed ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md#deadlines-and-failures)).
 
 **Confirm.** `proxy timeout GET <path> after 5000 ms` (or `30000 ms`) in the journal; `curl -s -m 5 http://127.0.0.1:8080/readyz` hangs or is slow.
 
@@ -102,7 +104,7 @@ sudo journalctl -u riot-proxy | grep '<request-id from the site line>'
 
 ## 7. Refresh gives 403
 
-**Cause.** SvelteKit refuses a form POST whose `Origin` is not the origin baked in at build time. A build without `ORIGIN=https://ninjagoldfinch.lol` guesses the origin from the `Host` header (`vite.config.ts:16-19`, ADR-014). **Observed**: a POST with a foreign `Origin` got 403; with the build's origin it went through.
+**Cause.** SvelteKit refuses a form POST whose `Origin` is not the origin baked in at build time. A build without `ORIGIN=https://ninjagoldfinch.lol` guesses the origin from the `Host` header (`vite.config.ts:30-33`, ADR-014). **Observed**: a POST with a foreign `Origin` got 403; with the build's origin it went through.
 
 **Confirm.** `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Origin: https://ninjagoldfinch.lol' -H 'content-type: application/x-www-form-urlencoded' 'http://127.0.0.1:3000/summoner/<id>?/refresh'`: anything but 403 means the origin is right.
 
@@ -112,11 +114,11 @@ sudo journalctl -u riot-proxy | grep '<request-id from the site line>'
 
 **Causes.**
 
-- The URL segment is split on the **last** hyphen: `/summoner/Game-Name-TAG` is `Game-Name` `#` `TAG` (`src/lib/domain/riot-id.ts:14-19,39-44`). A missing tag gives 404 without calling riot-proxy.
+- The URL segment is split on the **last** hyphen: `/summoner/Game-Name-TAG` is `Game-Name` `#` `TAG` (`src/lib/domain/riot-id.ts:14-19,51-60`). A missing tag gives 404 without calling riot-proxy.
 - riot-proxy answered `NOT_FOUND` or `VALIDATION` (`src/lib/server/errors.ts:19-22`).
 - riot-proxy named a platform the site has no region for: that is a 503, logged as `profile <Name>#<TAG>: unknown platform <p>` (`src/lib/server/profile.ts:91-95`).
 
-Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`), so a fix can take a minute to show.
+Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:14-15`), so a fix can take a minute to show.
 
 **Confirm.** Use the search box with `Name#TAG`; check the journal for `proxy 404` and the request id.
 
@@ -140,7 +142,7 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 **Confirm.** `curl -sI https://raw.communitydragon.org/<major.minor>/plugins/rcp-be-lol-game-data/global/default/v1/perks.json` from the host.
 
-**Fix.** Wait, or point `CDRAGON_URL` at a mirror and restart (`src/lib/server/env.ts:17-25`).
+**Fix.** Wait, or point `CDRAGON_URL` at a mirror and restart (`src/lib/server/env.ts:19-27`).
 
 ## 12. Champion pages 503, other pages fine
 
@@ -152,7 +154,7 @@ Not-found pages are cached at the edge for 60 s (`src/lib/server/cache.ts:12-13`
 
 ## 13. Slow first view of a champion page
 
-**Cause.** riot-proxy computes a champion slice on first request after each analytics rebuild: about 200 ms on production, then about 1 ms (ADR-039, `docs/DECISIONS.md:523-529`). The site logs analytics calls over 250 ms as `proxy slow GET <path> x-cache=MISS <ms>ms` (`src/lib/server/proxy.ts:42-63`).
+**Cause.** riot-proxy computes a champion slice on first request after each analytics rebuild: about 200 ms on production, then about 1 ms (ADR-039, `docs/DECISIONS.md:523-529`). The site logs analytics calls over 250 ms as `proxy slow GET <path> x-cache=MISS <ms>ms` (`src/lib/server/proxy.ts:38-68`).
 
 **Confirm.** For this or any other slow page, `sudo journalctl -u ninjagoldfinch-lol | grep 'slow load'` lists each request over 100 ms with its route id and every riot-proxy call it made, by spec path and time, in the form `slow load /champions/[key] <total>ms: …, GET /v1/lol/analytics/champions/{championId} <ms>ms, …`; the slowest call is the one to look at in riot-proxy (`src/lib/server/timing.ts:67-95`, ADR-046).
 
@@ -197,6 +199,22 @@ If the old patch stays well past that, the refresh is failing, and every request
 **Causes.** Node older than 22.18 with `engine-strict=true` (`package.json:7-9`, `.npmrc:1`); or Ubuntu's `node-corepack` 0.24, which cannot load pnpm 12 (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-804`).
 
 **Fix.** `node --version`; install pnpm with `sudo npm install -g pnpm@12.10.1` ([deployment/install.md](../deployment/install.md#2-pnpm)).
+
+## 20. `status checks failed:` or `riot_proxy check failed:` in the journal
+
+**Cause.** The status checks run in the background every `STATUS_CHECK_INTERVAL_S` (ADR-062). `riot_proxy check failed:` means the probe of riot-proxy's `/readyz` threw something other than the 503 the proxy client makes of no answer or a spent deadline; that round's `riot_proxy` check reads `down`, `unreachable` (`src/lib/server/status.ts:100-113`). `status checks failed:` means a round of checks, or the proxy alarm it hands the `riot_proxy` result to, threw: that round's results may not all be held, so `/api/status` can show the previous round's, and if the round would have raised or cleared the alarm, that event is not sent (`src/lib/server/status.ts:144-166`). The next round runs on time either way. Neither is expected: the probe, the alarm and its record catch their own failures, so both lines are a bug, logged with its stack.
+
+**Confirm.** `sudo journalctl -u ninjagoldfinch-lol | grep -E 'status checks failed|riot_proxy check failed'`, with the stack that follows. Then `curl -s http://127.0.0.1:3000/api/status` on the host: each check's `checked_at` should be within `STATUS_CHECK_INTERVAL_S` (30 s by default) of now.
+
+**Fix.** Report it with the stack. Pages are not affected. If it repeats on every round, `/api/status` stays stale and riot-proxy events stop; roll back to the previous release ([deployment/upgrade-and-rollback.md](../deployment/upgrade-and-rollback.md#roll-back)).
+
+## 21. Events do not arrive
+
+**Cause.** Events go to `EVENTS_URL` on changes of state only: `proxy_unreachable` after 3 failed `riot_proxy` checks in a row, `proxy_recovered` on the first `ok` after it, and `deployed` when a start runs another release than the previous start (ADR-063). Unset, nothing is sent and nothing is logged. Each event gets 5 attempts, about 40 s with the receiver down, then `event <name> dropped after 5 attempts: <error>`; a redirect counts as a failed attempt, so an `EVENTS_URL` that redirects loses every event. More than 64 waiting logs `event <name> dropped: 64 events already waiting`. `deployed`, and keeping the proxy alarm across a restart, need a writable `STATE_DIRECTORY`; without one nothing is logged, and a directory that cannot be read or written logs `could not read <file>:`, `could not record the version in <file>:` or `could not record the alarm in <file>:` (`src/lib/server/events.ts:86-91,140-251`). `event <name> dropped:` alone means sending threw, which is a bug (`src/lib/server/events.ts:248`).
+
+**Confirm.** `sudo journalctl -u ninjagoldfinch-lol | grep -E '^event |could not (read|record)'`; `sudo grep -c '^EVENTS_URL=.' /etc/ninjagoldfinch-lol/env` is 1 when a URL is set; `systemctl show ninjagoldfinch-lol -p StateDirectory` names `ninjagoldfinch-lol`.
+
+**Fix.** Set `EVENTS_URL` to the receiver's final URL and restart. For the state directory, see [deployment/releases.md](../deployment/releases.md). A dropped event is not sent again; the status bot's polls of `/api/status` carry the same state.
 
 ---
 
