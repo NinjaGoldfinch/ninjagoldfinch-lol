@@ -109,7 +109,7 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 
 - [x] STAT-01 the build's version, commit and time baked in by `scripts/package.sh`, logged at start-up; a public `GET /api/version` (ADR-061) — #120
 - [ ] STAT-02 `GET /api/status` to the shared contract: request and riot-proxy counters, riot-proxy latency, a background `riot_proxy` check; a bearer token, or a local request
-- [ ] STAT-03 events to an optional URL: `proxy_unreachable`, `proxy_recovered` and `deployed`
+- [x] STAT-03 events to an optional URL: `proxy_unreachable`, `proxy_recovered` and `deployed` (ADR-063) — #126
 
 ## P5 — Production
 
