@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import createClient, { type ClientOptions, type Middleware } from 'openapi-fetch';
 import { PROXY_KEY, PROXY_URL } from '$app/env/private';
 import type { paths } from '#lib/api/schema.d.ts';
+import { countProxyCalls } from './metrics.ts';
 import { timeCalls } from './timing.ts';
 
 /**
@@ -150,7 +151,15 @@ export function createProxyClient(
 	return client;
 }
 
-/** The one riot-proxy client. Server only. */
+/** The one riot-proxy client for pages, its calls counted for /api/status. Server only. */
 export const proxy = createProxyClient(PROXY_URL, PROXY_KEY);
+proxy.use(countProxyCalls());
+
+/**
+ * The status check's client (ADR-062): a 5 s deadline, so a riot-proxy that
+ * hangs shows as down within one check, and its calls are not counted with
+ * the pages'.
+ */
+export const probeClient = createProxyClient(PROXY_URL, PROXY_KEY, undefined, () => 5_000);
 
 export type ProxyClient = typeof proxy;

@@ -6,6 +6,8 @@
 // This file must not import $app/env/*: src/env.ts imports it, and SvelteKit
 // rejects that cycle.
 
+import { isIP } from 'node:net';
+
 /** Base URL of riot-proxy. Required in every environment. */
 export function parseProxyUrl(value: string | undefined): string {
 	if (!value) {
@@ -52,4 +54,60 @@ export function parseProxyKey(value: string | undefined, production: boolean): s
 	}
 
 	return key;
+}
+
+/**
+ * Bearer token for `GET /api/status`. Optional: without it, only a local
+ * request may read the status (ADR-062). A short token is refused, so a
+ * placeholder never guards it.
+ */
+export function parseStatusToken(value: string | undefined): string | undefined {
+	const token = value?.trim() || undefined;
+	if (token && token.length < 16) {
+		throw new Error('STATUS_TOKEN must be at least 16 characters; generate one with openssl rand');
+	}
+	return token;
+}
+
+/**
+ * Networks, besides loopback, that may read `GET /api/status` without the
+ * token: comma-separated CIDRs such as `10.0.0.0/8,fd00::/8`. Empty by default.
+ */
+export function parseStatusCidrs(value: string | undefined): string[] {
+	const cidrs = (value ?? '')
+		.split(',')
+		.map((c) => c.trim())
+		.filter((c) => c !== '');
+	for (const cidr of cidrs) {
+		if (!parseCidr(cidr)) {
+			throw new Error(`STATUS_ALLOW_CIDR must be CIDRs such as 10.0.0.0/8, got "${cidr}"`);
+		}
+	}
+	return cidrs;
+}
+
+/** A CIDR's network, prefix and family; undefined if it isn't one. */
+export function parseCidr(
+	cidr: string
+): { network: string; prefix: number; family: 'ipv4' | 'ipv6' } | undefined {
+	const match = /^([^/]+)\/(\d{1,3})$/.exec(cidr);
+	if (!match) return undefined;
+	const [, network = '', bits = ''] = match;
+	const version = isIP(network);
+	const prefix = Number(bits);
+	if (version === 4 && prefix <= 32) return { network, prefix, family: 'ipv4' };
+	if (version === 6 && prefix <= 128) return { network, prefix, family: 'ipv6' };
+	return undefined;
+}
+
+export const DEFAULT_STATUS_INTERVAL_S = 30;
+
+/** Seconds between the status checks; 30 by default, 5 to 3600. */
+export function parseStatusInterval(value: string | undefined): number {
+	if (!value?.trim()) return DEFAULT_STATUS_INTERVAL_S;
+	const seconds = Number(value);
+	if (!Number.isInteger(seconds) || seconds < 5 || seconds > 3600) {
+		throw new Error(`STATUS_CHECK_INTERVAL_S must be whole seconds from 5 to 3600, got "${value}"`);
+	}
+	return seconds;
 }

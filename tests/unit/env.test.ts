@@ -3,7 +3,10 @@ import {
 	DEFAULT_CDRAGON_URL,
 	parseCdragonUrl,
 	parseProxyKey,
-	parseProxyUrl
+	parseProxyUrl,
+	parseStatusCidrs,
+	parseStatusInterval,
+	parseStatusToken
 } from '#lib/server/env.ts';
 import { variables } from '../../src/env';
 
@@ -70,5 +73,45 @@ describe('src/env.ts PROXY_KEY', () => {
 			issues: [{ message: 'PROXY_KEY is required when NODE_ENV=production' }]
 		});
 		expect(validate(KEY)).toEqual({ value: KEY });
+	});
+});
+
+describe('parseStatusToken', () => {
+	it('is optional, and trimmed', () => {
+		expect(parseStatusToken(undefined)).toBeUndefined();
+		expect(parseStatusToken('  ')).toBeUndefined();
+		expect(parseStatusToken(' status-token-placeholder ')).toBe('status-token-placeholder');
+	});
+
+	it('refuses a token too short to guard anything', () => {
+		expect(() => parseStatusToken('short')).toThrow('at least 16');
+	});
+});
+
+describe('parseStatusCidrs', () => {
+	it('reads a comma-separated list, empty by default', () => {
+		expect(parseStatusCidrs(undefined)).toEqual([]);
+		expect(parseStatusCidrs('')).toEqual([]);
+		expect(parseStatusCidrs(' 10.0.0.0/8, fd00::/8 ,')).toEqual(['10.0.0.0/8', 'fd00::/8']);
+	});
+
+	it('refuses anything but CIDRs', () => {
+		expect(() => parseStatusCidrs('10.0.0.1')).toThrow('STATUS_ALLOW_CIDR');
+		expect(() => parseStatusCidrs('10.0.0.0/33')).toThrow('STATUS_ALLOW_CIDR');
+		expect(() => parseStatusCidrs('example.com/8')).toThrow('STATUS_ALLOW_CIDR');
+	});
+});
+
+describe('parseStatusInterval', () => {
+	it('is 30 s by default', () => {
+		expect(parseStatusInterval(undefined)).toBe(30);
+		expect(parseStatusInterval('')).toBe(30);
+		expect(parseStatusInterval('60')).toBe(60);
+	});
+
+	it('refuses anything but whole seconds from 5 to 3600', () => {
+		for (const bad of ['4', '3601', '1.5', 'thirty']) {
+			expect(() => parseStatusInterval(bad)).toThrow('STATUS_CHECK_INTERVAL_S');
+		}
 	});
 });

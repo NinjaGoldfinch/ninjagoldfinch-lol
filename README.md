@@ -84,16 +84,71 @@ A full URL records from CommunityDragon instead. The fixture is keyed by the URL
 
 ## Version and status
 
-| Endpoint           | Access | Answers                                                                     |
-| ------------------ | ------ | --------------------------------------------------------------------------- |
-| `GET /healthz`     | public | `{"ok":true,"version":"1.0.4"}` while the process is up; deploys wait on it |
-| `GET /api/version` | public | `{"version":"1.0.4","commit":"a1b2c3d"}`, never cached                      |
+| Endpoint           | Access                           | Answers                                                                     |
+| ------------------ | -------------------------------- | --------------------------------------------------------------------------- |
+| `GET /healthz`     | public                           | `{"ok":true,"version":"1.0.4"}` while the process is up; deploys wait on it |
+| `GET /api/version` | public                           | `{"version":"1.0.4","commit":"a1b2c3d"}`, never cached                      |
+| `GET /api/status`  | bearer token, or a local request | the shared status contract, below; `401` otherwise                          |
 
 `/api/version` lets a poller see a deploy: the version changes when a new release starts. `scripts/package.sh` bakes the release's version and short commit into the build (`BUILD_VERSION`, `BUILD_COMMIT`), and the server logs them with the build time at start-up. Any other build, such as `just dev` or a plain `pnpm build`, reports `dev` for both (ADR-061).
 
 ```console
 $ curl -s https://ninjagoldfinch.lol/api/version
 {"version":"1.0.4","commit":"a1b2c3d"}
+```
+
+`/api/status` follows the status contract every ninjagoldfinch service shares, for the frontend only: riot-proxy reports its own crawler, database and storage (ADR-062). It reads held results and in-memory counters only, so it answers in a few milliseconds and never calls riot-proxy. The checks run in the background, at start-up and then every `STATUS_CHECK_INTERVAL_S`:
+
+| Check         | `ok`                                                               | otherwise                                                                                                     |
+| ------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `riot_proxy`  | riot-proxy's `/readyz` answers 200 with the site's key, within 5 s | `down`: unreachable, not ready (the detail names `sqlite` or `limiter`), the key refused, or any other status |
+| `static_data` | a patch and its lookups are loaded                                 | `degraded`: none yet, so each page waits on riot-proxy for them                                               |
+
+`status` is the worst check. Counters run from `started_at`:
+
+| Metric                                         | Kind    | Counts                                                                     |
+| ---------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| `http_requests_total`, `http_errors_total`     | counter | every request the server answered, and those that were 5xx                 |
+| `api_requests_total`                           | counter | requests to `/api/…`                                                       |
+| `proxy_requests_total`, `proxy_errors_total`   | counter | the pages' riot-proxy calls, and those with no answer, a 429 or a 5xx      |
+| `proxy_latency_ms_p50`, `proxy_latency_ms_p95` | gauge   | those calls' times over the last 5 minutes; 0 with none                    |
+| `patch_age_s`                                  | gauge   | seconds since the current patch was loaded or last refreshed; 0 before one |
+
+Access: a request with `Authorization: Bearer <STATUS_TOKEN>`, or one made on the host itself or from `STATUS_ALLOW_CIDR`, without the token. Production is reached only through `cloudflared` on loopback, so a request carrying Cloudflare's `Cf-Connecting-Ip` always needs the token, whatever its address. Anything else is `401`.
+
+| Setting                   | Default | Meaning                                                            |
+| ------------------------- | ------- | ------------------------------------------------------------------ |
+| `STATUS_TOKEN`            | unset   | bearer token, at least 16 characters; secret, in the env file only |
+| `STATUS_ALLOW_CIDR`       | empty   | comma-separated CIDRs besides loopback that need no token          |
+| `STATUS_CHECK_INTERVAL_S` | `30`    | seconds between checks, 5–3600                                     |
+
+```console
+$ curl -s -H "Authorization: Bearer $STATUS_TOKEN" https://ninjagoldfinch.lol/api/status
+{
+  "schema": 1,
+  "service": "ninjagoldfinch-lol",
+  "host": "ngf-prod-syd1",
+  "version": "1.0.5",
+  "commit": "a1b2c3d",
+  "built_at": "2026-11-05T09:12:00Z",
+  "started_at": "2026-11-05T10:00:00Z",
+  "uptime_s": 86400,
+  "status": "ok",
+  "checks": [
+    { "name": "riot_proxy", "status": "ok", "latency_ms": 3, "checked_at": "2026-11-06T09:59:41Z", "detail": "ready" },
+    { "name": "static_data", "status": "ok", "latency_ms": 0, "checked_at": "2026-11-06T09:59:41Z", "detail": "patch 16.21.1" }
+  ],
+  "metrics": {
+    "http_requests_total": 48211,
+    "http_errors_total": 12,
+    "api_requests_total": 2880,
+    "proxy_requests_total": 61034,
+    "proxy_errors_total": 9,
+    "proxy_latency_ms_p50": 4,
+    "proxy_latency_ms_p95": 180,
+    "patch_age_s": 212
+  }
+}
 ```
 
 ## Deploying
@@ -108,14 +163,14 @@ Production runs without Docker: `node build` under systemd on the same server as
 
 From `v1.0.0` it runs a release from `/srv/ninjagoldfinch-lol/current`, deployed with `.github/workflows/deploy.yml` after the owner's approval (ADR-051 to ADR-054). The move from the checkout, and deploying and rolling back releases, are in [docs/deployment/releases.md](docs/deployment/releases.md). The checkout below is how production ran before, and the fallback until the move has settled.
 
-| What       | Where                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------- |
-| Checkout   | `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key                          |
-| Service    | `ninjagoldfinch-lol.service`, running as the `ninjagoldfinch-lol` user                 |
-| Settings   | `/etc/ninjagoldfinch-lol/env`: `NODE_ENV`, `HOST`, `PORT`, `PROXY_URL` and `PROXY_KEY` |
-| Listens on | `127.0.0.1:3000`; the tunnel is the only way in                                        |
-| Logs       | `sudo journalctl -u ninjagoldfinch-lol`                                                |
-| Liveness   | `curl -s http://127.0.0.1:3000/healthz`                                                |
+| What       | Where                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------ |
+| Checkout   | `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key                                          |
+| Service    | `ninjagoldfinch-lol.service`, running as the `ninjagoldfinch-lol` user                                 |
+| Settings   | `/etc/ninjagoldfinch-lol/env`: `NODE_ENV`, `HOST`, `PORT`, `PROXY_URL`, `PROXY_KEY` and `STATUS_TOKEN` |
+| Listens on | `127.0.0.1:3000`; the tunnel is the only way in                                                        |
+| Logs       | `sudo journalctl -u ninjagoldfinch-lol`                                                                |
+| Liveness   | `curl -s http://127.0.0.1:3000/healthz`                                                                |
 
 To deploy the latest `main`, run on the server:
 
