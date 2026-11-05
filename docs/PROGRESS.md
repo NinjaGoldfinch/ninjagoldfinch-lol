@@ -106,7 +106,7 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 
 Owner request 2026-11-05: the site answers the shared status contract the status bot polls, as riot-proxy does. Frontend only: the crawler, database and object storage are riot-proxy's, so they are not reported here (owner, 2026-11-05).
 
-- [ ] STAT-01 the build's version, commit and time baked in by `scripts/package.sh`, logged at start-up; a public `GET /api/version` (ADR-061)
+- [x] STAT-01 the build's version, commit and time baked in by `scripts/package.sh`, logged at start-up; a public `GET /api/version` (ADR-061) — #120
 - [ ] STAT-02 `GET /api/status` to the shared contract: request and riot-proxy counters, riot-proxy latency, a background `riot_proxy` check; a bearer token, or a local request
 - [ ] STAT-03 events to an optional URL: `proxy_unreachable`, `proxy_recovered` and `deployed`
 
