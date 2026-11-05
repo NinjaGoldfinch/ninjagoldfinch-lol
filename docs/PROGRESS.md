@@ -72,7 +72,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-02 The site icon is a ninja goldfinch on a lavender square, replacing the Svelte default — #94
 - [x] FIX-03 The site icon is a black-hooded ninja with a lavender eye band on a deep-purple square, visible on dark and light tabs — #97
 - [x] FIX-04 The site icon is a lavender N with a dark outline on a deep-purple square — #98
-- [ ] FIX-05 The browser tests wait for the page to hydrate before using a filter that applies on change
+- [x] FIX-05 The browser tests wait for the page to hydrate before using a filter that applies on change — #123
 
 ## RV — fixes from the code review of 2026-11-03
 
