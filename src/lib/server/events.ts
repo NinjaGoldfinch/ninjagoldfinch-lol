@@ -221,7 +221,7 @@ export class EventQueue {
 	private worker: Promise<void> | undefined;
 
 	constructor(
-		private readonly url: string | undefined,
+		readonly url: string | undefined,
 		private readonly send: (url: string, event: SiteEvent) => Promise<unknown> = deliver
 	) {}
 
@@ -258,11 +258,14 @@ export class EventQueue {
  * raised. With the record, a server that restarts during an outage (a deploy,
  * a crash) still sends its `proxy_recovered`, and not a second
  * `proxy_unreachable`. Without a directory the alarm lives in this process only.
+ * Without a URL nothing is watched, and the record is neither read nor written:
+ * it says what the receiver was told, and with no URL it was told nothing.
  */
 export function proxyWatch(
 	dir: string | undefined,
-	events: Pick<EventQueue, 'push'>
+	events: Pick<EventQueue, 'push' | 'url'>
 ): (check: Check) => Promise<void> {
+	if (!events.url) return () => Promise.resolve();
 	const alarm = readRaised(dir).then((raised) => new ProxyAlarm(raised));
 	return async (check) => {
 		const event = (await alarm).observe(check.status);
