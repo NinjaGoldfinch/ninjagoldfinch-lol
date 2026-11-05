@@ -102,6 +102,14 @@ Owner request 2026-11-05: the site joins the pipeline riot-proxy and ninja-monit
 - [x] DEP-07 the browser tests (`just e2e`) run in CI, on a hosted runner, before every release (ADR-059) — #117
 - [x] DEP-08 a smoke test of staging after each staging deploy, recorded as `staging/smoke`; prod takes only a version that passed it or was live in prod (ADR-060) — #118. First run 2026-11-05: `v1.0.4` on staging passed `/healthz` and all six pages through Access ([run 41926211650](https://github.com/NinjaGoldfinch/ninjagoldfinch-lol/actions/runs/41926211650)); `v1.0.0`–`v1.0.2` marked `prod/deployed`
 
+## STAT — version and status endpoints for the status bot
+
+Owner request 2026-11-05: the site answers the shared status contract the status bot polls, as riot-proxy does. Frontend only: the crawler, database and object storage are riot-proxy's, so they are not reported here (owner, 2026-11-05).
+
+- [ ] STAT-01 the build's version, commit and time baked in by `scripts/package.sh`, logged at start-up; a public `GET /api/version` (ADR-061)
+- [ ] STAT-02 `GET /api/status` to the shared contract: request and riot-proxy counters, riot-proxy latency, a background `riot_proxy` check; a bearer token, or a local request
+- [ ] STAT-03 events to an optional URL: `proxy_unreachable`, `proxy_recovered` and `deployed`
+
 ## P5 — Production
 
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109

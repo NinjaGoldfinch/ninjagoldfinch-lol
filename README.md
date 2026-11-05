@@ -82,6 +82,20 @@ Use the path exactly as the client sends it, URL-encoded. The recorder keeps onl
 
 A full URL records from CommunityDragon instead. The fixture is keyed by the URL's path, and the mock serves it when `CDRAGON_URL` points at the mock, as the e2e tests do: `just fixture cdragon-perks 'https://raw.communitydragon.org/16.20/plugins/rcp-be-lol-game-data/global/default/v1/perks.json' --keep 5001,5008`.
 
+## Version and status
+
+| Endpoint           | Access | Answers                                                                     |
+| ------------------ | ------ | --------------------------------------------------------------------------- |
+| `GET /healthz`     | public | `{"ok":true,"version":"1.0.4"}` while the process is up; deploys wait on it |
+| `GET /api/version` | public | `{"version":"1.0.4","commit":"a1b2c3d"}`, never cached                      |
+
+`/api/version` lets a poller see a deploy: the version changes when a new release starts. `scripts/package.sh` bakes the release's version and short commit into the build (`BUILD_VERSION`, `BUILD_COMMIT`), and the server logs them with the build time at start-up. Any other build, such as `just dev` or a plain `pnpm build`, reports `dev` for both (ADR-061).
+
+```console
+$ curl -s https://ninjagoldfinch.lol/api/version
+{"version":"1.0.4","commit":"a1b2c3d"}
+```
+
 ## Deploying
 
 ### Preview VM (dormant)
