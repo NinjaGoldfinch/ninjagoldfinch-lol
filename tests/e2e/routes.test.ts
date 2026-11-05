@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { hydrated } from './hydrated.ts';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
 
@@ -263,6 +264,7 @@ test.describe('match filters and pages', () => {
 
 	test('choosing a queue reloads with only that queue', async ({ page }) => {
 		await page.goto(PROFILE);
+		await hydrated(page);
 		await page.getByRole('combobox', { name: 'Queue' }).selectOption({ label: 'Ranked Solo' });
 
 		await expect(page).toHaveURL(`${PROFILE}?queue=420`);
@@ -272,6 +274,7 @@ test.describe('match filters and pages', () => {
 
 	test("choosing a champion shows only that champion's games", async ({ page }) => {
 		await page.goto(PROFILE);
+		await hydrated(page);
 		await page.getByRole('combobox', { name: 'Champion' }).selectOption({ label: 'Viego' });
 
 		await expect(page).toHaveURL(`${PROFILE}?champion=234`);

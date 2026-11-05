@@ -16,6 +16,12 @@
 			? page.data.championNames.filter((n: unknown): n is string => typeof n === 'string')
 			: []
 	);
+
+	// Marks the document once hydrated, when the enhancements (filters that apply
+	// on change, popups) are wired up. The browser tests wait for it before using them.
+	$effect(() => {
+		document.documentElement.dataset.hydrated = '';
+	});
 </script>
 
 <svelte:head>

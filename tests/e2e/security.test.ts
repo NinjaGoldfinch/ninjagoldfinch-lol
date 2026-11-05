@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { hydrated } from './hydrated.ts';
 
 // The CSP and the other security headers on every kind of page, and no
 // violation while the pages are used, with JavaScript and without (ADR-055).
@@ -121,6 +122,7 @@ test.describe('with JavaScript', () => {
 
 		// Profile: Refresh and its countdown, the inline teams, a queue filter.
 		await page.goto(PROFILE);
+		await hydrated(page);
 		await page.getByRole('button', { name: 'Refresh' }).click();
 		await expect(page.getByRole('main')).toContainText(/Refresh available in/);
 		const row = page.getByRole('article', { name: 'Victory as Ahri' }).first();
@@ -148,6 +150,7 @@ test.describe('with JavaScript', () => {
 		await page.getByRole('link', { name: 'Mid' }).click();
 		await expect(page).toHaveURL(/role=mid/);
 		await page.goto('/champions');
+		await hydrated(page);
 		// With JavaScript the picker applies itself on change.
 		await page.getByRole('combobox', { name: 'Tier' }).selectOption({ label: 'Emerald+' });
 		await expect(page).toHaveURL(/rank=emerald\+/);
