@@ -2,7 +2,7 @@ import { building } from '$app/env';
 import { EVENTS_URL, STATE_DIRECTORY, STATUS_CHECK_INTERVAL_S } from '$app/env/private';
 import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
 import { CACHE_POLICIES, responseCachePolicy } from '#lib/server/cache.ts';
-import { EventQueue, ProxyAlarm, recordStart } from '#lib/server/events.ts';
+import { EventQueue, proxyWatch, recordStart } from '#lib/server/events.ts';
 import { countRequest } from '#lib/server/metrics.ts';
 import { warmPatch } from '#lib/server/patch.ts';
 import { probeClient } from '#lib/server/proxy.ts';
@@ -23,11 +23,7 @@ export const init: ServerInit = () => {
 	console.log(`ninjagoldfinch-lol ${BUILD.version} commit ${BUILD.commit} built ${BUILD.built_at}`);
 	void warmPatch();
 	const events = new EventQueue(EVENTS_URL);
-	const alarm = new ProxyAlarm();
-	startChecks(probeClient, STATUS_CHECK_INTERVAL_S, (check) => {
-		const event = alarm.observe(check.status);
-		if (event) events.push(event, { reason: check.detail });
-	});
+	startChecks(probeClient, STATUS_CHECK_INTERVAL_S, proxyWatch(STATE_DIRECTORY, events));
 	void recordStart(STATE_DIRECTORY, BUILD).then((change) => {
 		if (change) events.push('deployed', change);
 	});

@@ -142,12 +142,13 @@ let timer: ReturnType<typeof setInterval> | undefined;
 /**
  * Starts the checks: now, then every `intervalS` seconds. A check still
  * running when the next is due is not started twice. `onProxyCheck` sees each
- * `riot_proxy` result, for the events (ADR-063). Called once at start-up.
+ * `riot_proxy` result, for the events (ADR-063), and is waited for; if it
+ * throws, that is logged and the checks go on. Called once at start-up.
  */
 export function startChecks(
 	client: ProxyClient,
 	intervalS: number,
-	onProxyCheck: (check: Check) => void = () => {}
+	onProxyCheck: (check: Check) => void | Promise<void> = () => {}
 ): void {
 	if (timer) return;
 	let running = false;
@@ -155,7 +156,7 @@ export function startChecks(
 		if (running) return;
 		running = true;
 		try {
-			onProxyCheck(await runChecks(client));
+			await onProxyCheck(await runChecks(client));
 		} catch (e) {
 			console.error('status checks failed:', e);
 		} finally {

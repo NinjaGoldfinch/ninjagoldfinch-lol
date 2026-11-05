@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
-import { rfc3339, type CheckStatus } from './status.ts';
+import { rfc3339, type Check, type CheckStatus } from './status.ts';
 import type { BuildInfo } from './version.ts';
 
 // Events to an optional URL, to the shared event contract (ADR-063): state
@@ -48,18 +48,24 @@ export function siteEvent(
 /** Attempts per event, the first included, before it is dropped. */
 export const MAX_ATTEMPTS = 5;
 
+/** How long one attempt may take, in ms. */
+export const ATTEMPT_TIMEOUT_MS = 5_000;
+
 type Fetch = (request: Request) => Promise<Response>;
 
 /**
  * Sends one event: up to MAX_ATTEMPTS POSTs, 5 s each, waiting 1, 2, 4 and
- * 8 s between them. Any 2xx is delivered. Never throws: a dropped event is
- * logged. Callers don't await it.
+ * 8 s between them. Any 2xx is delivered. A redirect is a failed attempt:
+ * following a 301 or 302 would turn the POST into a GET with no body, whose
+ * 2xx would count as delivered. Never throws: a dropped event is logged.
+ * Callers don't await it.
  */
 export async function deliver(
 	url: string,
 	event: SiteEvent,
 	fetch: Fetch = globalThis.fetch,
-	wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms).unref())
+	wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms).unref()),
+	timeoutMs: number = ATTEMPT_TIMEOUT_MS
 ): Promise<boolean> {
 	let last = '';
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -69,7 +75,8 @@ export async function deliver(
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify(event),
-					signal: AbortSignal.timeout(5_000)
+					signal: AbortSignal.timeout(timeoutMs),
+					redirect: 'error'
 				})
 			);
 			await response.body?.cancel();
@@ -90,11 +97,13 @@ export const UNREACHABLE_AFTER = 3;
 /**
  * Turns `riot_proxy` results into events: `proxy_unreachable` once, on the
  * third `down` in a row, and `proxy_recovered` once, on the first `ok` after
- * that. Anything else changes nothing.
+ * that. Anything else changes nothing. `raised` is whether an earlier run of
+ * the server already sent `proxy_unreachable` for an outage it did not see end.
  */
 export class ProxyAlarm {
 	private failures = 0;
-	private raised = false;
+
+	constructor(private raised = false) {}
 
 	observe(status: CheckStatus): 'proxy_unreachable' | 'proxy_recovered' | undefined {
 		if (status === 'down') {
@@ -128,6 +137,33 @@ export function deployedChange(
 }
 
 const STATE_FILE = 'last-version.json';
+const ALARM_FILE = 'proxy-alarm.json';
+
+/** The JSON in a state file; undefined if there is none, or it can't be read (logged). */
+async function readState(file: string): Promise<unknown> {
+	try {
+		return JSON.parse(await readFile(file, 'utf8'));
+	} catch (e) {
+		if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+			console.error(`could not read ${file}:`, e);
+		}
+		return undefined;
+	}
+}
+
+/** Writes a state file through a temporary file and a rename. Throws. */
+async function writeState(dir: string, file: string, value: unknown): Promise<void> {
+	await mkdir(dir, { recursive: true });
+	const next = `${file}.tmp`;
+	await writeFile(next, `${JSON.stringify(value)}\n`);
+	await rename(next, file);
+}
+
+function field(recorded: unknown, name: string): unknown {
+	return typeof recorded === 'object' && recorded !== null
+		? (recorded as Record<string, unknown>)[name]
+		: undefined;
+}
 
 /**
  * At start-up: reads the version the previous start recorded in `dir`, records
@@ -140,30 +176,36 @@ export async function recordStart(
 ): Promise<{ from: string; to: string } | undefined> {
 	if (!dir) return undefined;
 	const file = join(dir, STATE_FILE);
-	let previous: string | undefined;
-	try {
-		const recorded: unknown = JSON.parse(await readFile(file, 'utf8'));
-		const version =
-			typeof recorded === 'object' && recorded !== null && 'version' in recorded
-				? recorded.version
-				: undefined;
-		previous = typeof version === 'string' ? version : undefined;
-	} catch (e) {
-		if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
-			console.error(`could not read ${file}:`, e);
-		}
-	}
+	const version = field(await readState(file), 'version');
+	const previous = typeof version === 'string' ? version : undefined;
 	if (build.version === 'dev') return undefined;
 	try {
-		await mkdir(dir, { recursive: true });
-		const next = `${file}.tmp`;
-		await writeFile(next, `${JSON.stringify({ version: build.version, commit: build.commit })}\n`);
-		await rename(next, file);
+		await writeState(dir, file, { version: build.version, commit: build.commit });
 	} catch (e) {
 		console.error(`could not record the version in ${file}:`, e);
 		return undefined;
 	}
 	return deployedChange(previous, build.version);
+}
+
+/**
+ * Whether an earlier run recorded in `dir` that it sent `proxy_unreachable`
+ * and no `proxy_recovered` since. False without a directory or a record.
+ */
+export async function readRaised(dir: string | undefined): Promise<boolean> {
+	if (!dir) return false;
+	return field(await readState(join(dir, ALARM_FILE)), 'raised') === true;
+}
+
+/** Records in `dir` whether `proxy_unreachable` is raised. Never throws: a failure is logged. */
+export async function writeRaised(dir: string | undefined, raised: boolean): Promise<void> {
+	if (!dir) return;
+	const file = join(dir, ALARM_FILE);
+	try {
+		await writeState(dir, file, { raised });
+	} catch (e) {
+		console.error(`could not record the alarm in ${file}:`, e);
+	}
 }
 
 /** Events waiting to be sent, at most; a full queue drops the newest. */
@@ -208,4 +250,24 @@ export class EventQueue {
 		}
 		this.worker = undefined;
 	}
+}
+
+/**
+ * What the status checks call with each `riot_proxy` result: pushes the event
+ * a change of state makes, and records in `dir` whether `proxy_unreachable` is
+ * raised. With the record, a server that restarts during an outage (a deploy,
+ * a crash) still sends its `proxy_recovered`, and not a second
+ * `proxy_unreachable`. Without a directory the alarm lives in this process only.
+ */
+export function proxyWatch(
+	dir: string | undefined,
+	events: Pick<EventQueue, 'push'>
+): (check: Check) => Promise<void> {
+	const alarm = readRaised(dir).then((raised) => new ProxyAlarm(raised));
+	return async (check) => {
+		const event = (await alarm).observe(check.status);
+		if (!event) return;
+		events.push(event, { reason: check.detail });
+		await writeRaised(dir, event === 'proxy_unreachable');
+	};
 }

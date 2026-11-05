@@ -139,7 +139,7 @@ ninja-monitor warns at 70 % and 85 % (`riot-proxy:docs/design/12-object-storage-
    sudo -H -u ninjagoldfinch-lol pnpm store prune           # unreferenced packages in the user's store
    ```
 
-Effects of a full disk on the site: the running process keeps serving (it writes nothing), journald may drop log lines, and a deploy fails at `pnpm install` or `pnpm build`. Do not deploy until there is room: a failed build can leave `build/` missing ([deployment/upgrade-and-rollback.md](../deployment/upgrade-and-rollback.md#upgrade)).
+Effects of a full disk on the site: the running process keeps serving (pages need no disk), journald may drop log lines, and a deploy fails at `pnpm install` or `pnpm build`. The only files the site writes are the two event-state files in `/var/lib/ninjagoldfinch-lol/` (ADR-063); a write that fails is logged (`could not record the version in …`, `could not record the alarm in …`) and costs a `deployed` event, or the alarm's memory across a restart, nothing else. Do not deploy until there is room: a failed build can leave `build/` missing ([deployment/upgrade-and-rollback.md](../deployment/upgrade-and-rollback.md#upgrade)).
 
 ## Bandwidth near the 6 TB allowance
 

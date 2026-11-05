@@ -6,7 +6,9 @@
 # commit), /api/status answers a local request and refuses Cloudflare's without
 # a token, a start after another release sends a deployed event to EVENTS_URL,
 # the smoke test passes against the mock riot-proxy, and a form post is accepted
-# from the tarball's own origin and refused from the other's.
+# from the tarball's own origin and refused from the other's. Then one tarball
+# is started with riot-proxy unreachable: its third failed check sends
+# proxy_unreachable, and a restart with riot-proxy back sends proxy_recovered.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,7 +20,17 @@ cleanup() {
 }
 trap cleanup EXIT
 fail() { echo "package test: $*" >&2; exit 1; }
-free_port() { node -e 'const s = require("node:net").createServer().listen(0, () => { console.log(s.address().port); s.close(); })'; }
+# A port nothing listens on, and not one already given out in this run: a
+# server started in the background may not be listening on its port yet, and
+# the kernel can pick the same port twice.
+free_port() {
+	local port
+	while :; do
+		port=$(node -e 'const s = require("node:net").createServer().listen(0, () => { console.log(s.address().port); s.close(); })')
+		grep -qx "$port" "$tmp/ports" 2>/dev/null || break
+	done
+	echo "$port" | tee -a "$tmp/ports"
+}
 
 version=$(node -p 'require("./package.json").version')
 prod=https://ninjagoldfinch.lol
@@ -38,6 +50,37 @@ proxy_port=$(free_port)
 node tests/mock-proxy/server.ts "$proxy_port" >/dev/null &
 pids+=($!)
 
+# <file>: starts a receiver for EVENTS_URL that appends each body it is sent to
+# the file. Sets events_port.
+receiver() {
+	events_port=$(free_port)
+	node -e 'require("node:http").createServer((q, s) => { let b = ""; q.on("data", (c) => (b += c));
+		q.on("end", () => { require("node:fs").appendFileSync(process.argv[2], b + "\n"); s.writeHead(204).end(); });
+		}).listen(Number(process.argv[1]), "127.0.0.1")' "$events_port" "$1" &
+	pids+=($!)
+}
+
+# <release directory> <port> <log> [NAME=value ...]: starts a release's server
+# away from the checkout, with only the environment given. Sets site_pid.
+serve() {
+	local release=$1 port=$2 log=$3
+	shift 3
+	(cd "$tmp" && exec env -i PATH="$PATH" NODE_ENV=production PORT="$port" \
+		PROXY_KEY=package-test-placeholder CDRAGON_URL="http://127.0.0.1:$proxy_port" "$@" \
+		node "$release/build" >"$log" 2>&1) &
+	site_pid=$!
+	pids+=("$site_pid")
+}
+
+# <file> <pattern> <tries>: waits, 0.2 s a try, for a line of the file to match.
+await_line() {
+	for _ in $(seq "$3"); do
+		grep -q "$2" "$1" 2>/dev/null && return 0
+		sleep 0.2
+	done
+	return 1
+}
+
 # <asset> <its origin> <the other origin>
 check() {
 	local asset=$1 origin=$2 other=$3 release port body status
@@ -53,18 +96,11 @@ check() {
 	# The previous start ran another release, so this start is a deploy (ADR-063).
 	mkdir "$tmp/$asset-state"
 	printf '{"version":"0.0.1","commit":"0000000"}\n' >"$tmp/$asset-state/last-version.json"
-	events_port=$(free_port)
-	node -e 'require("node:http").createServer((q, s) => { let b = ""; q.on("data", (c) => (b += c));
-		q.on("end", () => { require("node:fs").appendFileSync(process.argv[2], b + "\n"); s.writeHead(204).end(); });
-		}).listen(Number(process.argv[1]), "127.0.0.1")' "$events_port" "$tmp/$asset-events" &
-	pids+=($!)
+	receiver "$tmp/$asset-events"
 
 	port=$(free_port)
-	(cd "$tmp" && env -i PATH="$PATH" NODE_ENV=production PORT="$port" \
-		PROXY_URL="http://127.0.0.1:$proxy_port" PROXY_KEY=package-test-placeholder \
-		CDRAGON_URL="http://127.0.0.1:$proxy_port" EVENTS_URL="http://127.0.0.1:$events_port/events" \
-		STATE_DIRECTORY="$tmp/$asset-state" node "$release/build" >"$tmp/$asset.log" 2>&1) &
-	pids+=($!)
+	serve "$release" "$port" "$tmp/$asset.log" PROXY_URL="http://127.0.0.1:$proxy_port" \
+		EVENTS_URL="http://127.0.0.1:$events_port/events" STATE_DIRECTORY="$tmp/$asset-state"
 
 	body=''
 	for _ in $(seq 50); do
@@ -95,16 +131,12 @@ check() {
 		"http://127.0.0.1:$port/api/status")
 	[ "$status" = 401 ] || fail "$asset: /api/status through Cloudflare without a token answered $status"
 	# Events (ADR-063): the start was a deploy, recorded for the next start.
-	for _ in $(seq 25); do
-		grep -q '"event":"deployed"' "$tmp/$asset-events" 2>/dev/null && break
-		sleep 0.2
-	done
+	await_line "$tmp/$asset-events" '"event":"deployed"' 25 || true
 	grep -q "\"service\":\"ninjagoldfinch-lol\",.*\"event\":\"deployed\",\"severity\":\"info\",.*\"detail\":{\"from\":\"0.0.1\",\"to\":\"$version\"}" \
 		"$tmp/$asset-events" 2>/dev/null ||
 		fail "$asset: no deployed event: $(cat "$tmp/$asset-events" 2>/dev/null); server log: $(cat "$tmp/$asset.log")"
 	grep -q "\"version\":\"$version\"" "$tmp/$asset-state/last-version.json" ||
 		fail "$asset: the start did not record its version"
-	! grep -q '"event":"proxy_' "$tmp/$asset-events" || fail "$asset: a proxy event with riot-proxy up"
 	# The smoke test deploy.yml runs on staging (ADR-060), with a stand-in Access token.
 	CF_ACCESS_CLIENT_ID=package-test CF_ACCESS_CLIENT_SECRET=package-test \
 		scripts/smoke.sh "http://127.0.0.1:$port" "v$version" >/dev/null ||
@@ -126,5 +158,44 @@ check() {
 
 check ninjagoldfinch-lol "$prod" "$staging"
 check ninjagoldfinch-lol-staging "$staging" "$prod"
+
+# Proxy events from real checks, through the init hook (ADR-063). With nothing
+# on riot-proxy's port, the third failed check, 5 s apart, sends
+# proxy_unreachable and records it. The server is then restarted with riot-proxy
+# back, as a deploy during an outage would: its first check sends the
+# proxy_recovered the outage is owed.
+outage() {
+	local release=$tmp/ninjagoldfinch-lol state=$tmp/outage-state events=$tmp/outage-events
+	local log=$tmp/outage.log url port dead
+	receiver "$events"
+	url=http://127.0.0.1:$events_port/events
+
+	port=$(free_port)
+	dead=$(free_port)
+	serve "$release" "$port" "$log" PROXY_URL="http://127.0.0.1:$dead" \
+		STATUS_CHECK_INTERVAL_S=5 EVENTS_URL="$url" STATE_DIRECTORY="$state"
+	await_line "$events" '"event":"proxy_unreachable"' 150 ||
+		fail "no proxy_unreachable after three failed checks: $(cat "$events" 2>/dev/null); server log: $(cat "$log")"
+	grep -q '"service":"ninjagoldfinch-lol",.*"event":"proxy_unreachable","severity":"critical",.*"detail":{"reason":"unreachable"}' \
+		"$events" || fail "bad proxy_unreachable event: $(cat "$events")"
+	await_line "$state/proxy-alarm.json" '"raised":true' 25 ||
+		fail "the raised alarm was not recorded: $(cat "$state/proxy-alarm.json" 2>/dev/null)"
+	# The first start with nothing recorded is not a deploy.
+	! grep -q '"event":"deployed"' "$events" || fail "a deployed event on a first start: $(cat "$events")"
+
+	kill "$site_pid"
+	wait "$site_pid" 2>/dev/null || true
+	serve "$release" "$(free_port)" "$log.2" PROXY_URL="http://127.0.0.1:$proxy_port" \
+		EVENTS_URL="$url" STATE_DIRECTORY="$state"
+	await_line "$events" '"event":"proxy_recovered"' 75 ||
+		fail "no proxy_recovered after a restart with riot-proxy back: $(cat "$events"); server log: $(cat "$log.2")"
+	grep -q '"event":"proxy_recovered","severity":"info",.*"detail":{"reason":"ready"}' "$events" ||
+		fail "bad proxy_recovered event: $(cat "$events")"
+	await_line "$state/proxy-alarm.json" '"raised":false' 25 ||
+		fail "the alarm was not cleared: $(cat "$state/proxy-alarm.json")"
+	[ "$(grep -c '"event":"proxy_' "$events")" = 2 ] ||
+		fail "an outage must send one proxy_unreachable and one proxy_recovered: $(cat "$events")"
+}
+outage
 
 echo "package test: ok"

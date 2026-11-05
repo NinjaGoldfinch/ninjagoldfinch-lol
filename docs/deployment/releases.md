@@ -2,14 +2,15 @@
 
 From `v1.0.0` production runs a release, not a checkout (ADR-054). A `v*` tag builds it ([workflows/release-process.md](../workflows/release-process.md), ADR-052), `deploy.yml` deploys it after the owner's approval (ADR-053), and on `ngf-prod-syd1` `ninja-deploy` (from `NinjaGoldfinch/ninja-actions`) unpacks it, restarts the unit, waits for `/healthz` to report its version (ADR-051) and rolls back by itself if it does not.
 
-| What          | Where                                                                                                         |
-| ------------- | ------------------------------------------------------------------------------------------------------------- |
-| Releases      | `/srv/ninjagoldfinch-lol/releases/<tag>/`: `build/`, `package.json`, `LICENSE`, `version.json`; newest 5 kept |
-| Asset         | `ninjagoldfinch-lol.tar.gz`; staging gets `ninjagoldfinch-lol-staging.tar.gz` ([Staging](#staging))           |
-| Live release  | `/srv/ninjagoldfinch-lol/current` → a release; `/srv/ninjagoldfinch-lol/live.json` says which and when        |
-| Unit drop-in  | `/etc/systemd/system/ninjagoldfinch-lol.service.d/ninja-deploy.conf`, from `deploy/systemd/ninja-deploy.conf` |
-| Deploy config | `/etc/ninja-deploy/ninjagoldfinch-lol.conf` (unit, health URL), written by `deploy-host-add.sh`               |
-| Settings      | Unchanged: `/etc/ninjagoldfinch-lol/env`, read by the unit, never part of a release                           |
+| What          | Where                                                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Releases      | `/srv/ninjagoldfinch-lol/releases/<tag>/`: `build/`, `package.json`, `LICENSE`, `version.json`; newest 5 kept                            |
+| Asset         | `ninjagoldfinch-lol.tar.gz`; staging gets `ninjagoldfinch-lol-staging.tar.gz` ([Staging](#staging))                                      |
+| Live release  | `/srv/ninjagoldfinch-lol/current` → a release; `/srv/ninjagoldfinch-lol/live.json` says which and when                                   |
+| Unit drop-in  | `/etc/systemd/system/ninjagoldfinch-lol.service.d/ninja-deploy.conf`, from `deploy/systemd/ninja-deploy.conf`                            |
+| Deploy config | `/etc/ninja-deploy/ninjagoldfinch-lol.conf` (unit, health URL), written by `deploy-host-add.sh`                                          |
+| Settings      | Unchanged: `/etc/ninjagoldfinch-lol/env`, read by the unit, never part of a release                                                      |
+| State         | `/var/lib/ninjagoldfinch-lol/`, from the unit's `StateDirectory=` ([The state directory](#the-state-directory-for-events-once), ADR-063) |
 
 ## Deploy, roll back, look
 
@@ -170,6 +171,41 @@ cat /srv/ninjagoldfinch-lol/live.json                      # on the host
 - Take the `ninja-lol` entry out of `~/.config/update-all/projects.conf`, so `update-all` stops building `/opt/ninjagoldfinch-lol`. Its builds no longer run, and its restarts would only restart the release.
 - Keep `/opt/ninjagoldfinch-lol` as the fallback above until a few releases have deployed, then remove it, its deploy key and `/etc/sudoers.d/update-all-site`.
 
+## The state directory, for events (once)
+
+From the release that brings ADR-063 the site keeps two small files in `/var/lib/ninjagoldfinch-lol/`: `last-version.json`, the version of the last start, and `proxy-alarm.json`, whether a `proxy_unreachable` is waiting for its `proxy_recovered`. The directory comes from `StateDirectory=ninjagoldfinch-lol` in the unit: systemd makes it for the unit's user, keeps it writable under `ProtectSystem=strict`, and sets `STATE_DIRECTORY`. A host whose unit lacks the line still runs the site, but it sends no `deployed`, and its proxy alarm does not survive a restart; nothing in the journal says so. Each host needs the line once, and `EVENTS_URL` if it is to send events at all.
+
+**Production, `ngf-prod-syd1`.** The line is in the drop-in. [Step 4 of the move](#4-put-v100-in-place-and-switch-the-unit-to-it) installed the drop-in from the `v1.0.0` tag, which does not have it, so install it again from `main`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/NinjaGoldfinch/ninjagoldfinch-lol/main/deploy/systemd/ninja-deploy.conf |
+  sudo tee /etc/systemd/system/ninjagoldfinch-lol.service.d/ninja-deploy.conf >/dev/null
+grep StateDirectory /etc/systemd/system/ninjagoldfinch-lol.service.d/ninja-deploy.conf   # StateDirectory=ninjagoldfinch-lol
+```
+
+**Staging, `ngf-mon-syd1`.** Staging has no drop-in: its unit is a full one ([Setting up staging](#setting-up-staging-once), step 2), and one installed before this had no `StateDirectory=`. Add it to the unit:
+
+```sh
+grep -q '^StateDirectory=' /etc/systemd/system/ninjagoldfinch-lol.service ||
+  sudo sed -i '/^ProtectSystem=strict$/a StateDirectory=ninjagoldfinch-lol' /etc/systemd/system/ninjagoldfinch-lol.service
+sudo systemd-analyze verify /etc/systemd/system/ninjagoldfinch-lol.service
+```
+
+**Then on each host**, add `EVENTS_URL` to the settings, reload, restart and look:
+
+```sh
+sudoedit /etc/ninjagoldfinch-lol/env                       # EVENTS_URL=<the receiver's URL>
+sudo systemctl daemon-reload
+sudo systemctl restart ninjagoldfinch-lol
+systemctl show ninjagoldfinch-lol -p StateDirectory        # StateDirectory=ninjagoldfinch-lol
+sudo ls -l /var/lib/ninjagoldfinch-lol/                    # last-version.json, owned by ninjagoldfinch-lol
+sudo cat /var/lib/ninjagoldfinch-lol/last-version.json     # the running version and commit
+```
+
+`last-version.json` appears only once the running release is one with ADR-063; with an older release the directory is there and empty. That first start records its version and sends nothing; each later release sends `deployed` when it starts. `EVENTS_URL` must be the receiver's final URL: a redirect is not followed, and the event is dropped after its 5 attempts (`event <name> dropped after 5 attempts` in the journal).
+
+> **TODO (unverified):** these commands have not been run on either host yet. Tick this off with the date once both show `last-version.json`.
+
 ## Staging
 
 Every release also deploys to staging, `https://staging.ninjagoldfinch.lol`, with no approval: `release.yml` calls `deploy.yml` with `env: staging` once the release is published (ADR-057). Prod still waits for the owner. Staging runs on `ngf-mon-syd1` (OVH, `ENV=staging` in `/etc/ninja-deploy/env`), next to ninja-monitor, behind Cloudflare Access on its own tunnel (`ngf-staging`, `staging.ninjagoldfinch.lol` → `127.0.0.1:3000`). It reads its data from production riot-proxy at `https://api.ninjagoldfinch.lol`, with a key of its own, `ninjagoldfinch-lol-staging`, quota 120 a minute (ADR-058).
@@ -237,6 +273,7 @@ ExecStart=/usr/bin/node build
 Restart=always
 RestartSec=2
 ProtectSystem=strict
+StateDirectory=ninjagoldfinch-lol
 PrivateTmp=yes
 NoNewPrivileges=yes
 
@@ -248,7 +285,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable ninjagoldfinch-lol                  # enable, do not start: no release yet
 ```
 
-It is production's unit ([install.md](./install.md)) with the release as its working directory, so it needs no drop-in. Do not start it: `/srv/ninjagoldfinch-lol/current` does not exist until the first deploy, which starts it.
+It is production's unit ([install.md](./install.md)) with the release as its working directory and the state directory the events need (ADR-063), which production gets from its drop-in, so it needs no drop-in. Do not start it: `/srv/ninjagoldfinch-lol/current` does not exist until the first deploy, which starts it.
 
 **3. `ninja-deploy` for the site**, with the public key from step 1:
 
@@ -300,5 +337,5 @@ To cut staging off without touching the live site: `rp key revoke ninjagoldfinch
 
 ---
 
-**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058, ADR-060), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
+**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058, ADR-060, ADR-063), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-05, during the move: `v1.0.0` started from `/srv` and served pages within a second of the restart

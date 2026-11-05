@@ -122,8 +122,10 @@ export function parseEventsUrl(value: string | undefined): string | undefined {
 
 /**
  * A writable directory for the version the last start recorded, for the
- * `deployed` event (ADR-063). systemd sets STATE_DIRECTORY from the unit's
- * `StateDirectory=`. Optional: without it, no `deployed` event is sent.
+ * `deployed` event, and for whether `proxy_unreachable` is raised (ADR-063).
+ * systemd sets STATE_DIRECTORY from the unit's `StateDirectory=`. Optional:
+ * without it, no `deployed` event is sent, and the alarm is not kept across
+ * restarts.
  */
 export function parseStateDirectory(value: string | undefined): string | undefined {
 	const dir = value?.trim() || undefined;

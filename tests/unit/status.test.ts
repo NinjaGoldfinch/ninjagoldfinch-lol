@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Metrics } from '#lib/server/metrics.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
 import {
@@ -131,6 +131,95 @@ describe('runChecks', () => {
 			await runChecks(client(() => Promise.reject(new TypeError('fetch failed'))))
 		).toMatchObject({ name: 'riot_proxy', status: 'down', detail: 'unreachable' });
 		vi.restoreAllMocks();
+	});
+});
+
+describe('startChecks', () => {
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.restoreAllMocks();
+	});
+	// startChecks runs once per process, so each test loads the module afresh.
+	const fresh = async () => {
+		vi.resetModules();
+		vi.useFakeTimers();
+		return await import('#lib/server/status.ts');
+	};
+	/** A riot-proxy that answers /readyz with each status in turn, then 200. */
+	const proxy = (...statuses: number[]) => {
+		let calls = 0;
+		const client = createProxyClient(BASE, 'placeholder-key', async () => {
+			const status = statuses[calls++] ?? 200;
+			return Response.json({ ...READY, ok: status === 200 }, { status });
+		});
+		return { client, calls: () => calls };
+	};
+
+	it('gives the callback each riot_proxy result: at once, then every interval', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { startChecks } = await fresh();
+		const { client } = proxy(200, 503, 502);
+		const seen: Check[] = [];
+		startChecks(client, 30, (check) => {
+			seen.push(check);
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(seen.map((c) => [c.name, c.status])).toEqual([['riot_proxy', 'ok']]);
+		await vi.advanceTimersByTimeAsync(29_000);
+		expect(seen).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(1_000);
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(seen.map((c) => [c.status, c.detail])).toEqual([
+			['ok', 'ready'],
+			['down', 'not ready'],
+			['down', 'answered 502']
+		]);
+	});
+
+	it('waits for the callback: the next check does not start while it runs', async () => {
+		const { startChecks } = await fresh();
+		const { client, calls } = proxy();
+		let release: () => void = () => {};
+		let entered = 0;
+		startChecks(client, 30, async () => {
+			entered += 1;
+			if (entered === 1) await new Promise<void>((r) => (release = r));
+		});
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect([calls(), entered]).toEqual([1, 1]);
+		release();
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect([calls(), entered]).toEqual([2, 2]);
+	});
+
+	it.each([
+		[
+			'throws',
+			() => {
+				throw new Error('callback broke');
+			}
+		],
+		['rejects', () => Promise.reject(new Error('callback broke'))]
+	])('keeps checking when the callback %s, and logs it', async (_how, broken) => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { startChecks, statusDocument } = await fresh();
+		const { client, calls } = proxy();
+		let entered = 0;
+		startChecks(client, 30, () => {
+			entered += 1;
+			return broken();
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(error).toHaveBeenCalledWith('status checks failed:', expect.any(Error));
+		await vi.advanceTimersByTimeAsync(30_000);
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect([calls(), entered]).toEqual([3, 3]);
+		expect(error).toHaveBeenCalledTimes(3);
+		// The results are still held for /api/status.
+		expect(statusDocument().checks.find((c) => c.name === 'riot_proxy')).toMatchObject({
+			status: 'ok',
+			detail: 'ready'
+		});
 	});
 });
 

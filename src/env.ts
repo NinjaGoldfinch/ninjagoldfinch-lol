@@ -56,7 +56,7 @@ export const variables = defineEnvVars({
 	},
 	STATE_DIRECTORY: {
 		description:
-			"Writable directory for the last start's version, for the deployed event. systemd's StateDirectory= sets it. Optional.",
+			"Writable directory for the last start's version (the deployed event) and the raised proxy alarm. systemd's StateDirectory= sets it. Optional.",
 		schema: atStartup(parseStateDirectory)
 	}
 });

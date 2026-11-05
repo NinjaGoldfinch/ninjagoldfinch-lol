@@ -1,8 +1,11 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+	ATTEMPT_TIMEOUT_MS,
 	EventQueue,
 	MAX_ATTEMPTS,
 	ProxyAlarm,
@@ -10,10 +13,14 @@ import {
 	UNREACHABLE_AFTER,
 	deliver,
 	deployedChange,
+	proxyWatch,
+	readRaised,
 	recordStart,
 	siteEvent,
+	writeRaised,
 	type SiteEvent
 } from '#lib/server/events.ts';
+import type { Check } from '#lib/server/status.ts';
 import type { BuildInfo } from '#lib/server/version.ts';
 
 const URL = 'http://events.test/in';
@@ -96,6 +103,54 @@ describe('deliver', () => {
 		expect(ok).toBe(true);
 		expect(calls).toBe(3);
 	});
+
+	describe('against a real receiver', () => {
+		let server: Server | undefined;
+		afterEach(() => {
+			server?.closeAllConnections();
+			server?.close();
+		});
+		/** A receiver on loopback; `seen` lists each request as `METHOD path`. */
+		const receiver = async (answer: (q: IncomingMessage, s: ServerResponse) => void) => {
+			const seen: string[] = [];
+			server = createServer((q, s) => {
+				seen.push(`${q.method} ${q.url}`);
+				q.resume();
+				answer(q, s);
+			});
+			await new Promise<void>((r) => server?.listen(0, '127.0.0.1', r));
+			const { port } = server.address() as AddressInfo;
+			return { url: `http://127.0.0.1:${port}/events`, seen };
+		};
+
+		// fetch would follow a 301 as a GET with no body and call its 2xx delivered.
+		it.each([301, 302, 307, 308])('does not follow a %i: the attempt fails', async (status) => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const { url, seen } = await receiver((q, s) => {
+				if (q.url === '/events') s.writeHead(status, { location: '/events/' }).end();
+				else s.writeHead(204).end();
+			});
+			expect(await deliver(url, event, undefined, noWait)).toBe(false);
+			expect(seen).toEqual(Array(MAX_ATTEMPTS).fill('POST /events'));
+			expect(error).toHaveBeenCalledWith(
+				expect.stringMatching(/^event deployed dropped after 5 attempts: /)
+			);
+		});
+
+		it('gives up on a receiver that accepts the connection and never answers', async () => {
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const { url, seen } = await receiver(() => {});
+			const started = performance.now();
+			expect(await deliver(url, event, undefined, noWait, 100)).toBe(false);
+			// Each attempt was cut off at its timeout, not answered.
+			expect(performance.now() - started).toBeGreaterThanOrEqual(MAX_ATTEMPTS * 90);
+			expect(seen).toEqual(Array(MAX_ATTEMPTS).fill('POST /events'));
+			expect(error).toHaveBeenCalledWith(
+				expect.stringMatching(/^event deployed dropped after 5 attempts: .*(timeout|aborted)/i)
+			);
+			expect(ATTEMPT_TIMEOUT_MS).toBe(5_000);
+		});
+	});
 });
 
 describe('ProxyAlarm', () => {
@@ -131,6 +186,18 @@ describe('ProxyAlarm', () => {
 			'proxy_recovered'
 		]);
 		expect(run(['down', 'down', 'down'])).toEqual([undefined, undefined, 'proxy_unreachable']);
+	});
+
+	it('started as raised, recovers on the first ok and does not raise again before it', () => {
+		const still = new ProxyAlarm(true);
+		expect(['down', 'down', 'down', 'down'].map((s) => still.observe(s as 'down'))).toEqual([
+			undefined,
+			undefined,
+			undefined,
+			undefined
+		]);
+		expect(still.observe('ok')).toBe('proxy_recovered');
+		expect(new ProxyAlarm(true).observe('ok')).toBe('proxy_recovered');
 	});
 });
 
@@ -261,5 +328,120 @@ describe('EventQueue', () => {
 		queue.push('proxy_recovered');
 		await queue.idle();
 		expect(sent).toEqual(['proxy_unreachable', 'proxy_recovered']);
+	});
+});
+
+describe('the raised alarm, kept across restarts', () => {
+	let dir = '';
+	afterEach(() => rmSync(dir, { recursive: true, force: true }));
+	const check = (status: Check['status'], detail = ''): Check => ({
+		name: 'riot_proxy',
+		status,
+		latency_ms: 1,
+		checked_at: '2026-11-05T10:00:00Z',
+		detail
+	});
+	/** A start of the server: a new watch over the same directory. */
+	const start = (stateDir: string | undefined = dir) => {
+		const pushed: [string, unknown][] = [];
+		const watch = proxyWatch(stateDir, { push: (event, detail) => pushed.push([event, detail]) });
+		return { watch, pushed };
+	};
+
+	it('is not raised with no directory, no record, or an unreadable one', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		expect(await readRaised(undefined)).toBe(false);
+		expect(await readRaised(dir)).toBe(false);
+		expect(error).not.toHaveBeenCalled();
+		writeFileSync(join(dir, 'proxy-alarm.json'), 'not json');
+		expect(await readRaised(dir)).toBe(false);
+		expect(error).toHaveBeenCalled();
+		writeFileSync(join(dir, 'proxy-alarm.json'), '{"raised":"yes"}');
+		expect(await readRaised(dir)).toBe(false);
+	});
+
+	it('is read back as written, beside the version', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		await recordStart(dir, build('1.1.0'));
+		await writeRaised(dir, true);
+		expect(await readRaised(dir)).toBe(true);
+		expect(JSON.parse(readFileSync(join(dir, 'proxy-alarm.json'), 'utf8'))).toEqual({
+			raised: true
+		});
+		await writeRaised(dir, false);
+		expect(await readRaised(dir)).toBe(false);
+		expect(JSON.parse(readFileSync(join(dir, 'last-version.json'), 'utf8')).version).toBe('1.1.0');
+	});
+
+	it('logs a directory that cannot be written, and does not throw', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		const file = join(dir, 'a-file');
+		writeFileSync(file, '');
+		await writeRaised(join(file, 'state'), true);
+		expect(error).toHaveBeenCalledWith(
+			expect.stringMatching(/^could not record the alarm in /),
+			expect.anything()
+		);
+		await writeRaised(undefined, true);
+	});
+
+	it('pushes the events of an outage, with the reason, from check results', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		const { watch, pushed } = start();
+		await watch(check('down', 'unreachable'));
+		await watch(check('down', 'unreachable'));
+		expect(pushed).toEqual([]);
+		expect(await readRaised(dir)).toBe(false);
+		await watch(check('down', 'not ready: sqlite'));
+		expect(pushed).toEqual([['proxy_unreachable', { reason: 'not ready: sqlite' }]]);
+		expect(await readRaised(dir)).toBe(true);
+		await watch(check('down', 'unreachable'));
+		await watch(check('ok', 'ready'));
+		await watch(check('ok', 'ready'));
+		expect(pushed).toEqual([
+			['proxy_unreachable', { reason: 'not ready: sqlite' }],
+			['proxy_recovered', { reason: 'ready' }]
+		]);
+		expect(await readRaised(dir)).toBe(false);
+	});
+
+	it('sends proxy_recovered after a restart, when riot-proxy came back meanwhile', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		const before = start();
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await before.watch(check('down', 'unreachable'));
+		expect(before.pushed.map(([event]) => event)).toEqual(['proxy_unreachable']);
+
+		const after = start();
+		await after.watch(check('ok', 'ready'));
+		expect(after.pushed).toEqual([['proxy_recovered', { reason: 'ready' }]]);
+		expect(await readRaised(dir)).toBe(false);
+		// And the start after that owes nothing.
+		const later = start();
+		await later.watch(check('ok', 'ready'));
+		expect(later.pushed).toEqual([]);
+	});
+
+	it('sends no second proxy_unreachable after a restart during the same outage', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		const before = start();
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await before.watch(check('down', 'unreachable'));
+
+		const after = start();
+		for (let i = 0; i < UNREACHABLE_AFTER + 2; i++) await after.watch(check('down', 'unreachable'));
+		expect(after.pushed).toEqual([]);
+		await after.watch(check('ok', 'ready'));
+		expect(after.pushed.map(([event]) => event)).toEqual(['proxy_recovered']);
+	});
+
+	it('keeps the alarm in the process only, without a directory', async () => {
+		const before = start('');
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await before.watch(check('down', 'unreachable'));
+		await before.watch(check('ok', 'ready'));
+		expect(before.pushed.map(([event]) => event)).toEqual(['proxy_unreachable', 'proxy_recovered']);
+		const after = start(undefined);
+		await after.watch(check('ok', 'ready'));
+		expect(after.pushed).toEqual([]);
 	});
 });
