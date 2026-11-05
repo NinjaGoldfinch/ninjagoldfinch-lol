@@ -67,6 +67,11 @@ test('an unknown page shows the not-found state, with the footer', async ({ page
 	await expect(page.locator('footer')).toContainText(LEGAL);
 });
 
+test('the document is marked once hydrated', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.locator('html')).toHaveAttribute('data-hydrated', '');
+});
+
 test.describe('without JavaScript', () => {
 	test.use({ javaScriptEnabled: false });
 
@@ -74,5 +79,6 @@ test.describe('without JavaScript', () => {
 		await page.goto('/');
 		await expect(page.getByRole('banner').getByRole('search')).toBeVisible();
 		await expect(page.locator('footer')).toContainText(LEGAL);
+		await expect(page.locator('html')).not.toHaveAttribute('data-hydrated');
 	});
 });
