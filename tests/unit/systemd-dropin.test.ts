@@ -11,12 +11,14 @@ const settings = dropin.split('\n').filter((line) => line !== '' && !line.starts
 const deploy = read('.github/workflows/deploy.yml');
 
 describe('the production drop-in', () => {
-	it('replaces ExecStart and the working directory, nothing else', () => {
+	// ADR-063: and a state directory, for the version the last start ran.
+	it('replaces ExecStart and the working directory, adds a state directory, nothing else', () => {
 		expect(settings).toEqual([
 			'[Service]',
 			'WorkingDirectory=/srv/ninjagoldfinch-lol/current',
 			'ExecStart=',
-			'ExecStart=/usr/bin/node /srv/ninjagoldfinch-lol/current/build'
+			'ExecStart=/usr/bin/node /srv/ninjagoldfinch-lol/current/build',
+			'StateDirectory=ninjagoldfinch-lol'
 		]);
 	});
 

@@ -5,6 +5,7 @@ import {
 	overallStatus,
 	probeProxy,
 	riotProxyCheck,
+	runChecks,
 	staticDataCheck,
 	statusDocument,
 	type Check
@@ -107,6 +108,28 @@ describe('probeProxy', () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const result = await probe(() => Promise.reject(new TypeError('fetch failed')));
 		expect(result).toMatchObject({ answered: false });
+		vi.restoreAllMocks();
+	});
+});
+
+describe('runChecks', () => {
+	it('returns the riot_proxy result, for the events (ADR-063)', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const client = (fetch: (r: Request) => Promise<Response>) =>
+			createProxyClient(BASE, 'placeholder-key', fetch);
+		expect(
+			await runChecks(
+				client(async () => Response.json(READY)),
+				() => AT
+			)
+		).toMatchObject({
+			name: 'riot_proxy',
+			status: 'ok',
+			checked_at: '2026-11-05T10:00:00Z'
+		});
+		expect(
+			await runChecks(client(() => Promise.reject(new TypeError('fetch failed'))))
+		).toMatchObject({ name: 'riot_proxy', status: 'down', detail: 'unreachable' });
 		vi.restoreAllMocks();
 	});
 });

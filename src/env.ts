@@ -2,8 +2,10 @@ import { building } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
 import {
 	parseCdragonUrl,
+	parseEventsUrl,
 	parseProxyKey,
 	parseProxyUrl,
+	parseStateDirectory,
 	parseStatusCidrs,
 	parseStatusInterval,
 	parseStatusToken
@@ -47,5 +49,14 @@ export const variables = defineEnvVars({
 	STATUS_CHECK_INTERVAL_S: {
 		description: 'Seconds between the background status checks. Optional; 30 by default.',
 		schema: atStartup(parseStatusInterval)
+	},
+	EVENTS_URL: {
+		description: 'URL that state-change events are POSTed to. Optional; no events without it.',
+		schema: atStartup(parseEventsUrl)
+	},
+	STATE_DIRECTORY: {
+		description:
+			"Writable directory for the last start's version, for the deployed event. systemd's StateDirectory= sets it. Optional.",
+		schema: atStartup(parseStateDirectory)
 	}
 });

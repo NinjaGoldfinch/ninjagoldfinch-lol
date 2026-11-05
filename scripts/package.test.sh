@@ -4,8 +4,9 @@
 # it makes runs on its own, unpacked away from the checkout with no node_modules:
 # /healthz and /api/version answer with that version (/api/version also with the
 # commit), /api/status answers a local request and refuses Cloudflare's without
-# a token, the smoke test passes against the mock riot-proxy, and a form post is
-# accepted from the tarball's own origin and refused from the other's.
+# a token, a start after another release sends a deployed event to EVENTS_URL,
+# the smoke test passes against the mock riot-proxy, and a form post is accepted
+# from the tarball's own origin and refused from the other's.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -49,10 +50,20 @@ check() {
 		"$release/version.json" || fail "$asset: bad version.json: $(cat "$release/version.json")"
 	[ ! -e "$release/node_modules" ] || fail "$asset: the release must not carry node_modules"
 
+	# The previous start ran another release, so this start is a deploy (ADR-063).
+	mkdir "$tmp/$asset-state"
+	printf '{"version":"0.0.1","commit":"0000000"}\n' >"$tmp/$asset-state/last-version.json"
+	events_port=$(free_port)
+	node -e 'require("node:http").createServer((q, s) => { let b = ""; q.on("data", (c) => (b += c));
+		q.on("end", () => { require("node:fs").appendFileSync(process.argv[2], b + "\n"); s.writeHead(204).end(); });
+		}).listen(Number(process.argv[1]), "127.0.0.1")' "$events_port" "$tmp/$asset-events" &
+	pids+=($!)
+
 	port=$(free_port)
 	(cd "$tmp" && env -i PATH="$PATH" NODE_ENV=production PORT="$port" \
 		PROXY_URL="http://127.0.0.1:$proxy_port" PROXY_KEY=package-test-placeholder \
-		CDRAGON_URL="http://127.0.0.1:$proxy_port" node "$release/build" >"$tmp/$asset.log" 2>&1) &
+		CDRAGON_URL="http://127.0.0.1:$proxy_port" EVENTS_URL="http://127.0.0.1:$events_port/events" \
+		STATE_DIRECTORY="$tmp/$asset-state" node "$release/build" >"$tmp/$asset.log" 2>&1) &
 	pids+=($!)
 
 	body=''
@@ -83,6 +94,17 @@ check() {
 	status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Cf-Connecting-Ip: 198.51.100.7' \
 		"http://127.0.0.1:$port/api/status")
 	[ "$status" = 401 ] || fail "$asset: /api/status through Cloudflare without a token answered $status"
+	# Events (ADR-063): the start was a deploy, recorded for the next start.
+	for _ in $(seq 25); do
+		grep -q '"event":"deployed"' "$tmp/$asset-events" 2>/dev/null && break
+		sleep 0.2
+	done
+	grep -q "\"service\":\"ninjagoldfinch-lol\",.*\"event\":\"deployed\",\"severity\":\"info\",.*\"detail\":{\"from\":\"0.0.1\",\"to\":\"$version\"}" \
+		"$tmp/$asset-events" 2>/dev/null ||
+		fail "$asset: no deployed event: $(cat "$tmp/$asset-events" 2>/dev/null); server log: $(cat "$tmp/$asset.log")"
+	grep -q "\"version\":\"$version\"" "$tmp/$asset-state/last-version.json" ||
+		fail "$asset: the start did not record its version"
+	! grep -q '"event":"proxy_' "$tmp/$asset-events" || fail "$asset: a proxy event with riot-proxy up"
 	# The smoke test deploy.yml runs on staging (ADR-060), with a stand-in Access token.
 	CF_ACCESS_CLIENT_ID=package-test CF_ACCESS_CLIENT_SECRET=package-test \
 		scripts/smoke.sh "http://127.0.0.1:$port" "v$version" >/dev/null ||

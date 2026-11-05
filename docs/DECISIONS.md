@@ -978,3 +978,26 @@ Date: 2026-11-05 · Task: STAT-02
 - The check logs through the client's usual failure lines, once an interval while riot-proxy is down.
 - The mock riot-proxy answers `/readyz` from a synthetic fixture. The package test reads `/api/status` from each tarball on loopback, waits for `riot_proxy` `ok` and the release's version, and checks that a request through Cloudflare without the token gets `401`.
 - The bot reaches `/api/status` through Cloudflare with the token. The owner adds `STATUS_TOKEN` to each host's env file; until then only the host itself can read it.
+
+## ADR-063: events on changes of state, to an optional URL
+
+Date: 2026-11-05 · Task: STAT-03
+
+**Context.** The status bot polls `/api/status` (ADR-062), but a poll only shows the state at that moment. The shared status contract also has an event, POSTed to a URL on a change of state, which riot-proxy sends from its STS-04 (`riot-proxy:docs/design/14-status.md`, "Outbound events"): `schema`, `service`, `host`, `event`, `severity`, `at` and an object `detail`. The site has two changes worth an event: riot-proxy going and coming back, and a new release starting. The server keeps nothing on disk, so it cannot tell a deploy from a restart without somewhere to remember the last version.
+
+**Decision.**
+
+- `EVENTS_URL` (optional, absolute http/https): events are POSTed there as the contract's event, `service: ninjagoldfinch-lol`, `host` from the hostname. Unset, none are sent. `src/lib/server/events.ts`.
+- Events, on changes of state only:
+  - `proxy_unreachable` (critical): the `riot_proxy` check (ADR-062) is `down` 3 times in a row, 60 to 95 s by default; `detail.reason` is the check's detail. Once per outage.
+  - `proxy_recovered` (info): the first `ok` after it. A `degraded` neither raises nor clears it.
+  - `deployed` (info): the server starts with another release than the previous start; `detail` is `{ from, to }`. The first start with nothing recorded, the same version again, and a `dev` build send nothing.
+- The version is kept in `$STATE_DIRECTORY/last-version.json`, written through a temporary file and a rename. The drop-in `deploy/systemd/ninja-deploy.conf` gains `StateDirectory=ninjagoldfinch-lol`, so systemd makes `/var/lib/ninjagoldfinch-lol` for the unit's user, writable under `ProtectSystem=strict`, and sets `STATE_DIRECTORY`. Unset, or unreadable or unwritable, no `deployed` is sent and the start goes on.
+- Delivery, as riot-proxy's: a queue of at most 64 (a full queue drops the newest, with a warning) and one worker that sends in order, so a `proxy_recovered` cannot overtake the `proxy_unreachable` still being retried. Each event gets up to 5 POSTs of 5 s, with 1, 2, 4 and 8 s between them; any 2xx is delivered, and a dropped event is logged. Nothing in a request waits on it, and nothing is formatted for Discord or any other service.
+
+**Consequences.**
+
+- ADR-054's "the server writes nothing to disk" no longer holds: it writes one small file per start in its state directory.
+- The owner reinstalls the drop-in on each host (`docs/deployment/releases.md`), runs `systemctl daemon-reload`, and adds `EVENTS_URL` to `/etc/ninjagoldfinch-lol/env`. The first start after that records the version without an event; the next release sends `deployed`.
+- A restart of riot-proxy shorter than three checks sends nothing.
+- The package test starts each tarball with a previous version recorded and a local receiver as `EVENTS_URL`, and checks the `deployed` event arrives, the new version is recorded, and no proxy event is sent while the mock riot-proxy is up.

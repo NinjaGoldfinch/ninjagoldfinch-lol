@@ -111,3 +111,26 @@ export function parseStatusInterval(value: string | undefined): number {
 	}
 	return seconds;
 }
+
+/**
+ * Where events are POSTed (ADR-063). Optional: without it, no events are
+ * sent.
+ */
+export function parseEventsUrl(value: string | undefined): string | undefined {
+	return value?.trim() ? httpUrl('EVENTS_URL', value.trim()) : undefined;
+}
+
+/**
+ * A writable directory for the version the last start recorded, for the
+ * `deployed` event (ADR-063). systemd sets STATE_DIRECTORY from the unit's
+ * `StateDirectory=`. Optional: without it, no `deployed` event is sent.
+ */
+export function parseStateDirectory(value: string | undefined): string | undefined {
+	const dir = value?.trim() || undefined;
+	// systemd lists several directories with colons when the unit names several.
+	const first = dir?.split(':')[0];
+	if (first !== undefined && !first.startsWith('/')) {
+		throw new Error(`STATE_DIRECTORY must be an absolute path, got "${value}"`);
+	}
+	return first;
+}

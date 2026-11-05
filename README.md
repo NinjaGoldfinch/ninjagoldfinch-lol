@@ -151,6 +151,33 @@ $ curl -s -H "Authorization: Bearer $STATUS_TOKEN" https://ninjagoldfinch.lol/ap
 }
 ```
 
+When `EVENTS_URL` is set, changes of state are POSTed there as the contract's event, never once per check (ADR-063):
+
+| Event               | Severity | Sent when                                                                                 | `detail`                     |
+| ------------------- | -------- | ----------------------------------------------------------------------------------------- | ---------------------------- |
+| `proxy_unreachable` | critical | `riot_proxy` has been `down` for 3 checks in a row                                        | `reason`: the check's detail |
+| `proxy_recovered`   | info     | the first `riot_proxy` `ok` after a `proxy_unreachable`                                   | `reason`                     |
+| `deployed`          | info     | the server starts with another release than the last start, recorded in `STATE_DIRECTORY` | `from`, `to`: versions       |
+
+One worker sends them in order, 5 s per attempt, retrying after 1, 2, 4 and 8 s and dropping an event after 5 attempts; at most 64 wait, and a full queue drops the newest with a warning. Sending never holds up a page or `/api/status`.
+
+```json
+{
+	"schema": 1,
+	"service": "ninjagoldfinch-lol",
+	"host": "ngf-prod-syd1",
+	"event": "deployed",
+	"severity": "info",
+	"at": "2026-11-05T10:00:00Z",
+	"detail": { "from": "1.1.0", "to": "1.2.0" }
+}
+```
+
+| Setting           | Default | Meaning                                                                                                       |
+| ----------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `EVENTS_URL`      | unset   | where events are POSTed; unset sends none                                                                     |
+| `STATE_DIRECTORY` | unset   | writable directory for the last start's version; systemd sets it from `StateDirectory=`. Unset, no `deployed` |
+
 ## Deploying
 
 ### Preview VM (dormant)

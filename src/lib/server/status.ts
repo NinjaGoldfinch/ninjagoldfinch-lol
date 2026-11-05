@@ -129,27 +129,35 @@ const results = new Map<string, Check>([
 	]
 ]);
 
-/** Runs every check once and holds the results. */
-export async function runChecks(client: ProxyClient, now: () => number = Date.now): Promise<void> {
-	const probe = await probeProxy(client);
-	results.set('riot_proxy', riotProxyCheck(probe, now()));
+/** Runs every check once and holds the results; returns the `riot_proxy` result. */
+export async function runChecks(client: ProxyClient, now: () => number = Date.now): Promise<Check> {
+	const proxyCheck = riotProxyCheck(await probeProxy(client), now());
+	results.set('riot_proxy', proxyCheck);
 	results.set('static_data', staticDataCheck(heldPatch(), now()));
+	return proxyCheck;
 }
 
 let timer: ReturnType<typeof setInterval> | undefined;
 
 /**
  * Starts the checks: now, then every `intervalS` seconds. A check still
- * running when the next is due is not started twice. Called once at start-up.
+ * running when the next is due is not started twice. `onProxyCheck` sees each
+ * `riot_proxy` result, for the events (ADR-063). Called once at start-up.
  */
-export function startChecks(client: ProxyClient, intervalS: number): void {
+export function startChecks(
+	client: ProxyClient,
+	intervalS: number,
+	onProxyCheck: (check: Check) => void = () => {}
+): void {
 	if (timer) return;
 	let running = false;
 	const tick = async () => {
 		if (running) return;
 		running = true;
 		try {
-			await runChecks(client);
+			onProxyCheck(await runChecks(client));
+		} catch (e) {
+			console.error('status checks failed:', e);
 		} finally {
 			running = false;
 		}

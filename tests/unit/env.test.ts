@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	DEFAULT_CDRAGON_URL,
 	parseCdragonUrl,
+	parseEventsUrl,
 	parseProxyKey,
 	parseProxyUrl,
+	parseStateDirectory,
 	parseStatusCidrs,
 	parseStatusInterval,
 	parseStatusToken
@@ -113,5 +115,31 @@ describe('parseStatusInterval', () => {
 		for (const bad of ['4', '3601', '1.5', 'thirty']) {
 			expect(() => parseStatusInterval(bad)).toThrow('STATUS_CHECK_INTERVAL_S');
 		}
+	});
+});
+
+describe('parseEventsUrl', () => {
+	it('is optional', () => {
+		expect(parseEventsUrl(undefined)).toBeUndefined();
+		expect(parseEventsUrl('  ')).toBeUndefined();
+		expect(parseEventsUrl(' https://bot.example/events ')).toBe('https://bot.example/events');
+	});
+
+	it('refuses anything but an absolute http or https URL', () => {
+		expect(() => parseEventsUrl('bot.example/events')).toThrow('EVENTS_URL');
+		expect(() => parseEventsUrl('ftp://bot.example/events')).toThrow('EVENTS_URL');
+	});
+});
+
+describe('parseStateDirectory', () => {
+	it("is optional, and the first of systemd's directories", () => {
+		expect(parseStateDirectory(undefined)).toBeUndefined();
+		expect(parseStateDirectory('')).toBeUndefined();
+		expect(parseStateDirectory('/var/lib/ninjagoldfinch-lol')).toBe('/var/lib/ninjagoldfinch-lol');
+		expect(parseStateDirectory('/var/lib/a:/var/lib/b')).toBe('/var/lib/a');
+	});
+
+	it('refuses a relative path', () => {
+		expect(() => parseStateDirectory('state')).toThrow('STATE_DIRECTORY');
 	});
 });
