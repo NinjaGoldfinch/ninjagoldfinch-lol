@@ -981,7 +981,7 @@ Date: 2026-11-05 · Task: STAT-02
 
 ## ADR-063: events on changes of state, to an optional URL
 
-Date: 2026-11-05 · Task: STAT-03
+Date: 2026-11-05 · Task: STAT-03 · The alarm's record without `EVENTS_URL` refined by ADR-064
 
 **Context.** The status bot polls `/api/status` (ADR-062), but a poll only shows the state at that moment. The shared status contract also has an event, POSTed to a URL on a change of state, which riot-proxy sends from its STS-04 (`riot-proxy:docs/design/14-status.md`, "Outbound events"): `schema`, `service`, `host`, `event`, `severity`, `at` and an object `detail`. The site has two changes worth an event: riot-proxy going and coming back, and a new release starting. The server keeps nothing on disk, so it cannot tell a deploy from a restart without somewhere to remember the last version.
 
@@ -1006,3 +1006,17 @@ Date: 2026-11-05 · Task: STAT-03
 - A restart of riot-proxy shorter than three checks sends nothing.
 - `startChecks` waits for its callback, so the alarm's record is written before the next check starts; a callback that throws is logged and the checks go on.
 - The package test starts each tarball with a previous version recorded and a local receiver as `EVENTS_URL`, and checks the `deployed` event arrives and the new version is recorded. It then starts one tarball with nothing on riot-proxy's port and a 5 s check interval, waits for `proxy_unreachable` from the third failed check, restarts it with the mock riot-proxy up, and checks `proxy_recovered` arrives: the `init` wiring and the alarm's record, from real checks.
+
+## ADR-064: no proxy alarm, and no record of it, without `EVENTS_URL`
+
+Date: 2026-11-06 · Task: FIX-09 (review of #126, issue #127; refines ADR-063)
+
+**Context.** ADR-063 keeps whether `proxy_unreachable` is raised in `$STATE_DIRECTORY/proxy-alarm.json`, so a restart during an outage neither repeats it nor loses its `proxy_recovered`. The alarm ran whether or not `EVENTS_URL` was set, and recorded each change even when nothing was sent. On a host with `STATE_DIRECTORY` and no `EVENTS_URL`, an outage was recorded as raised with no event sent. If `EVENTS_URL` was then added and the site restarted while riot-proxy was still down, the receiver got no `proxy_unreachable` for that outage, and later a `proxy_recovered` with nothing before it.
+
+**Decision.** Without `EVENTS_URL` the site does not watch the `riot_proxy` check for events: the alarm does not run, and `proxy-alarm.json` is neither read nor written. The record says what the receiver was told, and with no URL it was told nothing. A record left by an earlier start that had a URL stays as it was, so when the URL comes back the receiver still gets the `proxy_recovered` it is owed. `proxyWatch` in `src/lib/server/events.ts`; the status checks themselves, and `/api/status`, are unchanged.
+
+**Consequences.**
+
+- Adding `EVENTS_URL` during an outage sends `proxy_unreachable` after three more failed checks, then `proxy_recovered`, as for an outage that starts after the restart.
+- `last-version.json` is still written without `EVENTS_URL`, as before: a start records its version so that, once a URL is set, the next release sends `deployed` (ADR-063).
+- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told.

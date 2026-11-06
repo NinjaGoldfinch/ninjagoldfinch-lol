@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { hostname, tmpdir } from 'node:os';
@@ -362,10 +362,16 @@ describe('the raised alarm, kept across restarts', () => {
 		checked_at: '2026-11-05T10:00:00Z',
 		detail
 	});
-	/** A start of the server: a new watch over the same directory. */
-	const start = (stateDir: string | undefined = dir) => {
+	/**
+	 * A start of the server: a new watch over the same directory, sending to
+	 * `url`. null is no directory or no URL (undefined would take the default).
+	 */
+	const start = (stateDir: string | null = dir, url: string | null = URL) => {
 		const pushed: [string, unknown][] = [];
-		const watch = proxyWatch(stateDir, { push: (event, detail) => pushed.push([event, detail]) });
+		const watch = proxyWatch(stateDir ?? undefined, {
+			url: url ?? undefined,
+			push: (event, detail) => pushed.push([event, detail])
+		});
 		return { watch, pushed };
 	};
 
@@ -454,6 +460,38 @@ describe('the raised alarm, kept across restarts', () => {
 		expect(after.pushed).toEqual([]);
 		await after.watch(check('ok', 'ready'));
 		expect(after.pushed.map(([event]) => event)).toEqual(['proxy_recovered']);
+	});
+
+	it('is neither kept nor read without a URL, so adding one mid-outage still raises it', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		// A host with a state directory and no EVENTS_URL, through an outage.
+		const before = start(dir, null);
+		for (let i = 0; i < UNREACHABLE_AFTER + 1; i++)
+			await before.watch(check('down', 'unreachable'));
+		expect(before.pushed).toEqual([]);
+		expect(existsSync(join(dir, 'proxy-alarm.json'))).toBe(false);
+
+		// EVENTS_URL is added and the site restarted, riot-proxy still down.
+		const after = start();
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await after.watch(check('down', 'unreachable'));
+		await after.watch(check('ok', 'ready'));
+		expect(after.pushed).toEqual([
+			['proxy_unreachable', { reason: 'unreachable' }],
+			['proxy_recovered', { reason: 'ready' }]
+		]);
+	});
+
+	it('leaves a record from a start with a URL as it was, for when the URL is back', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		await writeRaised(dir, true);
+		const without = start(dir, null);
+		await without.watch(check('ok', 'ready'));
+		expect(without.pushed).toEqual([]);
+		expect(await readRaised(dir)).toBe(true);
+		// The receiver was told proxy_unreachable and nothing since: it still gets proxy_recovered.
+		const withUrl = start();
+		await withUrl.watch(check('ok', 'ready'));
+		expect(withUrl.pushed).toEqual([['proxy_recovered', { reason: 'ready' }]]);
 	});
 
 	// A write that fails leaves the record as it was, so the next start goes by
@@ -556,12 +594,15 @@ describe('the raised alarm, kept across restarts', () => {
 	});
 
 	it('keeps the alarm in the process only, without a directory', async () => {
-		const before = start('');
+		// A raised record nearby, which a start without a directory must not see.
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		await writeRaised(dir, true);
+		const before = start(null);
 		for (let i = 0; i < UNREACHABLE_AFTER; i++) await before.watch(check('down', 'unreachable'));
-		await before.watch(check('ok', 'ready'));
-		expect(before.pushed.map(([event]) => event)).toEqual(['proxy_unreachable', 'proxy_recovered']);
-		const after = start(undefined);
+		const after = start(null);
 		await after.watch(check('ok', 'ready'));
 		expect(after.pushed).toEqual([]);
+		await before.watch(check('ok', 'ready'));
+		expect(before.pushed.map(([event]) => event)).toEqual(['proxy_unreachable', 'proxy_recovered']);
 	});
 });

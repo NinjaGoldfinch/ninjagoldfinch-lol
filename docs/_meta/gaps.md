@@ -34,7 +34,7 @@ Every `TODO (unverified)` in `docs/`, with a suggested way to close it, grouped 
 
 | File                                      | Gap                                                                                                               | How to resolve                                                                                    |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| docs/integration/monitoring-hooks.md      | No readiness endpoint on the site; whether one is wanted                                                          | Owner decision; would be a code task                                                              |
+| docs/integration/monitoring-hooks.md      | Whether ninja-monitor or the status bot should probe `/api/status` (the `riot_proxy` check) as well as the unit   | Owner decision; a monitoring setting, not site code                                               |
 | docs/integration/service-communication.md | Whether the site should set `ADDRESS_HEADER=CF-Connecting-IP`; currently unset                                    | Owner decision; nothing reads the client address today                                            |
 | docs/workflows/development-setup.md       | Live profile and match pages against a local riot-proxy with a real Riot key (run only with a placeholder key)    | Repeat Option B step 5 with a development key from developer.riotgames.com                        |
 | docs/workflows/development-setup.md       | Why a dev server started with `PROXY_URL` on the command line later used `.env`'s value (seen once on 2026-10-20) | Reproduce with a long session and frequent file changes; read SvelteKit's dev program-reload path |
@@ -43,4 +43,4 @@ Every `TODO (unverified)` in `docs/`, with a suggested way to close it, grouped 
 ---
 
 **Sources:** `grep -rn "TODO (unverified)" docs/` on 2026-11-06 (23 markers, 23 rows)
-**Last verified:** 2026-11-06 against commit `968c674`
+**Last verified:** 2026-11-06 against commit `630a9f2`
