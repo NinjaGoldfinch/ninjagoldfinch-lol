@@ -25,6 +25,16 @@ Every setting ninjagoldfinch.lol reads, when it is read (build time or start-up)
 | `EVENTS_URL`              | absolute http(s) URL   | unset                                            | No                         | start-up                    | Where state-change events (`proxy_unreachable`, `proxy_recovered`, `deployed`) are POSTed. Must not redirect: a redirect is a failed attempt. A username or password is refused at start-up; a receiver's token goes in the path or query string, and the URL is then a secret ([secrets](#secrets)). Unset, none are sent (ADR-063) | `https://bot.example/events`    |
 | `STATE_DIRECTORY`         | absolute path          | unset                                            | No                         | start-up                    | Writable directory where each start records its version, to tell a deploy, and where a raised `proxy_unreachable` is kept across restarts. systemd sets it from the unit's `StateDirectory=ninjagoldfinch-lol` (production's drop-in, staging's unit); the first of several is used. Unset, no `deployed` event (ADR-063)            | `/var/lib/ninjagoldfinch-lol`   |
 
+**Leave `STATE_DIRECTORY` out of `/etc/ninjagoldfinch-lol/env`.** systemd builds a service's environment from several sources, and a variable read from `EnvironmentFile=` wins over one the service manager sets itself, `STATE_DIRECTORY` among them (systemd.exec(5), "Environment Variables in Spawned Processes"; read in systemd 257's man page). An empty `STATE_DIRECTORY=` copied from `.env.example` into the env file therefore replaces the path from `StateDirectory=` with nothing, and the site treats it as unset: no `deployed` event, and the proxy alarm not kept across restarts, with nothing in the journal. To see what the running site got:
+
+```sh
+sudo cat /proc/"$(systemctl show -p MainPID --value ninjagoldfinch-lol)"/environ | tr '\0' '\n' | grep '^STATE_DIRECTORY='
+# STATE_DIRECTORY=/var/lib/ninjagoldfinch-lol   expected; empty or missing means it is off
+# "Permission denied" or "No such file" means it did not look (no sudo, or the unit is stopped)
+```
+
+> **TODO (unverified):** nobody has run this override on a host yet; the paragraph above rests on the man page alone. To settle it, put `STATE_DIRECTORY=` in `/tmp/fix10.env` and run `sudo systemd-run --pipe --wait -p StateDirectory=fix10 -p EnvironmentFile=/tmp/fix10.env /usr/bin/env`: an empty `STATE_DIRECTORY=` in the output confirms it, `STATE_DIRECTORY=/var/lib/fix10` contradicts it. Remove `/tmp/fix10.env` and `/var/lib/fix10` afterwards, and tick this off with the date and the systemd version.
+
 ## Server settings (adapter-node)
 
 Read by the generated server in `build/server/` (adapter-node 6.0.0). None is set by this repo except `HOST` and `PORT` in production. Line numbers refer to the build output at `e7c395c`, not to tracked source.

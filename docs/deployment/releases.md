@@ -202,7 +202,7 @@ sudo ls -l /var/lib/ninjagoldfinch-lol/                    # last-version.json, 
 sudo cat /var/lib/ninjagoldfinch-lol/last-version.json     # the running version and commit
 ```
 
-`last-version.json` appears only once the running release is one with ADR-063; with an older release the directory is there and empty. That first start records its version and sends nothing; each later release sends `deployed` when it starts. `EVENTS_URL` must be the receiver's final URL: a redirect is not followed, and the event is dropped after its 5 attempts (`event <name> dropped after 5 attempts` in the journal).
+`last-version.json` appears only once the running release is one with ADR-063; with an older release the directory is there and empty. If it never appears on a release that has ADR-063, check what the process received ([configuration](configuration.md), "Leave `STATE_DIRECTORY` out of `/etc/ninjagoldfinch-lol/env`"): an empty `STATE_DIRECTORY=` in the env file passes both checks above. That first start records its version and sends nothing; each later release sends `deployed` when it starts. `EVENTS_URL` must be the receiver's final URL: a redirect is not followed, and the event is dropped after its 5 attempts (`event <name> dropped after 5 attempts` in the journal).
 
 > **TODO (unverified):** these commands have not been run on either host yet. Tick this off with the date once both show `last-version.json`.
 
@@ -337,5 +337,5 @@ To cut staging off without touching the live site: `rp key revoke ninjagoldfinch
 
 ---
 
-**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058, ADR-060, ADR-063), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
+**Sources:** `deploy/systemd/ninja-deploy.conf`, `.github/workflows/deploy.yml`, `.github/workflows/release.yml`, `scripts/package.sh`, `docs/deployment/configuration.md`, `docs/DECISIONS.md` (ADR-051 to ADR-054, ADR-057, ADR-058, ADR-060, ADR-063), `ninja-actions:README.md`, `ninja-actions:infra/deploy.sh`, `ninja-actions:infra/deploy-host-add.sh`, riot-proxy's `prod` environment (read 2026-11-05), the staging handover from the ninja-actions session (2026-11-05), owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-05, during the move: `v1.0.0` started from `/srv` and served pages within a second of the restart
