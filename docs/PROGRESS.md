@@ -115,6 +115,7 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 ## P5 — Production
 
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
+- [x] P5-02 Cloudflare: the cache rule recorded, a rate-limiting rule on `/summoner/*` and `/match/*` (20 per IP per 10 s, then blocked), `ADDRESS_HEADER` left unset (ADR-065) — #135 (check below)
 - [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
 
 ## Brought forward
@@ -197,7 +198,7 @@ Items that waited on riot-proxy, closed after its changes (ADR-018):
 - P2-02 "Updated N minutes ago": riot-proxy's `fetchedAgeSeconds` — #32 (ADR-019).
 - Also from riot-proxy's changes: its schemas for Riot's payloads, and fixtures re-recorded (#31); per-match `ddragonVersion` and the role quest slot (#34).
 
-Still for later: Cloudflare serving the second request is checked in P5-02.
+Cloudflare serving the second request was checked in P5-02 on 2026-11-07: `EXPIRED` then `HIT` ("P5-02 check" below).
 
 `phase-P2` was first tagged on 2026-10-09 with the two riot-proxy items open, at the owner's request. It was moved on the same day to the commit that closes them.
 
@@ -280,6 +281,24 @@ ngf-deploy ninjagoldfinch-lol -v v1.0.2 -w   run 41905758241  created 20:21:02Z 
 ```
 
 Each run took under 30 s from start to "live", approval included, against the five-minute target; `ninja-deploy` waits for `/healthz` to report the tag's version before it reports success (ADR-051). `/healthz` answered in the browser afterwards. Times are UTC (2026-11-04), from `gh run view`.
+
+### P5-02 check — passed 2026-11-07
+
+From outside (the owner's Mac), against `https://ninjagoldfinch.lol` on Cloudflare's Free plan, after the rate-limiting rule was deployed (ADR-065).
+
+```text
+rate limit   30 x GET /summoner/NinjaGoldfinch-OCENZ, back to back
+             200 x 20, then 429 x 10
+
+edge cache   GET /summoner/NinjaGoldfinch-OCENZ twice (the P2 exit check's last part, ADR-011)
+             1st  200  cf-cache-status: EXPIRED  cache-control: public, s-maxage=60, stale-while-revalidate=300
+             2nd  200  cf-cache-status: HIT      cache-control: public, s-maxage=60, stale-while-revalidate=300
+
+not limited  25 x GET /champions, back to back
+             200 x 25
+```
+
+The cache rule, read in the dashboard: `(http.host eq "ninjagoldfinch.lol")`, eligible for cache, edge TTL from `Cache-Control` and bypass without it, browser TTL from the origin, other settings at their defaults.
 
 ### SPD-06 check — passed 2026-11-03
 
