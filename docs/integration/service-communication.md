@@ -62,7 +62,7 @@ sequenceDiagram
 - Payloads are HTML pages, `__data.json` for client navigation, and `POST ?/refresh` form actions (see [../api/endpoints.md](../api/endpoints.md)).
 - Cloudflare's caching follows the site's `Cache-Control` (`src/lib/server/cache.ts:5-18`).
 
-> **TODO (unverified):** whether adapter-node is told the real client address (`ADDRESS_HEADER=CF-Connecting-IP`, as the plan suggests in `docs/IMPLEMENTATION.md:392`). It is not among the variable names in `/etc/ninjagoldfinch-lol/env`, so the site probably sees `127.0.0.1` for every client; nothing in the code reads the client address today.
+- adapter-node is not told the real client address: `ADDRESS_HEADER` stays unset (ADR-065), so the site sees `cloudflared` on loopback for every visitor. With it set, a request made on the host itself has no `CF-Connecting-IP` and adapter-node's `getClientAddress` throws, so `/api/status` would treat local checks as public and ask for the token (ADR-062). Nothing else reads the client address; Cloudflare's rate-limiting rule counts real addresses on its own side.
 
 ## 2. The site to riot-proxy
 
@@ -122,5 +122,5 @@ A deploy pulls `main` over SSH with a read-only deploy key belonging to the `nin
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L113-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L73`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `docs/IMPLEMENTATION.md:L392`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19)
-**Last verified:** 2026-11-03 against commit `ea998cb`
+**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L113-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L73`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19), `docs/DECISIONS.md:L1024-L1044` (ADR-065), the owner's Cloudflare dashboard and checks from outside (2026-11-07)
+**Last verified:** 2026-11-07 against commit `79f1842`
