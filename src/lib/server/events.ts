@@ -215,24 +215,36 @@ export const QUEUE_LIMIT = 64;
  * Where events go: a bounded queue and one worker that sends them in order, so
  * a `proxy_recovered` never overtakes the `proxy_unreachable` still being
  * retried. Without a URL, events are dropped silently. `push` never blocks.
+ * The URL may hold the receiver's token (ADR-063), so it is a `#` field, which
+ * neither `console.error(queue)` nor `JSON.stringify` shows; `enabled` says
+ * whether there is one.
  */
 export class EventQueue {
+	readonly #url: string | undefined;
 	private readonly queue: SiteEvent[] = [];
 	private worker: Promise<void> | undefined;
 
 	constructor(
-		readonly url: string | undefined,
+		url: string | undefined,
 		private readonly send: (url: string, event: SiteEvent) => Promise<unknown> = deliver
-	) {}
+	) {
+		this.#url = url;
+	}
+
+	/** Whether events are sent at all: false without a URL. */
+	get enabled(): boolean {
+		return Boolean(this.#url);
+	}
 
 	push(event: EventName, detail: Record<string, unknown> = {}): void {
-		if (!this.url) return;
+		const url = this.#url;
+		if (!url) return;
 		if (this.queue.length >= QUEUE_LIMIT) {
 			console.warn(`event ${event} dropped: ${QUEUE_LIMIT} events already waiting`);
 			return;
 		}
 		this.queue.push(siteEvent(event, detail));
-		this.worker ??= this.drain(this.url);
+		this.worker ??= this.drain(url);
 	}
 
 	/** Settles once every queued event is sent or dropped. For the tests. */
@@ -263,9 +275,9 @@ export class EventQueue {
  */
 export function proxyWatch(
 	dir: string | undefined,
-	events: Pick<EventQueue, 'push' | 'url'>
+	events: Pick<EventQueue, 'push' | 'enabled'>
 ): (check: Check) => Promise<void> {
-	if (!events.url) return () => Promise.resolve();
+	if (!events.enabled) return () => Promise.resolve();
 	const alarm = readRaised(dir).then((raised) => new ProxyAlarm(raised));
 	return async (check) => {
 		const event = (await alarm).observe(check.status);
