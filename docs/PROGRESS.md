@@ -117,6 +117,7 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
 - [x] P5-02 Cloudflare: the cache rule recorded, a rate-limiting rule on `/summoner/*` and `/match/*` (20 per IP per 10 s, then blocked), `ADDRESS_HEADER` left unset (ADR-065) — #135 (check below)
 - [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
+- [x] P5-05 External uptime check on `/healthz`, and the Riot Developer Portal product page updated with `https://ninjagoldfinch.lol`; done by the owner outside the repo (reported 2026-11-07) — #PR
 
 ## Brought forward
 
