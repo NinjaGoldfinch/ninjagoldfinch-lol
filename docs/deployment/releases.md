@@ -204,6 +204,15 @@ sudo cat /var/lib/ninjagoldfinch-lol/last-version.json     # the running version
 
 `last-version.json` appears only once the running release is one with ADR-063; with an older release the directory is there and empty. If it never appears on a release that has ADR-063, check what the process received ([configuration](configuration.md), "Leave `STATE_DIRECTORY` out of `/etc/ninjagoldfinch-lol/env`"): an empty `STATE_DIRECTORY=` in the env file passes both checks above. That first start records its version and sends nothing; each later release sends `deployed` when it starts. `EVENTS_URL` must be the receiver's final URL: a redirect is not followed, and the event is dropped after its 5 attempts (`event <name> dropped after 5 attempts` in the journal).
 
+**Changing or removing the receiver.** `proxy-alarm.json` records what the receiver was told, not which receiver (ADR-064). Without `EVENTS_URL` it is neither read nor written, so a raised record stays raised for as long as the URL is unset. If the URL then comes back pointing at another receiver, or is changed during an outage, the first `ok` sends that receiver a `proxy_recovered` with no `proxy_unreachable` before it. To avoid that, delete the record in the same step as the restart that applies the new or removed URL:
+
+```sh
+sudoedit /etc/ninjagoldfinch-lol/env                       # change or remove EVENTS_URL
+sudo rm -f /var/lib/ninjagoldfinch-lol/proxy-alarm.json && sudo systemctl restart ninjagoldfinch-lol
+```
+
+With the record gone, an outage still in progress is raised to the new receiver after three more failed checks. No host has run a build that recorded the alarm without `EVENTS_URL` (#126 to #128, before ADR-064): no release included it.
+
 > **TODO (unverified):** these commands have not been run on either host yet. Tick this off with the date once both show `last-version.json`.
 
 ## Staging

@@ -1019,7 +1019,7 @@ Date: 2026-11-06 · Task: FIX-09 (review of #126, issue #127; refines ADR-063)
 
 - Adding `EVENTS_URL` during an outage sends `proxy_unreachable` after three more failed checks, then `proxy_recovered`, as for an outage that starts after the restart.
 - `last-version.json` is still written without `EVENTS_URL`, as before: a start records its version so that, once a URL is set, the next release sends `deployed` (ADR-063).
-- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told.
+- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told. The same follows when `EVENTS_URL` is removed during an outage and later set to another receiver. `docs/deployment/releases.md` has the operator delete `proxy-alarm.json` with the restart that changes or removes the receiver, and unit tests hold both cases (FIX-11).
 
 ## ADR-065: Cloudflare in front of the site: the cache rule, a rate limit, and no `ADDRESS_HEADER`
 
