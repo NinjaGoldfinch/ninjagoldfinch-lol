@@ -48,7 +48,7 @@ From a clean machine to passing tests and a local ninjagoldfinch.lol rendering p
 just check
 ```
 
-This is the gate, and CI runs the same script on every pull request (`scripts/check.sh`, ADR-050). It runs, in order: `prettier --check .`, a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and the release package test `scripts/package.test.sh` (`scripts/check.sh`; `just check` runs it). The unit tests need a `.env`: `just setup` copies `.env.example`, and CI does the same. On a fresh clone at `e7c395c` it passed (exit 0); the suite has 34 test files and 332 tests.
+This is the gate, and CI runs the same script on every pull request (`scripts/check.sh`, ADR-050). It runs, in order: `prettier --check .`, the `docs/PROGRESS.md` tick check (`scripts/check-progress.ts`: no task ticked twice, no tick for a task the plan does not define, ADR-069), a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and the release package test `scripts/package.test.sh` (`scripts/check.sh`; `just check` runs it). The unit tests need a `.env`: `just setup` copies `.env.example`, and CI does the same. On a fresh clone at `e7c395c` it passed (exit 0); the suite has 34 test files and 332 tests.
 
 ## 3. Browser tests (optional)
 
@@ -199,4 +199,4 @@ $ riot-proxy v2.7.0 (placeholder key, AUTH_DISABLED) + just dev
 ---
 
 **Sources:** `package.json:L6-L9`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L67`, `.env.example:L1-L25`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/errors.ts:L36-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L16-L19`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L295`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L80-L83,L158-L159`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
-**Last verified:** 2026-11-03 against commit `23a4f41`
+**Last verified:** 2026-11-09 against commit `02630bb`
