@@ -172,10 +172,10 @@ One worker sends them in order, 5 s per attempt, retrying after 1, 2, 4 and 8 s 
 }
 ```
 
-| Setting           | Default | Meaning                                                                                                                                                                             |
-| ----------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EVENTS_URL`      | unset   | where events are POSTed; unset sends none                                                                                                                                           |
-| `STATE_DIRECTORY` | unset   | writable directory for the last start's version and the raised proxy alarm; systemd sets it from `StateDirectory=`. Unset, no `deployed`, and the alarm is not kept across restarts |
+| Setting           | Default | Meaning                                                                                                                                                                                                                  |
+| ----------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EVENTS_URL`      | unset   | where events are POSTed; unset sends none                                                                                                                                                                                |
+| `STATE_DIRECTORY` | unset   | writable directory for the last start's version and, when `EVENTS_URL` is set, the raised proxy alarm (ADR-064); systemd sets it from `StateDirectory=`. Unset, no `deployed`, and the alarm is not kept across restarts |
 
 ## Deploying
 
