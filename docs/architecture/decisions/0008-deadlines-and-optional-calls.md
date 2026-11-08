@@ -23,6 +23,8 @@ Accepted (SPD-05, PR #63).
 
 2026-11-03, RV-03: the mechanism was replaced, the decision stands. `AbortSignal.timeout` could fail to fire: `new Request(…, { signal })` holds its signal only weakly, so a call nothing else held could be garbage collected before the abort reached it, and the page never finished. `withTimeout` now races the fetch and the body read against a promise its own `setTimeout` or the caller's abort rejects, and aborts its own `AbortController`. Any failure other than the caller's own abort is now a 503, a refused connection included (it was a 500). Deadlines are logged as `proxy timeout` (`src/lib/server/proxy.ts:82-135`). The CommunityDragon `perks.json` fetch gained a 5 s deadline too (`src/lib/server/cdragon.ts:12-34`).
 
+2026-11-09, ADR-066: the front page's card calls go through `frontClient`, with a 2 s deadline; each is optional, so a slow riot-proxy costs the card, not the page (`src/lib/server/proxy.ts`, `src/lib/server/front-page.ts`).
+
 ## Evidence
 
 `tests/unit/proxy.test.ts` (including 20 hung calls under repeated garbage collection, `tests/unit/proxy.test.ts:154-169`), `tests/unit/errors.test.ts`, `tests/unit/cdragon.test.ts:49-66`, loader tests.

@@ -12,6 +12,7 @@ Production's `/champions/__data.json` took 3.9 s on 2026-10-14. riot-proxy 2.6.0
 - The site does not cache analytics; requests to warm them go to riot-proxy.
 - Analytics calls over 250 ms are logged with riot-proxy's `X-Cache` (`src/lib/server/proxy.ts:37-67`).
 - Since ADR-046, any request over 100 ms also logs one `slow load` line naming its route id and each riot-proxy call by spec path and time, so a cold slice shows on the page that waited on it (`src/lib/server/timing.ts:67-95`). The page-speed tasks' production measurements are in ADR-046 (SPD-07) and ADR-047 (SPD-08), SPD-10's local ones in [operations/performance.md](../../operations/performance.md); SPD-11 was dropped on them (owner, 2026-11-03).
+- The front page does not stream either (ADR-066): without JavaScript a streamed card never fills in, and streamed data arrives as inline scripts after the hashed CSP header has gone out (ADR-055). Its cards wait at most 2 s instead.
 
 ## Consequences
 

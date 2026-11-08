@@ -45,8 +45,12 @@ paths:
     get:
       tags: [pages]
       operationId: getHome
-      summary: Home page with the search form
-      description: Recent searches are filled in by the browser.
+      summary: Front page with the search form and live cards
+      description: >-
+        The patch, the ranked games analysed and the top win rates, from
+        riot-proxy's analytics within a 2 s deadline; a card whose call fails
+        shows a notice and the page is sent with `Cache-Control: no-store`
+        (ADR-066). Recent searches are filled in by the browser.
       responses:
         '200':
           $ref: '#/components/responses/Html'

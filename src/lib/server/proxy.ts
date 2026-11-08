@@ -162,4 +162,16 @@ proxy.use(countProxyCalls());
  */
 export const probeClient = createProxyClient(PROXY_URL, PROXY_KEY, undefined, () => 5_000);
 
+/** How long a front-page card may wait for riot-proxy: a slow answer costs the card, not the page (ADR-066). */
+export const FRONT_PAGE_BUDGET_MS = 2_000;
+
+/** The front page's client for its cards, its calls counted for /api/status like the pages' (ADR-066). */
+export const frontClient = createProxyClient(
+	PROXY_URL,
+	PROXY_KEY,
+	undefined,
+	() => FRONT_PAGE_BUDGET_MS
+);
+frontClient.use(countProxyCalls());
+
 export type ProxyClient = typeof proxy;

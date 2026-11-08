@@ -2,16 +2,20 @@
 	let {
 		query = '',
 		message = null,
-		champions = []
+		champions = [],
+		size = 'default'
 	}: {
 		query?: string;
 		/** Why the last search found nothing, shown under the box. */
 		message?: string | null;
 		/** Champion names to suggest; none when the page has no Data Dragon names. */
 		champions?: string[];
+		/** `large` for the front page's hero; `default` everywhere else. */
+		size?: 'default' | 'large';
 	} = $props();
 
 	const id = $props.id();
+	const large = $derived(size === 'large');
 </script>
 
 <!-- A plain GET form, so search works without JavaScript. A query with # is a
@@ -30,10 +34,17 @@
 				list={champions.length > 0 ? `${id}-champions` : undefined}
 				aria-invalid={message ? 'true' : undefined}
 				aria-describedby={message ? `${id}-message` : undefined}
-				class="h-9 w-full rounded border border-border bg-bg px-3 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
+				class="w-full border border-border placeholder:text-muted focus:border-accent focus:outline-none {large
+					? 'h-12 rounded-lg bg-surface px-4 text-base'
+					: 'h-9 rounded bg-bg px-3 text-sm'}"
 			/>
 		</label>
-		<button type="submit" class="h-9 rounded bg-accent px-4 text-sm font-medium text-bg">
+		<button
+			type="submit"
+			class="bg-accent font-medium text-bg {large
+				? 'h-12 rounded-lg px-6 text-base'
+				: 'h-9 rounded px-4 text-sm'}"
+		>
 			Search
 		</button>
 	</div>

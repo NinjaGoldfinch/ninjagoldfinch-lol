@@ -47,15 +47,22 @@ for (const path of PAGES) {
 	});
 }
 
-test('/ and /about are rendered per request and cached at the edge for 10 minutes', async ({
+test('/about is rendered per request and cached at the edge for 10 minutes', async ({
 	request
 }) => {
-	for (const path of ['/', '/about']) {
-		const response = await request.get(path);
-		expect(response.headers()['cache-control']).toBe(
-			'public, s-maxage=600, stale-while-revalidate=600'
-		);
-	}
+	const response = await request.get('/about');
+	expect(response.headers()['cache-control']).toBe(
+		'public, s-maxage=600, stale-while-revalidate=600'
+	);
+});
+
+test('/ is rendered per request and cached at the edge for a minute (ADR-066)', async ({
+	request
+}) => {
+	const response = await request.get('/');
+	expect(response.headers()['cache-control']).toBe(
+		'public, s-maxage=60, stale-while-revalidate=120'
+	);
 });
 
 test('a redirect and a not-found page carry the headers too', async ({ request }) => {
@@ -116,7 +123,11 @@ test.describe('with JavaScript', () => {
 		// The profile records itself once hydrated; leaving before then records nothing.
 		await page.waitForFunction(() => localStorage.getItem('recent-searches')?.includes('OCENZ'));
 		await page.goto('/');
-		await expect(page.getByRole('link', { name: 'NinjaGoldfinch#OCENZ' })).toBeVisible();
+		await expect(
+			page
+				.getByRole('region', { name: 'Recent searches' })
+				.getByRole('link', { name: 'NinjaGoldfinch#OCENZ' })
+		).toBeVisible();
 		await page.getByRole('link', { name: 'About' }).first().click();
 		await expect(page).toHaveURL('/about');
 

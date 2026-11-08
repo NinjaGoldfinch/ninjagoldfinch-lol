@@ -525,6 +525,16 @@ The owner's review of the code and docs on 2026-11-03 found security, caching an
 
 **Exit check:** none beyond each task's own.
 
+### FP — front page
+
+Owner request 2026-11-09: a search-first front page ("Concept 1, search first with live cards"): a hero with the patch and the games analysed, a larger search with example searches, recent searches as cards, and a row of live cards (free rotation, top win rates, server status) for a region named in the query. Data loads only in `+page.server.ts`, each card fails on its own, and the page works without JavaScript.
+
+- [ ] FP-01 Hero and the top-win-rate card: `Patch X.Y` and `N ranked games analysed` pills, a larger search with example links, the six champions with the highest win rate over 800 games; a `live` cache policy and a 2 s deadline for the front page's calls, no streaming (ADR-066)
+- [ ] FP-02 Free rotation and server status for a region: `?region=` with Oceania as the default, a switcher that works without JavaScript, Riot's passed-through payloads parsed at runtime (ADR-067)
+- [ ] FP-03 Recent searches as cards: profile icon, region, solo rank and when it was viewed, recorded by the profile page; entries stored before still read (ADR-068)
+
+**Exit check:** with JavaScript disabled, `/?region=kr` renders Korea's rotation and status from the server; with riot-proxy stopped, `/` answers 200 with every card's notice and `Cache-Control: no-store`.
+
 ## Riot policy checklist
 
 These come from Riot's [General Policies](https://developer.riotgames.com/policies/general) (last updated May 29, 2025) and the [League of Legends developer docs](https://developer.riotgames.com/docs/lol). Re-read both before the production key review.

@@ -20,6 +20,12 @@ describe('cacheControl', () => {
 		});
 	});
 
+	it("lets the edge keep the front page's live cards for a minute, stale for two", () => {
+		expect(cacheControl('live')).toEqual({
+			'cache-control': 'public, s-maxage=60, stale-while-revalidate=120'
+		});
+	});
+
 	it('lets the edge cache pages without proxy data for 10 min, stale for another 10', () => {
 		expect(cacheControl('static')).toEqual({
 			'cache-control': 'public, s-maxage=600, stale-while-revalidate=600'

@@ -123,6 +123,14 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 - [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
 - [x] P5-05 External uptime check on `/healthz`, and the Riot Developer Portal product page updated with the live URL — done by the owner outside the repo, no PR (owner, 2026-11-07)
 
+## FP — front page
+
+Owner request 2026-11-09: a search-first front page with live cards (IMPLEMENTATION.md, "FP — front page").
+
+- [x] FP-01 Hero and the top-win-rate card; `live` cache policy; 2 s front-page deadline (ADR-066) — #139
+- [ ] FP-02 Free rotation and server status per region, `?region=` (ADR-067)
+- [ ] FP-03 Recent searches as cards with icon, region, rank and age (ADR-068)
+
 ## Brought forward
 
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Production runs without Docker (ADR-038), so the rest of P5-01 (`cloudflared`, no published port, and the 200 MB image check) applies only if the Docker preview path comes back. The preview VM is dormant: VM 104 no longer exists (owner, 2026-10-19).
