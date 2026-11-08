@@ -1042,3 +1042,24 @@ Date: 2026-11-07 · Task: P5-02
 - `/champions`, `/champions/*`, `/`, `/about` and `/search` are not limited. The champion pages are analytics riot-proxy has already computed and the edge holds for 10 minutes; `/search` reads only the site's in-memory lookups and redirects a Riot ID to its profile, which the rule covers.
 - On a paid plan the rule could block for longer and count only requests that reach the server.
 - Checked from outside on 2026-11-07 (`docs/PROGRESS.md`, "P5-02 check"): 20 `200`s then `429`; a profile `EXPIRED` then `HIT`; `/champions` never blocked.
+
+## ADR-066: the front page shows live data: a `live` policy, a 2 s front-page deadline, no streaming
+
+Date: 2026-11-09 · Task: FP-01
+
+**Context.** `/` had no proxy data and a 10-minute `static` policy (ADR-055). The owner's new front page ("Concept 1, search first with live cards") adds a patch pill, the ranked games analysed and the top win rates (FP-01), then the free rotation and server status for a region (FP-02). The rules it must keep: data loads only in `+page.server.ts`; pages work without JavaScript; each card fails on its own, and the page never fails because riot-proxy is slow; the CSP is hash-based (ADR-055); Cloudflare caches every page by its `Cache-Control`, with the query string in the key (ADR-065).
+
+**Decision.**
+
+- **One load, every call optional.** `loadFrontPage` (`src/lib/server/front-page.ts`) starts every card's call in one `Promise.all`, each through `optional()`. A part that failed is `null` and its card shows a notice ("Win rates are unavailable right now."). With every part loaded and the lookups not fallen back, `complete` is true and the page gets `live`; otherwise `none` (ADR-045).
+- **A 2 s deadline for the cards.** The card calls go through `frontClient`, a client with `FRONT_PAGE_BUDGET_MS = 2_000`, counted for `/api/status` like the pages' (`src/lib/server/proxy.ts`). The usual budget would let a rotation or status call wait 30 s. The patch and its lookups stay on `proxy`: they are held in memory and loaded at start-up (ADR-048), and without them the page still renders, with no pill and no icons.
+- **No streaming.** Without JavaScript a streamed card never fills in (ADR-039). SvelteKit also streams deferred data as inline scripts after the response's headers, CSP included, have gone out, so their hashes cannot be in it; they would need a nonce, which a page shared from the edge cannot have (ADR-055). The page waits for every card, at most about 2 s.
+- **`live`: `public, s-maxage=60, stale-while-revalidate=120`.** A change in the server status shows within about three minutes; repeat views come from the edge. `static` stays for `/about`. `profile` has similar numbers, but a named policy says why and can change on its own.
+- **The pills.** `Patch 16.20` is `major.minor` of the Data Dragon version already held for icons: no call. The games analysed are `totalGames` of the analytics call the top-win-rate card makes anyway (`/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=500`, as `/champions` asks), not a sum over `/v1/lol/analytics/patches`, a second call whose sum the spec does not say equals it.
+- **The top win rates** are over every region, tier and patch, as `/champions` shows them. A champion needs 800 games to be listed (`TOP_WIN_RATE_MIN_GAMES`), applied in the page; `minGames=0` stays on the wire (ADR-035). The card links to `/champions?sort=win`. No MMR or ELO anywhere.
+
+**Consequences.**
+
+- Each edge miss on `/` costs riot-proxy one analytics call, answered from its memory; FP-02 adds two calls riot-proxy caches from Riot.
+- While riot-proxy is down or slow, `/` is not kept at the edge: every view reaches the server and waits up to 2 s, then shows the notices. `/` is not rate limited (ADR-065).
+- `/` now returns the champion names, so the header search suggests champions there too, as on `/champions`.

@@ -8,7 +8,7 @@ riot-proxy's capacity and the Riot rate budget are the scarce resources; most pa
 
 ## Decision
 
-- Six policies in `src/lib/server/cache.ts:5-18`: `profile` (`s-maxage=60, stale-while-revalidate=300`), `match` (`s-maxage=86400, stale-while-revalidate=86400`), `analytics` (`s-maxage=600, stale-while-revalidate=600`), `static` (`s-maxage=600, stale-while-revalidate=600`, for `/` and `/about`, ADR-055), `notFound` (`s-maxage=60`), `none` (`no-store`).
+- Seven policies in `src/lib/server/cache.ts:5-20`: `profile` (`s-maxage=60, stale-while-revalidate=300`), `match` (`s-maxage=86400, stale-while-revalidate=86400`), `analytics` (`s-maxage=600, stale-while-revalidate=600`), `live` (`s-maxage=60, stale-while-revalidate=120`, for `/`, ADR-066), `static` (`s-maxage=600, stale-while-revalidate=600`, for `/about`, ADR-055), `notFound` (`s-maxage=60`), `none` (`no-store`).
 - Every load sets one through `cacheControl()` (`CLAUDE.md:62`).
 - The `handle` hook overrides: non-GET/HEAD and errors are `no-store`, 404 is `notFound` (`src/hooks.server.ts:20-32`, `src/lib/server/cache.ts:31-36`, ADR-017).
 - After those rules, a response with no `Cache-Control` gets `no-store`. That covers redirects thrown before a load set a policy (`src/hooks.server.ts:24-29`, ADR-045).
@@ -22,7 +22,7 @@ riot-proxy's capacity and the Riot rate budget are the scarce resources; most pa
 - Refresh is a POST so it is never cached (ADR-012).
 - Cloudflare's cache key includes the query string, checked from outside on 2026-10-19 (`docs/DECISIONS.md:579`).
 - Cloudflare's cache rule covers the whole host, takes the edge TTL from `Cache-Control`, and bypasses the cache for a response without one (ADR-065).
-- `/` and `/about` were prerendered so they escaped `handle`'s `no-store` default (ADR-045); since ADR-055 they are rendered per request with the `static` policy, so they get the security headers.
+- `/` and `/about` were prerendered so they escaped `handle`'s `no-store` default (ADR-045); since ADR-055 they are rendered per request, so they get the security headers; `/about` has the `static` policy and `/` the `live` one (ADR-066).
 - A degraded page costs riot-proxy a request per view until it recovers, as an error page does.
 - SvelteKit sends `__data.json` with `private, no-store` unless the load set a policy, which then replaces it (checked in SvelteKit 3.0.1's source and against `node build` on 2026-11-03).
 

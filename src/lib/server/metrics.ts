@@ -98,7 +98,8 @@ export function isProxyError(status: number | undefined): boolean {
 
 /**
  * Counts every riot-proxy call the site makes and records its time. Only the
- * pages' client uses it, so the status check's own calls are not counted.
+ * pages' clients (`proxy`, `frontClient`) use it, so the status check's own
+ * calls are not counted.
  */
 export function countProxyCalls(into: Metrics = metrics): Middleware {
 	const started = new Map<string, number>();

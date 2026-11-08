@@ -7,7 +7,8 @@ test('every page has the search form and the Riot legal notice', async ({ page }
 	const search = page.getByRole('banner').getByRole('search');
 	// A Riot ID names its own region (ADR-037), so there is nothing to pick.
 	await expect(search.getByRole('combobox', { name: 'Region' })).toHaveCount(0);
-	await expect(search.getByRole('textbox', { name: 'Riot ID or champion' })).toBeVisible();
+	// The front page suggests champions, so its box is a combobox.
+	await expect(search.getByRole('combobox', { name: 'Riot ID or champion' })).toBeVisible();
 	await expect(page.locator('footer')).toContainText(LEGAL);
 });
 

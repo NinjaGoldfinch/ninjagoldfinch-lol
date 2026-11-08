@@ -9,7 +9,9 @@ export const CACHE_POLICIES = {
 	match: 'public, s-maxage=86400, stale-while-revalidate=86400',
 	/** Champion analytics: riot-proxy recomputes them per crawl, so 10 min at the edge. */
 	analytics: 'public, s-maxage=600, stale-while-revalidate=600',
-	/** Pages without proxy data (home, about): 10 min at the edge, then stale for another 10. */
+	/** The front page's live cards (ADR-066): a minute at the edge, then stale for two while refreshing. */
+	live: 'public, s-maxage=60, stale-while-revalidate=120',
+	/** Pages without proxy data (about): 10 min at the edge, then stale for another 10. */
 	static: 'public, s-maxage=600, stale-while-revalidate=600',
 	/** Not-found pages: briefly, so repeated misses do not all reach riot-proxy. */
 	notFound: 'public, s-maxage=60',
