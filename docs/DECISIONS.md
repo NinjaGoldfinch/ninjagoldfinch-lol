@@ -1043,7 +1043,7 @@ Date: 2026-11-07 · Task: P5-02
 - On a paid plan the rule could block for longer and count only requests that reach the server.
 - Checked from outside on 2026-11-07 (`docs/PROGRESS.md`, "P5-02 check"): 20 `200`s then `429`; a profile `EXPIRED` then `HIT`; `/champions` never blocked.
 
-## ADR-066: the P5 exit check reads riot-proxy as published only through its tunnel
+## ADR-070: the P5 exit check reads riot-proxy as published only through its tunnel
 
 Date: 2026-11-09 · Task: P5
 

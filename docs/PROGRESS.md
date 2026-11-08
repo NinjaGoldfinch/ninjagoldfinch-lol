@@ -118,7 +118,7 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 
 ## P5 — Production
 
-Exit check (amended in ADR-066): `https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes. Passed 2026-11-09 (below).
+Exit check (amended in ADR-070): `https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes. Passed 2026-11-09 (below).
 
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
 - [x] P5-02 Cloudflare: the cache rule recorded, a rate-limiting rule on `/summoner/*` and `/match/*` (20 per IP per 10 s, then blocked), `ADDRESS_HEADER` left unset (ADR-065) — #135 (check below)
@@ -308,7 +308,7 @@ not limited  25 x GET /champions, back to back
 
 The cache rule, read in the dashboard: `(http.host eq "ninjagoldfinch.lol")`, eligible for cache, edge TTL from `Cache-Control` and bypass without it, browser TTL from the origin, other settings at their defaults.
 
-### P5 exit check (amended, ADR-066) — passed 2026-11-09
+### P5 exit check (amended, ADR-070) — passed 2026-11-09
 
 From outside the host (a cloud session, not on the host's network), 2026-11-08, shortly before 12:00 UTC, with production on `v1.0.4`. The host address is `ngf-prod-syd1`'s public address, the prod environment's `DEPLOY_HOST` variable (`gh variable list -e prod`), not written here.
 
@@ -330,7 +330,7 @@ riot-proxy, no key   https://api.ninjagoldfinch.lol
 no key, 2026-11-08   the same hostname, probed again at about 13:10 UTC (riot-proxy 2.10.0 by its /readyz)
                      GET /dev                        403 (WAF)
                      GET /docs                       403 (WAF)
-                     the rest are served without a key by riot-proxy's design (ADR-066):
+                     the rest are served without a key by riot-proxy's design (ADR-070):
                      GET /healthz                    200 {"ok":true}
                      GET /readyz                     200 ok, sqlite, limiter, keyScope, SQLite reader and writer state, version
                      GET /openapi.json               200 application/json
