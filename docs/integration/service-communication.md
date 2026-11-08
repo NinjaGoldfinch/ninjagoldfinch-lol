@@ -30,7 +30,7 @@ flowchart LR
 | #   | From → to                            | Protocol and auth                                     | Frequency                   | Failure behaviour                                    |
 | --- | ------------------------------------ | ----------------------------------------------------- | --------------------------- | ---------------------------------------------------- |
 | 1   | Browser → ninjagoldfinch.lol         | HTTPS to Cloudflare, Tunnel to `127.0.0.1:3000`; none | Every uncached page view    | Cloudflare error page if the site is down            |
-| 2   | ninjagoldfinch.lol → riot-proxy      | HTTP, `Authorization: Bearer <PROXY_KEY>`             | 1–8 calls per uncached page | Page error or section notice; no retry               |
+| 2   | ninjagoldfinch.lol → riot-proxy      | HTTP, `Authorization: Bearer <PROXY_KEY>`             | 1–9 calls per uncached page | Page error or section notice; no retry               |
 | 3   | ninjagoldfinch.lol → CommunityDragon | HTTPS GET, none                                       | Once per patch per process  | Stat shards left out; retried on the next match page |
 | 4   | Browser → image CDNs                 | HTTPS GET, none                                       | Every page with images      | Broken image in the Browser                          |
 | 5   | ninja-monitor → ninjagoldfinch.lol   | Not in this repo                                      | Continuous                  | Discord alert                                        |

@@ -83,7 +83,7 @@ Each fixture is `{ request: { method, path }, response: { status, headers, body 
 The recorder (`tests/record-fixture.ts`):
 
 - reads `PROXY_URL` and `PROXY_KEY` from the environment or `.env`, and sends the key only to riot-proxy, never to a full CommunityDragon URL (`tests/record-fixture.ts:37-48`);
-- keeps only the headers the site reads: `content-type`, `x-cache`, `x-cache-age`, `x-request-id`, `retry-after` (`tests/record-fixture.ts:41`);
+- keeps only the headers the site reads: `content-type`, `x-cache`, `x-cache-age`, `x-cache-fetched-age`, `x-request-id`, `retry-after` (`tests/record-fixture.ts:41-48`);
 - replaces every `puuid`, every `summonerId` and match `metadata.participants` with `fixture-puuid-<hash>` or `fixture-summoner-<hash>`, in the body and in the recorded path, so separately recorded fixtures agree (`tests/redact.ts:1-38`, `tests/record-fixture.ts:63-64`);
 - with `--keep id,…`, trims Data Dragon files or lists to the entries other fixtures use (`tests/record-fixture.ts:52-61`).
 

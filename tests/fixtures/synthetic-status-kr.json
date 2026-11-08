@@ -1,0 +1,112 @@
+{
+	"_note": "Synthetic: Riot's lol-status-v4 PlatformDataDto for Korea: a warning incident, a scheduled maintenance, a completed maintenance (not shown) and an entry with no titles (not shown). Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/status/kr"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json",
+			"x-cache": "HIT",
+			"x-cache-age": "3600",
+			"x-cache-fetched-age": "180",
+			"x-request-id": "SYNTHETIC"
+		},
+		"body": {
+			"id": "KR",
+			"name": "Korea",
+			"locales": ["ko_KR", "en_US"],
+			"incidents": [
+				{
+					"id": 9101,
+					"maintenance_status": null,
+					"incident_severity": "warning",
+					"titles": [
+						{
+							"locale": "ko_KR",
+							"content": "랭크 게임 대기열 비활성화"
+						},
+						{
+							"locale": "en_US",
+							"content": "Ranked queues are disabled"
+						}
+					],
+					"updates": [
+						{
+							"id": 9102,
+							"author": "",
+							"publish": true,
+							"publish_locations": ["riotclient", "game"],
+							"translations": [
+								{
+									"locale": "en_US",
+									"content": "Ranked queues are disabled while we investigate an issue."
+								}
+							],
+							"created_at": "2026-11-09T01:10:00Z",
+							"updated_at": "2026-11-09T01:10:00Z"
+						}
+					],
+					"created_at": "2026-11-09T01:00:00Z",
+					"archive_at": null,
+					"updated_at": "2026-11-09T01:10:00Z",
+					"platforms": ["windows", "macos"]
+				},
+				{
+					"id": 9103,
+					"maintenance_status": null,
+					"incident_severity": "info",
+					"titles": [],
+					"updates": [],
+					"created_at": "2026-11-09T00:00:00Z",
+					"archive_at": null,
+					"updated_at": null,
+					"platforms": ["windows"]
+				}
+			],
+			"maintenances": [
+				{
+					"id": 9201,
+					"maintenance_status": "scheduled",
+					"incident_severity": null,
+					"titles": [
+						{
+							"locale": "en_US",
+							"content": "Scheduled maintenance for patch 16.21"
+						},
+						{
+							"locale": "ko_KR",
+							"content": "16.21 패치 정기 점검"
+						}
+					],
+					"updates": [],
+					"created_at": "2026-11-08T22:00:00Z",
+					"archive_at": null,
+					"updated_at": "2026-11-08T22:00:00Z",
+					"platforms": ["windows", "macos"]
+				},
+				{
+					"id": 9202,
+					"maintenance_status": "complete",
+					"incident_severity": null,
+					"titles": [
+						{
+							"locale": "en_US",
+							"content": "Store maintenance"
+						},
+						{
+							"locale": "ko_KR",
+							"content": "상점 점검"
+						}
+					],
+					"updates": [],
+					"created_at": "2026-11-07T22:00:00Z",
+					"archive_at": "2026-11-10T22:00:00Z",
+					"updated_at": "2026-11-08T02:00:00Z",
+					"platforms": ["windows"]
+				}
+			]
+		}
+	}
+}

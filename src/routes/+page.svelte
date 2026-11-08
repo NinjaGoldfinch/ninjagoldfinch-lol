@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { PUBLIC_SITE_NAME } from '$app/env/public';
 	import RecentSearches from '#lib/components/RecentSearches.svelte';
+	import RotationCard from '#lib/components/RotationCard.svelte';
 	import SearchForm from '#lib/components/SearchForm.svelte';
+	import StatusCard from '#lib/components/StatusCard.svelte';
 	import TopWinRates from '#lib/components/TopWinRates.svelte';
 	import { EXAMPLE_SEARCHES, TOP_WIN_RATE_MIN_GAMES, formatCount } from '#lib/domain/front-page.ts';
 	import type { PageProps } from './$types';
@@ -52,5 +54,11 @@
 </div>
 
 <div class="mt-12 grid gap-4 lg:grid-cols-3">
+	<RotationCard champions={data.rotation} patch={data.patch} region={data.region} />
 	<TopWinRates rows={data.topWinRates} patch={data.patch} minGames={TOP_WIN_RATE_MIN_GAMES} />
+	<StatusCard
+		status={data.status}
+		checkedSeconds={data.statusCheckedSeconds}
+		region={data.region}
+	/>
 </div>
