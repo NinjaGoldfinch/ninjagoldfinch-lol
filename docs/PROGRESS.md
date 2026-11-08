@@ -349,7 +349,7 @@ Rollback, against five minutes: met by the deploy timings through the current `d
 - A rollback goes through the same gate. The previous tag, `v1.0.3`, carries no commit status: it was live in prod on 2026-11-04 (run 41919591011) before the gate, but is not among the releases marked `prod/deployed` (`docs/deployment/releases.md`). `v1.0.4` → `v1.0.3` would be refused after the approval unless `v1.0.3` is first deployed to staging, which runs the smoke test and sets `staging/smoke`, or the deploy uses `break_glass`. `v1.0.2` carries `prod/deployed` and would pass. Times are from `gh run view`; statuses from `gh api repos/NinjaGoldfinch/ninjagoldfinch-lol/commits/<sha>/statuses`, 2026-11-09.
 - `ngf-deploy`, which the owner uses to start and wait for these runs, lives outside this repository; its history since the rehearsal is not verified here.
 
-P5-01 is the part brought forward above; production runs without Docker (ADR-038), so its image checks do not apply.
+P5-01 is dropped (ADR-067, #138): its image checks were for the Docker preview path, which is removed, and production runs without Docker (ADR-038).
 
 Tagged `phase-P5` on the commit that records this check. Paused for owner review.
 
