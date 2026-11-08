@@ -74,6 +74,10 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-04 The site icon is a lavender N with a dark outline on a deep-purple square — #98
 - [x] FIX-05 The browser tests wait for the page to hydrate before using a filter that applies on change — #123
 - [x] FIX-06 The deploy test's scratch repo ignores a hook's GIT_DIR, so a push from a worktree no longer marks the real repo bare or commits into it — #124
+- [x] FIX-07 Every log line in the monitoring log table, `/api/version` and `/api/status` in the monitoring docs, troubleshooting for both — #129
+- [x] FIX-09 No proxy alarm, and no record of it, without `EVENTS_URL` (ADR-064) — #128
+- [x] FIX-10 An empty `STATE_DIRECTORY=` kept out of the host's env file, in `.env.example` and the configuration docs — #130
+- [x] FIX-11 The events URL a private field behind `enabled`; the watch tested through a real `EventQueue` with no URL, in the unit and package tests; a receiver changed or removed mid-outage pinned, and a runbook step for it (review of #128, issue #131) — #133
 
 ## RV — fixes from the code review of 2026-11-03
 
