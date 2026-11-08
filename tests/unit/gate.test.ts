@@ -24,7 +24,6 @@ describe('the gate', () => {
 			'pnpm svelte-check --tsconfig ./tsconfig.json',
 			'pnpm vitest run',
 			'pnpm build',
-			'bash deploy/proxmox/test.sh',
 			'bash scripts/package.test.sh'
 		]);
 	});

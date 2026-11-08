@@ -508,7 +508,7 @@ Date: 2026-10-10 · Task: P5-04
 - The server keeps a checkout at `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key, and builds there: `pnpm install --frozen-lockfile`, then `pnpm build` with `ORIGIN=https://ninjagoldfinch.lol` (ADR-014).
 - `ninjagoldfinch-lol.service` runs `node build` as its own `ninjagoldfinch-lol` user, with settings from `/etc/ninjagoldfinch-lol/env`. `HOST=127.0.0.1`, so only the tunnel on the same server reaches it.
 - The Cloudflare Tunnel routes `ninjagoldfinch.lol` to `http://127.0.0.1:3000`.
-- The `Dockerfile`, `deploy/compose.yaml` and `deploy/proxmox/` stay for the LAN preview VM.
+- The `Dockerfile`, `deploy/compose.yaml` and `deploy/proxmox/` stay for the LAN preview VM (removed in ADR-067).
 
 **Consequences.** Node 22.18 or later and pnpm must be installed on the server; Ubuntu 26.04's packaged Node is new enough. Deploying is five commands, listed in the README, and none of them is in the repo as a script or unit file yet. The plan's deployment section and P5-01's compose-with-`cloudflared` item describe a setup production does not use.
 
@@ -1019,7 +1019,7 @@ Date: 2026-11-06 · Task: FIX-09 (review of #126, issue #127; refines ADR-063)
 
 - Adding `EVENTS_URL` during an outage sends `proxy_unreachable` after three more failed checks, then `proxy_recovered`, as for an outage that starts after the restart.
 - `last-version.json` is still written without `EVENTS_URL`, as before: a start records its version so that, once a URL is set, the next release sends `deployed` (ADR-063).
-- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told.
+- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told. The same follows when `EVENTS_URL` is removed during an outage and later set to another receiver. `docs/deployment/releases.md` has the operator delete `proxy-alarm.json` with the restart that changes or removes the receiver, and unit tests hold both cases (FIX-11).
 
 ## ADR-065: Cloudflare in front of the site: the cache rule, a rate limit, and no `ADDRESS_HEADER`
 
@@ -1059,3 +1059,22 @@ Date: 2026-11-09 · Task: P5
 
 - What the original check protected still holds: riot-proxy's port is closed on the public interface, where only SSH listens (`docs/deployment/security.md`), and from outside riot-proxy is reached only through the Tunnel, where a data request needs a key and the internal pages are blocked at the edge. What it serves without a key is its own decision, recorded in riot-proxy.
 - Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.
+
+## ADR-067: the Docker preview path removed
+
+Date: 2026-11-09 · Task: P5-01 (dropped; owner request)
+
+**Context.** P5-01 brought forward a `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN (#13). Production has run without Docker since ADR-038, and releases are tarballs deployed by `ninja-actions` (ADR-052, ADR-053), with staging as the place to look at a release before prod (ADR-057). The preview VM has not existed since 2026-10-19. The files were kept, and `just check` still ran `deploy/proxmox/test.sh`, in case it came back. The owner asked for them to go (2026-11-09).
+
+**Decision.**
+
+- Removed: `Dockerfile`, `.dockerignore`, `deploy/compose.yaml`, `deploy/proxmox/` (`create-vm.sh`, `ninjagoldfinch-update`, its README and `test.sh`), `just image`, `tests/unit/deploy-test.test.ts` and `docs/deployment/preview-vm.md`.
+- The gate (`scripts/check.sh`) loses its deploy test step and is otherwise unchanged; CI, releases and deploys run the same script, so nothing in `.github/workflows/` changes.
+- P5-01 is dropped: its remaining checks (an image under 200 MB, `cloudflared` beside the container, no published port) were for the Docker path only.
+- `deploy/systemd/` stays: it is production's.
+
+**Consequences.**
+
+- Nothing in the gate runs git any more, so the worktree hazard RV-01 and FIX-06 guarded against no longer applies.
+- A LAN preview, if wanted again, is a new task: a release tarball runs anywhere with Node 22 (ADR-052), so it need not be Docker.
+- The ADRs and notes that describe the preview VM stay as the record of what was.

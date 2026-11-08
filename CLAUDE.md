@@ -42,7 +42,7 @@ tests/unit/          Vitest
 tests/e2e/           Playwright against the mock proxy
 tests/fixtures/      redacted proxy responses
 openapi/             committed copy of the riot-proxy spec
-deploy/              compose file for the VM
+deploy/              systemd drop-in for the production host
 .github/workflows/   CI (the gate); release and deploy later (ADR-050)
 scripts/check.sh     the gate itself
 
@@ -51,10 +51,9 @@ scripts/check.sh     the gate itself
 just setup    install, enable git hooks, create .env
 just dev      dev server
 just gen      regenerate API types from openapi/riot-proxy.json
-just check    format, spec drift, lint, svelte-check, unit tests, build, deploy test,
+just check    format, spec drift, lint, svelte-check, unit tests, build,
               release package test
 just e2e      Playwright smoke tests
-just image    build the production image
 
 ## Conventions
 
