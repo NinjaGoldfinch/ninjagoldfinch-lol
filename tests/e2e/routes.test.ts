@@ -16,7 +16,8 @@ async function recorded(page: Page, name: string) {
 
 async function search(page: Page, riotId: string) {
 	const form = page.getByRole('banner').getByRole('search');
-	await form.getByRole('textbox', { name: 'Riot ID or champion' }).fill(riotId);
+	// A textbox, or a combobox on pages that suggest champions (the front page).
+	await form.getByLabel('Riot ID or champion').fill(riotId);
 	await form.getByRole('button', { name: 'Search' }).click();
 }
 

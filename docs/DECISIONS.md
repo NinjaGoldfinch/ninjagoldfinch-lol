@@ -1043,22 +1043,26 @@ Date: 2026-11-07 · Task: P5-02
 - On a paid plan the rule could block for longer and count only requests that reach the server.
 - Checked from outside on 2026-11-07 (`docs/PROGRESS.md`, "P5-02 check"): 20 `200`s then `429`; a profile `EXPIRED` then `HIT`; `/champions` never blocked.
 
-## ADR-070: the P5 exit check reads riot-proxy as published only through its tunnel
+## ADR-066: the front page shows live data: a `live` policy, a 2 s front-page deadline, no streaming
 
-Date: 2026-11-09 · Task: P5
+Date: 2026-11-09 · Task: FP-01
 
-**Context.** The plan's P5 exit check asks that "riot-proxy is unreachable from outside the VM". When the plan was written riot-proxy was a private service for this site. Since then riot-proxy has published itself at `https://api.ninjagoldfinch.lol` through the Tunnel, with key authentication and a WAF over its metrics, dashboard, dev, admin and docs paths, and `admin.ninjagoldfinch.lol` behind Cloudflare Access; staging reads from it with a key of its own (ADR-058). That is riot-proxy's decision, made in its own repo, and the site does not change it.
+**Context.** `/` had no proxy data and a 10-minute `static` policy (ADR-055). The owner's new front page ("Concept 1, search first with live cards") adds a patch pill, the ranked games analysed and the top win rates (FP-01), then the free rotation and server status for a region (FP-02). The rules it must keep: data loads only in `+page.server.ts`; pages work without JavaScript; each card fails on its own, and the page never fails because riot-proxy is slow; the CSP is hash-based (ADR-055); Cloudflare caches every page by its `Cache-Control`, with the query string in the key (ADR-065).
 
 **Decision.**
 
-- **The P5 exit check changes:** "`https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes". What riot-proxy serves without a key is its own decision, recorded in riot-proxy.
-- As of riot-proxy 2.10.0, it answers some routes without a key on purpose, and the check does not fail on them: `/healthz`, `/readyz`, `/openapi.json`, `/openapi.yaml`, `/ddragon/*` (Data Dragon images and data files) and the `/v1/ws` handshake. The handshake reads the key from the `Authorization: Bearer` header or the `?token=` query parameter; a missing or bad key still gets its upgrade, then an error frame and a `4401` close, and a plain `GET` gets `400`. `/readyz` returns internal readiness detail to anyone: the Riot key's cache scope (a truncated hash), the SQLite reader and writer state, the version. The scope fingerprints the Riot key, so it would show a rotation without exposing the key. Whether to keep that is riot-proxy's call; it is noted here and not changed.
-- The check is run from outside the host, against its public address and the public hostnames, without a key.
+- **One load, every call optional.** `loadFrontPage` (`src/lib/server/front-page.ts`) starts every card's call in one `Promise.all`, each through `optional()`. A part that failed is `null` and its card shows a notice ("Win rates are unavailable right now."). With every part loaded and the lookups not fallen back, `complete` is true and the page gets `live`; otherwise `none` (ADR-045).
+- **A 2 s deadline for the cards.** The card calls go through `frontClient`, a client with `FRONT_PAGE_BUDGET_MS = 2_000`, counted for `/api/status` like the pages' (`src/lib/server/proxy.ts`). The usual budget would let a rotation or status call wait 30 s. The patch and its lookups stay on `proxy`: they are held in memory and loaded at start-up (ADR-048), and without them the page still renders, with no pill and no icons.
+- **No streaming.** Without JavaScript a streamed card never fills in (ADR-039). SvelteKit also streams deferred data as inline scripts after the response's headers, CSP included, have gone out, so their hashes cannot be in it; they would need a nonce, which a page shared from the edge cannot have (ADR-055). The page waits for every card, at most about 2 s.
+- **`live`: `public, s-maxage=60, stale-while-revalidate=120`.** A change in the server status shows within about three minutes; repeat views come from the edge. `static` stays for `/about`. `profile` has similar numbers, but a named policy says why and can change on its own.
+- **The pills.** `Patch 16.20` is `major.minor` of the Data Dragon version already held for icons: no call. The games analysed are `totalGames` of the analytics call the top-win-rate card makes anyway (`/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=500`, as `/champions` asks), not a sum over `/v1/lol/analytics/patches`, a second call whose sum the spec does not say equals it.
+- **The top win rates** are over every region, tier and patch, as `/champions` shows them. A champion needs 800 games to be listed (`TOP_WIN_RATE_MIN_GAMES`), applied in the page; `minGames=0` stays on the wire (ADR-035). The card links to `/champions?sort=win`. No MMR or ELO anywhere.
 
 **Consequences.**
 
-- What the original check protected still holds: riot-proxy's port is closed on the public interface, where only SSH listens (`docs/deployment/security.md`), and from outside riot-proxy is reached only through the Tunnel, where a data request needs a key and the internal pages are blocked at the edge. What it serves without a key is its own decision, recorded in riot-proxy.
-- Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.
+- Each edge miss on `/` costs riot-proxy one analytics call, answered from its memory; FP-02 adds two calls riot-proxy caches from Riot.
+- While riot-proxy is down or slow, `/` is not kept at the edge: every view reaches the server and waits up to 2 s, then shows the notices. `/` is not rate limited (ADR-065).
+- `/` now returns the champion names, so the header search suggests champions there too, as on `/champions`.
 
 ## ADR-067: the Docker preview path removed
 
@@ -1078,3 +1082,20 @@ Date: 2026-11-09 · Task: P5-01 (dropped; owner request)
 - Nothing in the gate runs git any more, so the worktree hazard RV-01 and FIX-06 guarded against no longer applies.
 - A LAN preview, if wanted again, is a new task: a release tarball runs anywhere with Node 22 (ADR-052), so it need not be Docker.
 - The ADRs and notes that describe the preview VM stay as the record of what was.
+
+## ADR-070: the P5 exit check reads riot-proxy as published only through its tunnel
+
+Date: 2026-11-09 · Task: P5
+
+**Context.** The plan's P5 exit check asks that "riot-proxy is unreachable from outside the VM". When the plan was written riot-proxy was a private service for this site. Since then riot-proxy has published itself at `https://api.ninjagoldfinch.lol` through the Tunnel, with key authentication and a WAF over its metrics, dashboard, dev, admin and docs paths, and `admin.ninjagoldfinch.lol` behind Cloudflare Access; staging reads from it with a key of its own (ADR-058). That is riot-proxy's decision, made in its own repo, and the site does not change it.
+
+**Decision.**
+
+- **The P5 exit check changes:** "`https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes". What riot-proxy serves without a key is its own decision, recorded in riot-proxy.
+- As of riot-proxy 2.10.0, it answers some routes without a key on purpose, and the check does not fail on them: `/healthz`, `/readyz`, `/openapi.json`, `/openapi.yaml`, `/ddragon/*` (Data Dragon images and data files) and the `/v1/ws` handshake. The handshake reads the key from the `Authorization: Bearer` header or the `?token=` query parameter; a missing or bad key still gets its upgrade, then an error frame and a `4401` close, and a plain `GET` gets `400`. `/readyz` returns internal readiness detail to anyone: the Riot key's cache scope (a truncated hash), the SQLite reader and writer state, the version. The scope fingerprints the Riot key, so it would show a rotation without exposing the key. Whether to keep that is riot-proxy's call; it is noted here and not changed.
+- The check is run from outside the host, against its public address and the public hostnames, without a key.
+
+**Consequences.**
+
+- What the original check protected still holds: riot-proxy's port is closed on the public interface, where only SSH listens (`docs/deployment/security.md`), and from outside riot-proxy is reached only through the Tunnel, where a data request needs a key and the internal pages are blocked at the edge. What it serves without a key is its own decision, recorded in riot-proxy.
+- Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.

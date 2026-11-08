@@ -1,6 +1,12 @@
 import { isHttpError } from '@sveltejs/kit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SLOW_ANALYTICS_MS, createProxyClient, proxyBudget } from '#lib/server/proxy.ts';
+import {
+	FRONT_PAGE_BUDGET_MS,
+	SLOW_ANALYTICS_MS,
+	createProxyClient,
+	frontClient,
+	proxyBudget
+} from '#lib/server/proxy.ts';
 
 const BASE = 'http://proxy.test:8080';
 
@@ -130,6 +136,11 @@ describe('timeouts', () => {
 		expect(proxyBudget('/v1/static/versions')).toBe(5_000);
 		expect(proxyBudget('/v1/players/by-riot-id/a/b/profile')).toBe(30_000);
 		expect(proxyBudget('/v1/lol/matches/sea/OC1_1')).toBe(30_000);
+	});
+
+	it("gives the front page's cards 2 s, through their own client", () => {
+		expect(FRONT_PAGE_BUDGET_MS).toBe(2_000);
+		expect(frontClient.GET).toBeTypeOf('function');
 	});
 
 	it('fails a call that never answers once its budget is spent, as unavailable', async () => {

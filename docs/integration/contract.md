@@ -20,7 +20,7 @@ The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a n
 
 - Base URL from `PROXY_URL`; production `http://127.0.0.1:8080`.
 - `Authorization: Bearer <PROXY_KEY>` on every call when `PROXY_KEY` is set (`src/lib/server/proxy.ts:137-148`). The key needs the `read` scope (`riot-proxy:src/routes/docs.rs:118-126`). See [authentication.md](./authentication.md).
-- All calls are `GET` with JSON responses. Deadlines: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for the rest (`src/lib/server/proxy.ts:74-78`).
+- All calls are `GET` with JSON responses. Deadlines: 5 s for `/v1/lol/analytics/*` and `/v1/static/*`, 30 s for the rest (`src/lib/server/proxy.ts:74-78`); the front page's cards have 2 s, through `frontClient` (ADR-066).
 
 ## Routes used
 
@@ -35,7 +35,7 @@ Twelve of the spec's 70 paths. Required means a failure fails the page.
 | `GET /v1/static/versions`                                 | every page with data | —                                                                                        | yes      |
 | `GET /v1/static/{file}`                                   | every page with data | `version`; `file` one of `champion`, `item`, `summoner`, `runesReforged`                 | no*      |
 | `GET /v1/static/queues`                                   | every page with data | —                                                                                        | no*      |
-| `GET /v1/lol/analytics/champions`                         | `/champions`         | `queue=RANKED_SOLO_5x5`, `patch`, `role`, `tier` or `minTier`, `minGames=0`, `limit=500` | yes      |
+| `GET /v1/lol/analytics/champions`                         | `/champions`, `/`    | `queue=RANKED_SOLO_5x5`, `patch`, `role`, `tier` or `minTier`, `minGames=0`, `limit=500` | yes      |
 | `GET /v1/lol/analytics/champions/{championId}`            | `/champions/{key}`   | as above with `limit=10`                                                                 | yes      |
 | `GET /v1/lol/analytics/champions/{championId}/builds`     | `/champions/{key}`   | as above without `limit`, plus `opponentId` against an opponent                          | no       |
 | `GET /v1/lol/analytics/champions/{championId}/matchups`   | `/champions/{key}`   | as above with `limit=200`                                                                | no       |
