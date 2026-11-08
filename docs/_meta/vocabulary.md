@@ -12,6 +12,7 @@ The one list of names used across `docs/`. If a document needs a name that is no
 | ninjagoldfinch.lol    | This repo: the SvelteKit site, run in production as `node build`              | `ninjagoldfinch.lol`    |
 | riot-proxy            | The API in front of Riot; owns the Riot key, caching, archive and analytics   | `riot-proxy`            |
 | ninja-monitor         | Per-service CPU, RAM and disk monitoring with Discord alerts                  | `ninja-monitor`         |
+| Healthchecks.io       | Pinged by ninja-monitor each minute; emails the owner 5 min after pings stop  | `Healthchecks.io`       |
 | Riot API              | Riot Games' developer API                                                     | `Riot API`              |
 | Data Dragon CDN       | `ddragon.leagueoflegends.com`, where the Browser loads game images            | `Data Dragon CDN`       |
 | CommunityDragon       | `raw.communitydragon.org` (or a mirror set by `CDRAGON_URL`)                  | `CommunityDragon`       |
@@ -115,4 +116,4 @@ None belong to ninjagoldfinch.lol. All are riot-proxy's.
 ---
 
 **Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L69-L78`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Last verified:** 2026-11-09 against commit `02630bb`

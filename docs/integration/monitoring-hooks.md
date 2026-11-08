@@ -67,7 +67,9 @@ ninja-monitor is a separate service; this repo has no code for it. riot-proxy's 
 
 Alerts go to a Discord webhook; its API is reached over an SSH local forward. The systemd unit restarts the site 2 s after any exit (`Restart=always`, `RestartSec=2`, owner-supplied unit), so a crash loop shows as repeated restarts rather than a long outage.
 
-> **TODO (unverified):** how ninja-monitor decides `ninjagoldfinch-lol` is "down" (systemd state, process, or an HTTP probe of `/healthz`). ninja-monitor's repo and config were not available.
+From outside the host, ninja-monitor on `ngf-mon-syd1` also fetches `https://ninjagoldfinch.lol/healthz` through Cloudflare every minute, and pings a Healthchecks.io check every minute; after 5 minutes without a ping, Healthchecks.io emails the owner. Downtime is handled through ninja-monitor's Discord alerts; the email is the check that still fires when both Discord and ninja-monitor are out (P5-05, owner 2026-11-09; `docs/PROGRESS.md`, "P5-05 check").
+
+> **TODO (unverified):** how ninja-monitor turns a failed `/healthz` probe into the `ninjagoldfinch-lol` down alert (threshold, alert text), and whether it still pings Healthchecks.io after a failed probe. ninja-monitor's repo and config were not available.
 
 ## Suggested alert conditions from the logs
 
@@ -85,5 +87,5 @@ These are derived from the log lines above; none is configured anywhere in this 
 
 ---
 
-**Sources:** `src/routes/healthz/+server.ts:L7-L9`, `src/routes/api/version/+server.ts:L1-L10`, `src/routes/api/status/+server.ts:L1-L26`, `src/hooks.server.ts:L21-L30,L59-L63`, `src/lib/server/status.ts:L55-L113,L144-L166`, `src/lib/server/metrics.ts`, `src/lib/server/events.ts:L86-L91,L140-L251`, `src/lib/server/proxy.ts:L8-L68,L126-L130`, `src/lib/server/timing.ts:L11-L95`, `src/lib/server/profile.ts:L93-L119`, `src/lib/server/match.ts:L50-L73`, `src/lib/server/patch.ts:L124,L144,L172`, `src/lib/server/champions.ts:L51-L52`, `src/lib/server/static-data.ts:L89`, `src/lib/server/champion-page.ts:L95,L148`, `src/lib/server/cdragon.ts:L23-L34`, `src/routes/search/+page.server.ts:L39`, `playwright.config.ts:L20`, `README.md:L84-L179,L199-L200`, `riot-proxy:src/routes/health.rs:L47-L106`, `riot-proxy:src/app.rs:L107-L115`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, owner-supplied unit (2026-10-19)
-**Last verified:** 2026-11-06 against commit `8cbb8c4`
+**Sources:** `src/routes/healthz/+server.ts:L7-L9`, `src/routes/api/version/+server.ts:L1-L10`, `src/routes/api/status/+server.ts:L1-L26`, `src/hooks.server.ts:L21-L30,L59-L63`, `src/lib/server/status.ts:L55-L113,L144-L166`, `src/lib/server/metrics.ts`, `src/lib/server/events.ts:L86-L91,L140-L251`, `src/lib/server/proxy.ts:L8-L68,L126-L130`, `src/lib/server/timing.ts:L11-L95`, `src/lib/server/profile.ts:L93-L119`, `src/lib/server/match.ts:L50-L73`, `src/lib/server/patch.ts:L124,L144,L172`, `src/lib/server/champions.ts:L51-L52`, `src/lib/server/static-data.ts:L89`, `src/lib/server/champion-page.ts:L95,L148`, `src/lib/server/cdragon.ts:L23-L34`, `src/routes/search/+page.server.ts:L39`, `playwright.config.ts:L20`, `README.md:L84-L179,L199-L200`, `riot-proxy:src/routes/health.rs:L47-L106`, `riot-proxy:src/app.rs:L107-L115`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, owner-supplied unit (2026-10-19), `docs/PROGRESS.md` ("P5-05 check")
+**Last verified:** 2026-11-09 against commit `02630bb`

@@ -47,6 +47,8 @@ curl -sI https://ninjagoldfinch.lol/healthz | head -1                       # th
 
 `/healthz` never calls riot-proxy (`src/routes/healthz/+server.ts:7-9`), so a healthy `/healthz` with failing pages points at riot-proxy, the key, or Riot. The site has no readiness endpoint ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
 
+From outside, ninja-monitor on `ngf-mon-syd1` fetches `https://ninjagoldfinch.lol/healthz` through Cloudflare every minute and pings Healthchecks.io each minute (P5-05). An email from Healthchecks.io means the pings stopped for 5 minutes: either ninja-monitor on `ngf-mon-syd1` is down, or the site is and ninja-monitor's Discord alert did not reach you. Run the checks above first, then look at ninja-monitor ([ninja-monitor alerts](#ninja-monitor-alerts)).
+
 ## Keys
 
 ### Rotate the site's riot-proxy key (`PROXY_KEY`)
@@ -161,9 +163,9 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 | Host memory below 15 % free                                  | `free -m`, `systemctl status` for each service's memory; riot-proxy's page cache use is normal                                                                                |
 | Host CPU over 90 % for 20 min                                | `top`; usually riot-proxy's background jobs                                                                                                                                   |
 
-> **TODO (unverified):** ninja-monitor's alert texts and whether it checks `/healthz` or only the systemd unit. Neither repository contains its configuration.
+> **TODO (unverified):** ninja-monitor's alert texts, its threshold for a failed `/healthz` probe, and whether it still pings Healthchecks.io after a failed probe. Neither repository contains its configuration.
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L7-L9`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key)
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L7-L9`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key), `docs/PROGRESS.md` ("P5-05 check")
+**Last verified:** 2026-11-09 against commit `02630bb`
