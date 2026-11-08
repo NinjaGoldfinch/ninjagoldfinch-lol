@@ -83,7 +83,6 @@ Not written: `workflows/adding-a-migration.md` (no database). `adding-a-riot-cal
 | [deployment/backup-and-restore.md](./deployment/backup-and-restore.md)     | What state exists and how it is recovered           |
 | [deployment/capacity.md](./deployment/capacity.md)                         | The site's share of the VPS, measured and estimated |
 | [deployment/security.md](./deployment/security.md)                         | Threat model in brief                               |
-| [deployment/preview-vm.md](./deployment/preview-vm.md)                     | The dormant Proxmox preview VM                      |
 
 ### Operations
 

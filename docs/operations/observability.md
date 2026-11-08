@@ -9,7 +9,7 @@ Where each signal goes and who reads it.
 ```mermaid
 flowchart LR
     Site["ninjagoldfinch.lol"] -->|"stdout, stderr"| Journal["journald"]
-    Site -->|"GET /healthz"| Probe["curl, Docker HEALTHCHECK (preview VM)"]
+    Site -->|"GET /healthz"| Probe["curl"]
     Monitor["ninja-monitor"] -->|"unit state, memory"| Site
     Monitor -->|"Discord webhook"| Owner["Operator"]
     Journal -->|"journalctl"| Owner
@@ -61,7 +61,7 @@ That example was taken against the mock proxy with the threshold set to 0. The c
 
 `GET /healthz` answers `{"ok":true,"version":"…"}` with `Cache-Control: no-store` whenever the process is serving, without touching riot-proxy (`src/routes/healthz/+server.ts:7-9`). `version` is `package.json`'s at build time (ADR-051). It is liveness only. There is no readiness endpoint that checks riot-proxy; requesting a data page such as `/champions` serves that purpose by hand ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
 
-Consumers today: operators with `curl`; the preview VM's Docker `HEALTHCHECK` every 30 s after a 10 s start period, on `PORT` or 3000 (`Dockerfile:22-24`); Playwright waits on it before running tests (`playwright.config.ts:20`). Whether ninja-monitor calls it is not known (gap in [\_meta/gaps.md](../_meta/gaps.md)).
+Consumers today: operators with `curl`; Playwright waits on it before running tests (`playwright.config.ts:20`). Whether ninja-monitor calls it is not known (gap in [\_meta/gaps.md](../_meta/gaps.md)).
 
 ## Metrics
 
@@ -86,5 +86,5 @@ Watches the `ninjagoldfinch-lol` unit on the host: down after 30 s (repeated eve
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L12-L67`, `src/lib/server/timing.ts:L26-L95`, `src/lib/server/patch.ts:L82-L146`, `src/hooks.server.ts:L11-L13,L34-L38`, `src/lib/server/profile.ts:L93,L119`, `src/routes/healthz/+server.ts:L7-L9`, `Dockerfile:L22-L24`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L101`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
+**Sources:** `src/lib/server/proxy.ts:L12-L67`, `src/lib/server/timing.ts:L26-L95`, `src/lib/server/patch.ts:L82-L146`, `src/hooks.server.ts:L11-L13,L34-L38`, `src/lib/server/profile.ts:L93,L119`, `src/routes/healthz/+server.ts:L7-L9`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L101`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`
 **Last verified:** 2026-11-03 against commit `e183749`

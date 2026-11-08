@@ -10,7 +10,7 @@ Every pull request and every push to `main` run two jobs, `just check` and `just
 2. Node 22 (`actions/setup-node`), then `corepack enable`, which provides pnpm at the version `package.json`'s `packageManager` names.
 3. `pnpm install --frozen-lockfile`.
 4. `cp .env.example .env`: the unit tests load the server env, and the example's values are placeholders.
-5. `scripts/check.sh`, the gate: Prettier, the schema drift check, ESLint, `svelte-kit sync`, svelte-check, Vitest, the build and `deploy/proxmox/test.sh`.
+5. `scripts/check.sh`, the gate: Prettier, the schema drift check, ESLint, `svelte-kit sync`, svelte-check, Vitest, the build and the release package test.
 
 A pull request from this repository runs on the self-hosted Proxmox runner (`self-hosted, linux, proxmox`); one from a fork runs on `ubuntu-24.04`, so outside code never reaches that runner, and the repository requires approval before an outside contributor's workflows run. The token is read-only and the job reads no secrets. Every action is pinned to a commit.
 

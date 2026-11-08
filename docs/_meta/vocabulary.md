@@ -49,7 +49,6 @@ The one list of names used across `docs/`. If a document needs a name that is no
 | local dev               | Vite dev server on your machine                         | a riot-proxy you run yourself        | none if `AUTH_DISABLED=true`, else your own read key | active      |
 | test                    | `http://localhost:4173` (`node build`)                  | mock proxy `http://127.0.0.1:8787`   | placeholder `e2e-placeholder`                        | active      |
 | LAN dev proxy (dormant) | —                                                       | `http://192.168.68.46:8080`, no auth | none                                                 | not running |
-| preview VM (dormant)    | `http://192.168.68.47:3000`                             | per `deploy/.env`                    | per `deploy/.env`                                    | VM deleted  |
 
 Public hostnames on the same Tunnel: `ninjagoldfinch.lol` (the site), `api.ninjagoldfinch.lol` and `admin.ninjagoldfinch.lol` (riot-proxy).
 
