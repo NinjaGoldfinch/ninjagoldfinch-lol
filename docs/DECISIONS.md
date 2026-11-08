@@ -1045,16 +1045,17 @@ Date: 2026-11-07 · Task: P5-02
 
 ## ADR-066: the P5 exit check reads riot-proxy as published only through its tunnel
 
-Date: 2026-11-09 · Task: P5 exit check
+Date: 2026-11-09 · Task: P5
 
-**Context.** The plan's P5 exit check asks that "riot-proxy is unreachable from outside the VM". When the plan was written riot-proxy was a private service for this site. Since then riot-proxy has published itself at `https://api.ninjagoldfinch.lol` through the Tunnel, with key authentication and a WAF over its metrics, dashboard, dev and admin paths, and `admin.ninjagoldfinch.lol` behind Cloudflare Access; staging reads from it with a key of its own (ADR-058). That is riot-proxy's decision, made in its own repo, and the site does not change it.
+**Context.** The plan's P5 exit check asks that "riot-proxy is unreachable from outside the VM". When the plan was written riot-proxy was a private service for this site. Since then riot-proxy has published itself at `https://api.ninjagoldfinch.lol` through the Tunnel, with key authentication and a WAF over its metrics, dashboard, dev, admin and docs paths, and `admin.ninjagoldfinch.lol` behind Cloudflare Access; staging reads from it with a key of its own (ADR-058). That is riot-proxy's decision, made in its own repo, and the site does not change it.
 
 **Decision.**
 
-- **The P5 exit check changes:** "`https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address, and riot-proxy answers from outside only through its tunnel, refusing a request without a key; a rollback to the previous tag takes under five minutes".
+- **The P5 exit check changes:** "`https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes". What riot-proxy serves without a key is its own decision, recorded in riot-proxy.
+- riot-proxy answers some routes without a key on purpose, and the check does not fail on them: `/healthz`, `/readyz`, `/openapi.json`, `/openapi.yaml`, `/ddragon/*` (Data Dragon images) and the `/v1/ws` handshake, which checks the key in-band once the connection is upgraded (a plain `GET` gets `400`). `/readyz` returns internal readiness detail to anyone: the limiter's key scope, the SQLite reader and writer state, the version. Whether to keep that is riot-proxy's call; it is noted here and not changed.
 - The check is run from outside the host, against its public address and the public hostnames, without a key.
 
 **Consequences.**
 
-- What the original check protected still holds: nothing reaches riot-proxy except over loopback, on the host, or through the Tunnel with a key. Only SSH listens on the public interface (`docs/deployment/security.md`).
+- What the original check protected still holds: riot-proxy's port is closed on the public interface, where only SSH listens (`docs/deployment/security.md`), and from outside riot-proxy is reached only through the Tunnel, where a data request needs a key and the internal pages are blocked at the edge. What it serves without a key is its own decision, recorded in riot-proxy.
 - Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.
