@@ -114,6 +114,8 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 
 ## P5 — Production
 
+Exit check (amended in ADR-066): `https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address, and riot-proxy answers from outside only through its tunnel, refusing a request without a key; a rollback to the previous tag takes under five minutes. Passed 2026-11-09 (below).
+
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
 - [x] P5-02 Cloudflare: the cache rule recorded, a rate-limiting rule on `/summoner/*` and `/match/*` (20 per IP per 10 s, then blocked), `ADDRESS_HEADER` left unset (ADR-065) — #135 (check below)
 - [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
@@ -300,6 +302,32 @@ not limited  25 x GET /champions, back to back
 ```
 
 The cache rule, read in the dashboard: `(http.host eq "ninjagoldfinch.lol")`, eligible for cache, edge TTL from `Cache-Control` and bypass without it, browser TTL from the origin, other settings at their defaults.
+
+### P5 exit check (amended, ADR-066) — passed 2026-11-09
+
+From outside the host (a cloud session, not on the host's network), 2026-11-08 at about 12:00 UTC, with production on `v1.0.4`. The host address is `ngf-prod-syd1`'s public address, the prod environment's `DEPLOY_HOST` variable (`gh variable list -e prod`), not written here.
+
+```text
+profile over HTTPS   GET https://ninjagoldfinch.lol/summoner/NinjaGoldfinch-OCENZ
+                     200, certificate verified, <title>NinjaGoldfinch#OCENZ · Oceania, 10 match links
+                     cache-control: public, s-maxage=60, stale-while-revalidate=300
+
+host ports           TCP connect to the public address
+                     22 open; 80, 443, 3000, 8080 closed or filtered
+                     curl http://<address>:3000/healthz and :8080/healthz: no connection
+
+riot-proxy, no key   https://api.ninjagoldfinch.lol
+                     GET /v1/static/versions         401 UNAUTHORIZED "Missing or invalid API key"
+                     GET /metrics                    403 (WAF)
+                     GET /v1/admin/consumers         403 (WAF)
+                     GET /dashboard                  403 (WAF)
+```
+
+Rollback: the P5-04 rehearsal above, `v1.0.2` → `v1.0.1` → `v1.0.2` in under 30 s each, against five minutes.
+
+P5-01 is the part brought forward above; production runs without Docker (ADR-038), so its image checks do not apply.
+
+Tagged `phase-P5` on the commit that records this check. Paused for owner review.
 
 ### SPD-06 check — passed 2026-11-03
 

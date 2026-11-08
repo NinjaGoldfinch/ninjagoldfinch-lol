@@ -1042,3 +1042,19 @@ Date: 2026-11-07 · Task: P5-02
 - `/champions`, `/champions/*`, `/`, `/about` and `/search` are not limited. The champion pages are analytics riot-proxy has already computed and the edge holds for 10 minutes; `/search` reads only the site's in-memory lookups and redirects a Riot ID to its profile, which the rule covers.
 - On a paid plan the rule could block for longer and count only requests that reach the server.
 - Checked from outside on 2026-11-07 (`docs/PROGRESS.md`, "P5-02 check"): 20 `200`s then `429`; a profile `EXPIRED` then `HIT`; `/champions` never blocked.
+
+## ADR-066: the P5 exit check reads riot-proxy as published only through its tunnel
+
+Date: 2026-11-09 · Task: P5 exit check
+
+**Context.** The plan's P5 exit check asks that "riot-proxy is unreachable from outside the VM". When the plan was written riot-proxy was a private service for this site. Since then riot-proxy has published itself at `https://api.ninjagoldfinch.lol` through the Tunnel, with key authentication and a WAF over its metrics, dashboard, dev and admin paths, and `admin.ninjagoldfinch.lol` behind Cloudflare Access; staging reads from it with a key of its own (ADR-058). That is riot-proxy's decision, made in its own repo, and the site does not change it.
+
+**Decision.**
+
+- **The P5 exit check changes:** "`https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address, and riot-proxy answers from outside only through its tunnel, refusing a request without a key; a rollback to the previous tag takes under five minutes".
+- The check is run from outside the host, against its public address and the public hostnames, without a key.
+
+**Consequences.**
+
+- What the original check protected still holds: nothing reaches riot-proxy except over loopback, on the host, or through the Tunnel with a key. Only SSH listens on the public interface (`docs/deployment/security.md`).
+- Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.
