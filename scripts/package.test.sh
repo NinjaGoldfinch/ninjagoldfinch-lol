@@ -9,8 +9,8 @@
 # from the tarball's own origin and refused from the other's. Then one tarball
 # is started with riot-proxy unreachable: its third failed check sends
 # proxy_unreachable, and a restart with riot-proxy back sends proxy_recovered.
-# Beside it, one without EVENTS_URL goes through the same outage and records no
-# alarm (ADR-064).
+# Beside it, one without EVENTS_URL goes through the same outage: its status says
+# riot-proxy is down, and it records no alarm (ADR-064).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -166,17 +166,19 @@ check ninjagoldfinch-lol-staging "$staging" "$prod"
 # proxy_unreachable and records it. The server is then restarted with riot-proxy
 # back, as a deploy during an outage would: its first check sends the
 # proxy_recovered the outage is owed. A server without EVENTS_URL, started
-# first on the same dead port, sees the same failed checks and must not write
-# proxy-alarm.json (ADR-064), while it still records its version.
+# first on the same dead port, sees the same failed checks: its status reports
+# riot-proxy down, and it must not write proxy-alarm.json (ADR-064), while it
+# still records its version.
 outage() {
 	local release=$tmp/ninjagoldfinch-lol state=$tmp/outage-state events=$tmp/outage-events
-	local log=$tmp/outage.log url port dead raised_at quiet=$tmp/outage-no-url-state
+	local log=$tmp/outage.log url port dead raised_at quiet=$tmp/outage-no-url-state quiet_port body
 	receiver "$events"
 	url=http://127.0.0.1:$events_port/events
 
 	port=$(free_port)
 	dead=$(free_port)
-	serve "$release" "$(free_port)" "$log.no-url" PROXY_URL="http://127.0.0.1:$dead" \
+	quiet_port=$(free_port)
+	serve "$release" "$quiet_port" "$log.no-url" PROXY_URL="http://127.0.0.1:$dead" \
 		STATUS_CHECK_INTERVAL_S=5 STATE_DIRECTORY="$quiet"
 	serve "$release" "$port" "$log" PROXY_URL="http://127.0.0.1:$dead" \
 		STATUS_CHECK_INTERVAL_S=5 EVENTS_URL="$url" STATE_DIRECTORY="$state"
@@ -206,6 +208,11 @@ outage() {
 	# By now the server without a URL has had at least one more check than the
 	# one that raised the alarm: the raise, then a full interval.
 	while ((SECONDS - raised_at < 6)); do sleep 0.2; done
+	# Its checks ran: /api/status (a local request, no token) reports the dead
+	# port as riot-proxy down. Without this, no proxy-alarm.json proves nothing.
+	body=$(curl -fsS --max-time 2 "http://127.0.0.1:$quiet_port/api/status" 2>/dev/null) || body=''
+	printf '%s' "$body" | grep -q '"name":"riot_proxy","status":"down"' ||
+		fail "the server without EVENTS_URL does not report riot-proxy down: '$body'; server log: $(cat "$log.no-url")"
 	[ -e "$quiet/last-version.json" ] ||
 		fail "the server without EVENTS_URL did not record its version; server log: $(cat "$log.no-url")"
 	[ ! -e "$quiet/proxy-alarm.json" ] ||
