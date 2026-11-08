@@ -75,7 +75,7 @@ ninjagoldfinch.lol reads and writes no bucket. riot-proxy writes match and timel
 
 ## How the site is deployed
 
-The site is built on the host from a git checkout pulled with a read-only deploy key, and runs as `node build` under systemd (ADR-038, `docs/DECISIONS.md:500-516`). Production does not use the `Dockerfile` or `deploy/compose.yaml`; those are for the dormant preview VM ([preview-vm.md](./preview-vm.md)). Step-by-step: [install.md](./install.md) for a new host, [upgrade-and-rollback.md](./upgrade-and-rollback.md) for a release.
+The site is built on the host from a git checkout pulled with a read-only deploy key, and runs as `node build` under systemd (ADR-038, `docs/DECISIONS.md:500-516`). Step-by-step: [install.md](./install.md) for a new host, [upgrade-and-rollback.md](./upgrade-and-rollback.md) for a release.
 
 ## Logs and data
 

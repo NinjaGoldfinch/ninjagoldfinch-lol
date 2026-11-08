@@ -13,7 +13,6 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 | `tests/fixtures/*.json`                      | 50 fixtures: recorded or synthetic riot-proxy responses, and one CommunityDragon file                                       | mock and unit tests |
 | `tests/fixtures/builds/`                     | riot-proxy's golden build fixtures, copied unchanged; not served by the mock                                                | unit tests          |
 | `tests/record-fixture.ts`, `tests/redact.ts` | Fixture recorder and its redaction                                                                                          | `just fixture`      |
-| `deploy/proxmox/test.sh`                     | Tests the preview VM scripts                                                                                                | `just check`        |
 
 ## Commands
 
@@ -25,7 +24,6 @@ How ninjagoldfinch.lol is tested: the unit tests in `just check`, the browser te
 | `pnpm vitest`                                                 | Watch mode                                                     | Vitest            |
 | `just e2e`                                                    | Builds, then runs Playwright against `node build` and the mock | `justfile:30-32`  |
 | `pnpm playwright test tests/e2e/match.test.ts -g "bot laner"` | One file or test by title                                      | Playwright        |
-| `bash deploy/proxmox/test.sh`                                 | Deploy-script test alone                                       | `justfile:28`     |
 
 Results on 2026-10-20 at `e7c395c`: unit `Test Files 34 passed (34)`, `Tests 332 passed (332)`; e2e `81 passed (31.9s)`. On 2026-11-03, with RV-03: `Test Files 35 passed (35)`, `Tests 341 passed (341)`. With SPD-10 (`tests/e2e/images.test.ts`), e2e has 91 tests.
 
@@ -96,8 +94,6 @@ Fixtures must contain no `rpx_` or `RGAPI-` strings (`CLAUDE.md:13-14`); the pre
 Chromium needs its system packages, fonts included; without them text lays out at zero height and visibility checks fail (`README.md:16-17`).
 
 ## Deploy-script test
-
-`deploy/proxmox/test.sh` exercises the preview VM scripts in a temporary directory, including `ninjagoldfinch-update` following a moved tag and pruning a deleted one, with throwaway git repositories (`deploy/proxmox/test.sh:51-88`). It prints `deploy test: ok`. It runs `git init`, `commit` and `tag`, after unsetting the location variables git exports to hooks; `tests/unit/deploy-test.test.ts` runs it with `GIT_DIR` set and checks that repository is untouched (RV-01).
 
 ## Coverage expectations
 

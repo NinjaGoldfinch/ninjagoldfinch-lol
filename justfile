@@ -27,7 +27,3 @@ e2e:
 # Record one riot-proxy response as a test fixture (spends Riot rate limit)
 fixture name path *keep:
     node tests/record-fixture.ts {{name}} '{{path}}' {{keep}}
-
-# Build the production image locally
-image:
-    docker build -t ninjagoldfinch-web:local .

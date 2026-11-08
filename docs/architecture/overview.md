@@ -72,11 +72,10 @@ The site and riot-proxy start in order: the unit has `After=network-online.targe
 
 ## Other machines
 
-| Machine                       | Role                                                                                               | Status              |
-| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------- |
-| `ngf-mon-syd1`                | The former production box, now the monitoring host (ninja-monitor; Prometheus and Grafana planned) | live                |
-| LAN dev proxy `192.168.68.46` | A riot-proxy with auth off, used for site development until SPD-01                                 | dormant             |
-| preview VM `192.168.68.47`    | A Proxmox VM that built and ran the site in Docker (`deploy/proxmox/`)                             | deleted, may return |
+| Machine                       | Role                                                                                               | Status  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------- |
+| `ngf-mon-syd1`                | The former production box, now the monitoring host (ninja-monitor; Prometheus and Grafana planned) | live    |
+| LAN dev proxy `192.168.68.46` | A riot-proxy with auth off, used for site development until SPD-01                                 | dormant |
 
 Sources for the table: `riot-proxy:docs/DECISIONS.md:1512`, `docs/DECISIONS.md:538`, `docs/PROGRESS.md:71`, owner answer of 2026-10-19. Development no longer depends on any of them: see [../integration/environments.md](../integration/environments.md).
 
