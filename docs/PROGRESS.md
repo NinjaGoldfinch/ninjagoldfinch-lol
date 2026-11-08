@@ -124,7 +124,7 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 Owner request 2026-11-09: a search-first front page with live cards (IMPLEMENTATION.md, "FP — front page").
 
 - [x] FP-01 Hero and the top-win-rate card; `live` cache policy; 2 s front-page deadline (ADR-066) — #139
-- [ ] FP-02 Free rotation and server status per region, `?region=` (ADR-067)
+- [x] FP-02 Free rotation and server status per region, `?region=` (ADR-067) — #140
 - [ ] FP-03 Recent searches as cards with icon, region, rank and age (ADR-068)
 
 ## Brought forward
