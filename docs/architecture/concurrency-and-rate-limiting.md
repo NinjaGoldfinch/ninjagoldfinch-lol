@@ -86,9 +86,7 @@ How the site reacts, from `classifyProxyError` (`src/lib/server/errors.ts:16-33`
 - The Refresh button is disabled while `refreshAvailableIn` is above zero (`docs/DECISIONS.md:155`).
 - Error and form-post responses are never cached at the edge, so a passing rate limit is not served to later visitors (`src/lib/server/cache.ts:26-36`).
 
-At the edge, the plan calls for a Cloudflare rate-limiting rule on `/summoner/*` and `/match/*` (`docs/IMPLEMENTATION.md:391`, P5-02).
-
-> **TODO (unverified):** whether that Cloudflare rate-limiting rule exists in production. P5-02 is not ticked in `docs/PROGRESS.md`; check the Cloudflare dashboard.
+At the edge, a Cloudflare rate-limiting rule covers paths starting `/summoner/` or `/match/`: pages, their `__data.json`, the Refresh post and the old region URLs. Each IP may make 20 requests in 10 seconds; past that it is blocked with Cloudflare's own 429 for 10 seconds. The zone is on the Free plan, so the period and block are fixed at 10 seconds and edge `HIT`s count toward the 20. Counters are per Cloudflare data centre. `/champions`, `/`, `/about` and `/search` are not limited. (ADR-065, `docs/DECISIONS.md:1024-1044`; checked from outside on 2026-11-07, 20 `200`s then `429`.)
 
 ## Backpressure
 
@@ -96,5 +94,5 @@ There is none in the site beyond the deadlines: a slow riot-proxy holds each aff
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L69-L154`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/timing.ts:L54-L60`, `src/lib/server/static-data.ts:L22-L63`, `src/lib/server/cdragon.ts:L10-L37`, `src/lib/server/profile.ts:L76-L127`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L11-L13,L34-L39`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L531,L562,L684-L715`, `docs/IMPLEMENTATION.md:L391`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`
-**Last verified:** 2026-11-03 against commit `a6b406b`
+**Sources:** `src/lib/server/proxy.ts:L69-L154`, `src/lib/server/errors.ts:L16-L68`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/timing.ts:L54-L60`, `src/lib/server/static-data.ts:L22-L63`, `src/lib/server/cdragon.ts:L10-L37`, `src/lib/server/profile.ts:L76-L127`, `src/lib/server/match.ts:L42-L61`, `src/lib/server/champions.ts:L37-L48`, `src/lib/server/champion-page.ts:L121-L140`, `src/lib/server/cache.ts:L5-L34`, `src/lib/domain/error-view.ts:L7-L31`, `src/hooks.server.ts:L11-L13,L34-L39`, `tests/unit/proxy.test.ts:L154-L169`, `build/server/adapter-node-env.js:L4-L19`, `docs/DECISIONS.md:L155,L531,L562,L684-L715`, `riot-proxy:src/http/quota.rs:L1-L135`, `riot-proxy:src/consumers.rs:L14`, `riot-proxy:src/http/auth.rs:L318-L343`, `riot-proxy:src/config.rs:L716`, `riot-proxy:src/fetcher.rs:L455-L466`, `riot-proxy:src/routes/players/refresh.rs:L17-L71`, `riot-proxy:src/riot/client.rs:L22-L24`, `docs/DECISIONS.md:L1024-L1044` (ADR-065), the owner's Cloudflare dashboard and checks from outside (2026-11-07)
+**Last verified:** 2026-11-07 against commit `79f1842`

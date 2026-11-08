@@ -1019,4 +1019,26 @@ Date: 2026-11-06 · Task: FIX-09 (review of #126, issue #127; refines ADR-063)
 
 - Adding `EVENTS_URL` during an outage sends `proxy_unreachable` after three more failed checks, then `proxy_recovered`, as for an outage that starts after the restart.
 - `last-version.json` is still written without `EVENTS_URL`, as before: a start records its version so that, once a URL is set, the next release sends `deployed` (ADR-063).
-- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told.
+- If `EVENTS_URL` is changed to another receiver during an outage, the new receiver gets only the `proxy_recovered`. Not handled: the record does not say which receiver was told. The same follows when `EVENTS_URL` is removed during an outage and later set to another receiver. `docs/deployment/releases.md` has the operator delete `proxy-alarm.json` with the restart that changes or removes the receiver, and unit tests hold both cases (FIX-11).
+
+## ADR-065: Cloudflare in front of the site: the cache rule, a rate limit, and no `ADDRESS_HEADER`
+
+Date: 2026-11-07 · Task: P5-02
+
+**Context.** P5-02 sets up Cloudflare: DNS, the Tunnel, a cache rule and a rate-limiting rule on `/summoner/*` and `/match/*` (plan, "Cloudflare, set once"). DNS and the Tunnel have served production since it went live (ADR-038), and pages were seen going `MISS` then `HIT` (ADR-039, SPD-06), so a cache rule existed, but its settings were never recorded. There was no rate-limiting rule: the site has no limit of its own, so one client walking through profiles could spend the site's whole riot-proxy quota (600 requests a minute by default, shared by every visitor). The plan also says to set `ADDRESS_HEADER=CF-Connecting-IP`. The zone is on Cloudflare's Free plan.
+
+**Decision.**
+
+- **The cache rule, as it stands** (read in the dashboard by the owner, 2026-11-07). "Cache site pages", first in order: `(http.host eq "ninjagoldfinch.lol")`; eligible for cache; edge TTL "use cache-control header if present, bypass cache if not"; browser TTL "respect origin TTL"; cache key, stale-while-revalidate and the other options at their defaults, so the query string is in the key. The edge keeps exactly what `src/lib/server/cache.ts` says, and nothing without a `Cache-Control` header.
+- **A rate-limiting rule** (owner, 2026-11-07). "Profile and match pages per IP": `(starts_with(http.request.uri.path, "/summoner/")) or (starts_with(http.request.uri.path, "/match/"))`, counted per IP, 20 requests per 10 seconds, then Block for 10 seconds. It covers profile and match pages, their `__data.json`, the Refresh form post and the old region URLs. Free allows one rule, fixes the period and the duration at 10 seconds, and has no option to leave cached responses out of the count, so edge `HIT`s count too.
+  - **Block, not a challenge.** A page's `__data.json` on client-side navigation and a match expanded inline are fetched by the page's script, which cannot answer a challenge; they would fail instead.
+  - **20 per 10 seconds** leaves room for a person clicking through a profile and expanding matches, and stops a script working through many profiles. If real visitors hit it (Security → Events), raise it to 30.
+- **`ADDRESS_HEADER` stays unset** (owner, 2026-11-07). With it set, adapter-node's `getClientAddress` throws on a request without the header, and every request made on the host itself is one. `/api/status` catches that and treats the request as not local, so checks from the host would need the token (ADR-062). Nothing else reads the client address. Cloudflare's own rule counts visitors by their real address whatever the site sees.
+
+**Consequences.**
+
+- A response without `Cache-Control` bypasses the edge. ADR-045 and ADR-055 described such responses as cached for Cloudflare's default TTL; that is not what this rule does, whatever it did then. `handle`'s `no-store` fallback (ADR-045) stays, for browsers and in case the rule changes.
+- A blocked visitor gets Cloudflare's 429 page, not the site's, for 10 seconds. Counters are kept per Cloudflare data centre, so a client spread across locations gets more than 20.
+- `/champions`, `/champions/*`, `/`, `/about` and `/search` are not limited. The champion pages are analytics riot-proxy has already computed and the edge holds for 10 minutes; `/search` reads only the site's in-memory lookups and redirects a Riot ID to its profile, which the rule covers.
+- On a paid plan the rule could block for longer and count only requests that reach the server.
+- Checked from outside on 2026-11-07 (`docs/PROGRESS.md`, "P5-02 check"): 20 `200`s then `429`; a profile `EXPIRED` then `HIT`; `/champions` never blocked.

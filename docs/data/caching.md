@@ -38,11 +38,21 @@ Rules:
 
 Measured through Cloudflare on 2026-10-15: `MISS` 55–69 ms, then `HIT` 25–30 ms for champion pages (`docs/DECISIONS.md:529`).
 
-Cloudflare does not cache HTML unless a cache rule says so; the plan calls for one that respects origin `Cache-Control` (`docs/IMPLEMENTATION.md:390`). ADR-039 and ADR-042 record `HIT`s on production pages, so a rule exists.
+Cloudflare does not cache HTML unless a cache rule says so. Production's rule, "Cache site pages" (ADR-065, read in the dashboard 2026-11-07):
+
+| Setting               | Value                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| Matches               | `(http.host eq "ninjagoldfinch.lol")`, the whole site                                 |
+| Cache eligibility     | Eligible for cache                                                                    |
+| Edge TTL              | Use the `Cache-Control` header if present; **bypass the cache if not**                |
+| Browser TTL           | Respect the origin's TTL                                                              |
+| Cache key, and others | Defaults: the query string is in the key; no stale-while-revalidate or Vary overrides |
+
+So the edge keeps exactly what `src/lib/server/cache.ts` says, and a response with no `Cache-Control` is not cached at all. `handle`'s `no-store` fallback (ADR-045) still matters for browsers.
 
 The rule covers `__data.json` too: on 2026-11-03 each page type's `__data.json`, with and without `x-sveltekit-invalidated=01`, went `MISS` or `EXPIRED` then `HIT` from outside, with the same `Cache-Control` as its HTML (SPD-06, `docs/PROGRESS.md`).
 
-> **TODO (unverified):** the Cloudflare cache rule's exact settings. Read them in the Cloudflare dashboard.
+The P2 exit check's last part, that a second request for a profile is served by Cloudflare, was checked on 2026-11-07: `/summoner/NinjaGoldfinch-OCENZ` went `EXPIRED` then `HIT` with `public, s-maxage=60, stale-while-revalidate=300` (`docs/PROGRESS.md`, "P5-02 check").
 
 **Invalidation.** Nothing purges the edge. A page changes when its `s-maxage` lapses: a profile within 60 s (plus up to 300 s stale while revalidating), analytics within 10 min, a match within a day. Refresh bypasses it by returning the fresh profile in the POST response (ADR-012).
 
@@ -83,5 +93,5 @@ A profile's "Updated N minutes ago" comes from riot-proxy's `fetchedAgeSeconds`,
 
 ---
 
-**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L11-L29`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L19`, `src/lib/server/match.ts:L76-L84`, `src/lib/server/champions.ts:L53`, `src/lib/server/champion-page.ts:L173`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/server/patch.ts:L51-L159`, `src/lib/server/timing.ts:L54-L60`, `src/lib/server/static-data.ts:L22-L97`, `src/lib/server/cdragon.ts:L10-L42`, `src/lib/recent-storage.ts:L6`, `docs/DECISIONS.md:L163-L165,L233,L319,L529,L562-L564,L579,L617-L630,L684-L715`, `docs/IMPLEMENTATION.md:L390`, `docs/PROGRESS.md:L55`, `riot-proxy:src/riot/endpoints.rs:L14-L496`, `riot-proxy:src/config.rs:L713-L715,L726`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`, `riot-proxy:src/routes/statics.rs:L161-L167`, `riot-proxy:src/routes/players/refresh.rs:L17-L18`; headers observed on `node build` 2026-10-19
-**Last verified:** 2026-11-03 against commit `a6b406b`
+**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L11-L29`, `src/routes/+page.ts:L3`, `src/routes/about/+page.ts:L2`, `src/routes/search/+page.server.ts:L19`, `src/lib/server/match.ts:L76-L84`, `src/lib/server/champions.ts:L53`, `src/lib/server/champion-page.ts:L173`, `node_modules/@sveltejs/kit/src/runtime/server/data/index.js:L89-L148`, `node_modules/@sveltejs/kit/src/runtime/server/respond.js:L212-L237,L513-L516`, `src/lib/server/patch.ts:L51-L159`, `src/lib/server/timing.ts:L54-L60`, `src/lib/server/static-data.ts:L22-L97`, `src/lib/server/cdragon.ts:L10-L42`, `src/lib/recent-storage.ts:L6`, `docs/DECISIONS.md:L163-L165,L233,L319,L529,L562-L564,L579,L617-L630,L684-L715`, `docs/PROGRESS.md:L55`, `riot-proxy:src/riot/endpoints.rs:L14-L496`, `riot-proxy:src/config.rs:L713-L715,L726`, `riot-proxy:src/routes/analytics/cache.rs:L1-L19`, `riot-proxy:src/routes/statics.rs:L161-L167`, `riot-proxy:src/routes/players/refresh.rs:L17-L18`; headers observed on `node build` 2026-10-19, `docs/DECISIONS.md:L1024-L1044` (ADR-065), the owner's Cloudflare dashboard and checks from outside (2026-11-07)
+**Last verified:** 2026-11-07 against commit `79f1842`

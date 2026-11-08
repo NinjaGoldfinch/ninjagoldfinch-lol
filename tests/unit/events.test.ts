@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { inspect } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	ATTEMPT_TIMEOUT_MS,
@@ -273,6 +274,16 @@ describe('EventQueue', () => {
 		expect(send).not.toHaveBeenCalled();
 	});
 
+	it('says whether it sends, and never shows its URL, which may hold a token', () => {
+		expect(new EventQueue(undefined).enabled).toBe(false);
+		expect(new EventQueue('').enabled).toBe(false);
+		const queue = new EventQueue('http://events.test/in?token=secret-token');
+		expect(queue.enabled).toBe(true);
+		expect(inspect(queue, { showHidden: true, depth: Infinity })).not.toContain('secret-token');
+		expect(JSON.stringify(queue)).not.toContain('secret-token');
+		expect(Object.values(queue).join(' ')).not.toContain('secret-token');
+	});
+
 	it('sends one event at a time, in order, each after the last is done', async () => {
 		const log: string[] = [];
 		let release: () => void = () => {};
@@ -363,16 +374,25 @@ describe('the raised alarm, kept across restarts', () => {
 		detail
 	});
 	/**
-	 * A start of the server: a new watch over the same directory, sending to
-	 * `url`. null is no directory or no URL (undefined would take the default).
+	 * A start of the server: a new watch over the same directory, with or
+	 * without a URL to send to. null is no directory (undefined would take the
+	 * default).
 	 */
-	const start = (stateDir: string | null = dir, url: string | null = URL) => {
+	const start = (stateDir: string | null = dir, withUrl = true) => {
 		const pushed: [string, unknown][] = [];
 		const watch = proxyWatch(stateDir ?? undefined, {
-			url: url ?? undefined,
+			enabled: withUrl,
 			push: (event, detail) => pushed.push([event, detail])
 		});
 		return { watch, pushed };
+	};
+	/**
+	 * A start of the server as `init` makes it: a real EventQueue for `url`,
+	 * whose sends land in `sent` as [url, event name].
+	 */
+	const startQueue = (url: string | undefined, sent: [string, string][]) => {
+		const queue = new EventQueue(url, async (to, event) => sent.push([to, event.event]));
+		return { queue, watch: proxyWatch(dir, queue) };
 	};
 
 	it('is not raised with no directory, no record, or an unreadable one', async () => {
@@ -465,7 +485,7 @@ describe('the raised alarm, kept across restarts', () => {
 	it('is neither kept nor read without a URL, so adding one mid-outage still raises it', async () => {
 		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
 		// A host with a state directory and no EVENTS_URL, through an outage.
-		const before = start(dir, null);
+		const before = start(dir, false);
 		for (let i = 0; i < UNREACHABLE_AFTER + 1; i++)
 			await before.watch(check('down', 'unreachable'));
 		expect(before.pushed).toEqual([]);
@@ -484,7 +504,7 @@ describe('the raised alarm, kept across restarts', () => {
 	it('leaves a record from a start with a URL as it was, for when the URL is back', async () => {
 		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
 		await writeRaised(dir, true);
-		const without = start(dir, null);
+		const without = start(dir, false);
 		await without.watch(check('ok', 'ready'));
 		expect(without.pushed).toEqual([]);
 		expect(await readRaised(dir)).toBe(true);
@@ -492,6 +512,63 @@ describe('the raised alarm, kept across restarts', () => {
 		const withUrl = start();
 		await withUrl.watch(check('ok', 'ready'));
 		expect(withUrl.pushed).toEqual([['proxy_recovered', { reason: 'ready' }]]);
+	});
+
+	// The same, through the EventQueue init builds, so the watch and the queue
+	// cannot disagree about whether there is a URL.
+	for (const url of [undefined, '']) {
+		it(`neither records nor sends through a real EventQueue with ${JSON.stringify(url)} as URL`, async () => {
+			dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+			const sent: [string, string][] = [];
+			const { queue, watch } = startQueue(url, sent);
+			for (let i = 0; i < UNREACHABLE_AFTER + 1; i++) await watch(check('down', 'unreachable'));
+			await watch(check('ok', 'ready'));
+			await queue.idle();
+			expect(sent).toEqual([]);
+			expect(existsSync(join(dir, 'proxy-alarm.json'))).toBe(false);
+		});
+	}
+
+	// The record does not say which receiver was told (ADR-064): a receiver that
+	// takes over during an outage gets its proxy_recovered and nothing before.
+	it('sends a receiver changed mid-outage only proxy_recovered', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		const sent: [string, string][] = [];
+		const a = startQueue('http://a.test/in', sent);
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await a.watch(check('down', 'unreachable'));
+		await a.queue.idle();
+
+		const b = startQueue('http://b.test/in', sent);
+		await b.watch(check('ok', 'ready'));
+		await b.queue.idle();
+		expect(sent).toEqual([
+			['http://a.test/in', 'proxy_unreachable'],
+			['http://b.test/in', 'proxy_recovered']
+		]);
+		expect(await readRaised(dir)).toBe(false);
+	});
+
+	it('sends only proxy_recovered to a receiver set after the URL was removed mid-outage', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'ngf-state-'));
+		const sent: [string, string][] = [];
+		const a = startQueue('http://a.test/in', sent);
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await a.watch(check('down', 'unreachable'));
+		await a.queue.idle();
+
+		// Without a URL, outages come and go and the record stays as A left it.
+		const none = startQueue(undefined, sent);
+		await none.watch(check('ok', 'ready'));
+		for (let i = 0; i < UNREACHABLE_AFTER; i++) await none.watch(check('down', 'unreachable'));
+		await none.watch(check('ok', 'ready'));
+		expect(await readRaised(dir)).toBe(true);
+
+		const b = startQueue('http://b.test/in', sent);
+		await b.watch(check('ok', 'ready'));
+		await b.queue.idle();
+		expect(sent).toEqual([
+			['http://a.test/in', 'proxy_unreachable'],
+			['http://b.test/in', 'proxy_recovered']
+		]);
 	});
 
 	// A write that fails leaves the record as it was, so the next start goes by

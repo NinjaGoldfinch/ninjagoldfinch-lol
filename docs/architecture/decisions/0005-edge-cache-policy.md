@@ -21,13 +21,14 @@ riot-proxy's capacity and the Riot rate budget are the scarce resources; most pa
 - "Updated N minutes ago" can be up to the cache age older than it says (`docs/DECISIONS.md:233`).
 - Refresh is a POST so it is never cached (ADR-012).
 - Cloudflare's cache key includes the query string, checked from outside on 2026-10-19 (`docs/DECISIONS.md:579`).
+- Cloudflare's cache rule covers the whole host, takes the edge TTL from `Cache-Control`, and bypasses the cache for a response without one (ADR-065).
 - `/` and `/about` were prerendered so they escaped `handle`'s `no-store` default (ADR-045); since ADR-055 they are rendered per request with the `static` policy, so they get the security headers.
 - A degraded page costs riot-proxy a request per view until it recovers, as an error page does.
 - SvelteKit sends `__data.json` with `private, no-store` unless the load set a policy, which then replaces it (checked in SvelteKit 3.0.1's source and against `node build` on 2026-11-03).
 
 ## Status
 
-Accepted; extended by ADR-045. Whether Cloudflare caches `__data.json` with a `public` policy is open (SPD-06).
+Accepted; extended by ADR-045. Cloudflare caches `__data.json` with its page's policy (SPD-06); the cache rule's settings are in ADR-065.
 
 ## Evidence
 
@@ -35,5 +36,5 @@ Accepted; extended by ADR-045. Whether Cloudflare caches `__data.json` with a `p
 
 ---
 
-**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L20-L32`, `src/routes/+page.ts:L3`, `CLAUDE.md:L62`, `docs/IMPLEMENTATION.md:L248`, `docs/DECISIONS.md:L145-L157,L206-L215,L233,L579,L617-L630`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Sources:** `src/lib/server/cache.ts:L5-L34`, `src/hooks.server.ts:L20-L32`, `src/routes/+page.ts:L3`, `CLAUDE.md:L62`, `docs/IMPLEMENTATION.md:L248`, `docs/DECISIONS.md:L145-L157,L206-L215,L233,L579,L617-L630`, `docs/DECISIONS.md:L1024-L1044`
+**Last verified:** 2026-11-07 against commit `79f1842`
