@@ -31,16 +31,15 @@ flowchart LR
         Monitor["ninja-monitor"] -.->|"watches"| Site
         Monitor -.->|"watches"| Proxy
     end
-    MonHost["ninja-monitor on ngf-mon-syd1"] -->|"GET /healthz, every minute"| Cloudflare
-    MonHost -->|"ping, every minute"| HC["Healthchecks.io"]
-    HC -->|"email after 5 min without a ping"| Owner["Operator"]
+    MonHost["ngf-mon-syd1"] -->|"heartbeat ping, every minute"| HC["Healthchecks.io"]
+    HC -->|"email when the pings stop"| Owner["Operator"]
     Proxy -->|"HTTPS · Riot key"| Riot["Riot API"]
     Proxy -->|"S3 API"| Onidel["Onidel Object Storage"]
     host -->|"rclone, hourly and 6-hourly"| R2["Cloudflare R2"]
     Browser -->|"HTTPS, images"| DDragon["Data Dragon CDN"]
 ```
 
-TLS ends at Cloudflare; the Tunnel carries requests to `cloudflared` on the host, which forwards plain HTTP over loopback. No DNS record points at the host's IP, so no DNS change is needed when the connector moves (`riot-proxy:docs/design/12-object-storage-and-hosting.md:532-537`). The site talks only to riot-proxy, over loopback, with its consumer key ([integration/service-communication.md](../integration/service-communication.md)). ninja-monitor's checks are described in [integration/monitoring-hooks.md](../integration/monitoring-hooks.md), including its probe of `https://ninjagoldfinch.lol/healthz` from `ngf-mon-syd1` through Cloudflare every minute and the Healthchecks.io check behind it (P5-05).
+TLS ends at Cloudflare; the Tunnel carries requests to `cloudflared` on the host, which forwards plain HTTP over loopback. No DNS record points at the host's IP, so no DNS change is needed when the connector moves (`riot-proxy:docs/design/12-object-storage-and-hosting.md:532-537`). The site talks only to riot-proxy, over loopback, with its consumer key ([integration/service-communication.md](../integration/service-communication.md)). ninja-monitor's checks are described in [integration/monitoring-hooks.md](../integration/monitoring-hooks.md). From `ngf-mon-syd1`, a heartbeat pings a Healthchecks.io check every minute, which emails the owner when the pings stop (P5-05); whether anything there also probes `https://ninjagoldfinch.lol/healthz` is unverified ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio)).
 
 ## Hostnames and routes
 
@@ -93,4 +92,4 @@ The site is built on the host from a git checkout pulled with a read-only deploy
 ---
 
 **Sources:** `riot-proxy:docs/DECISIONS.md:L1507-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L586-L594,L612-L626,L803-L838,L904-L917`, `riot-proxy:docs/design/13-admin-dashboard.md:L39,L44-L67`, `riot-proxy:deploy/README.md:L1-L36`, `riot-proxy:deploy/riot-proxy-replica.service:L1-L33`, `riot-proxy:deploy/riot-proxy-replica.timer:L1-L10`, `riot-proxy:PROGRESS.md:L335`, `riot-proxy:README.md:L132`, `README.md:L89-L114`, `docs/DECISIONS.md:L500-L516`, owner-supplied unit (inventory section 14), `docs/PROGRESS.md` ("P5-05 check")
-**Last verified:** 2026-11-09 against commit `02630bb`
+**Last verified:** 2026-10-20 against commit `85d9cf8`

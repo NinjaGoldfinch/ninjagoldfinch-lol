@@ -11,17 +11,16 @@ flowchart LR
     Site["ninjagoldfinch.lol"] -->|"stdout, stderr"| Journal["journald"]
     Site -->|"GET /healthz"| Probe["curl"]
     Monitor["ninja-monitor"] -->|"unit state, memory"| Site
-    Monitor -->|"GET /healthz through Cloudflare, every minute"| Site
-    Monitor -->|"ping, every minute"| HC["Healthchecks.io"]
-    HC -->|"email after 5 min without a ping"| Owner
     Monitor -->|"Discord webhook"| Owner["Operator"]
+    MonHost["ngf-mon-syd1"] -->|"heartbeat ping, every minute"| HC["Healthchecks.io"]
+    HC -->|"email when the pings stop"| Owner
     Journal -->|"journalctl"| Owner
     Site -->|"X-Request-Id in log lines"| Journal
     Proxy["riot-proxy"] -->|"JSON logs with request_id"| Journal
     Cloudflare -->|"zone analytics"| Owner
 ```
 
-The site pushes nothing anywhere; everything is read from the host or from Cloudflare by the operator or by ninja-monitor, which also probes `/healthz` from outside through Cloudflare.
+The site pushes nothing anywhere; everything is read from the host or from Cloudflare by the operator or by ninja-monitor. Separately, a heartbeat from `ngf-mon-syd1`, the monitoring host, pings Healthchecks.io, which emails the owner when the pings stop; whether anything probes the site from outside is unverified ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio)).
 
 ## Logs
 
@@ -64,7 +63,7 @@ That example was taken against the mock proxy with the threshold set to 0. The c
 
 `GET /healthz` answers `{"ok":true,"version":"…"}` with `Cache-Control: no-store` whenever the process is serving, without touching riot-proxy (`src/routes/healthz/+server.ts:7-9`). `version` is `package.json`'s at build time (ADR-051). It is liveness only. There is no readiness endpoint that checks riot-proxy; requesting a data page such as `/champions` serves that purpose by hand ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
 
-Consumers today: operators with `curl`; Playwright waits on it before running tests (`playwright.config.ts:20`). ninja-monitor fetches it through Cloudflare every minute from `ngf-mon-syd1` and pings Healthchecks.io each minute, which emails the owner after 5 minutes without a ping (P5-05; [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#ninja-monitor)).
+Consumers today: operators with `curl`; Playwright waits on it before running tests (`playwright.config.ts:20`). The P5-05 answers say ninja-monitor on `ngf-mon-syd1` fetches it through Cloudflare every minute, but ninja-monitor's public source (`v0.2.3`) has no setting that fetches a URL, so whether anything outside the host requests it is unverified ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio)).
 
 ## Metrics
 
@@ -85,9 +84,9 @@ None. The site has no `instrumentation.server.ts` and no OpenTelemetry dependenc
 
 ## ninja-monitor
 
-Watches the `ninjagoldfinch-lol` unit on the host: down after 30 s (repeated every 30 min), memory over 1 GiB, plus host-wide disk, memory and CPU alerts, posting to Discord (`riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`). From `ngf-mon-syd1` it also probes `https://ninjagoldfinch.lol/healthz` every minute and pings Healthchecks.io, the check behind it, which emails the owner after 5 minutes without a ping (P5-05; [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#ninja-monitor)). Responses to each alert: [runbook.md](./runbook.md#ninja-monitor-alerts).
+Watches the `ninjagoldfinch-lol` unit on the host: down after 30 s (repeated every 30 min), memory over 1 GiB, plus host-wide disk, memory and CPU alerts, posting to Discord (`riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`). A second instance runs on `ngf-mon-syd1` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:839-845`). A heartbeat from that host pings a Healthchecks.io check every minute, and Healthchecks.io emails the owner when the pings stop, with 5 minutes of grace after the check's period (P5-05). Which process sends the ping, the check's period, and whether anything probes `/healthz` from outside are unverified ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio)). Responses to each alert: [runbook.md](./runbook.md#ninja-monitor-alerts).
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L12-L67`, `src/lib/server/timing.ts:L26-L95`, `src/lib/server/patch.ts:L82-L146`, `src/hooks.server.ts:L11-L13,L34-L38`, `src/lib/server/profile.ts:L93,L119`, `src/routes/healthz/+server.ts:L7-L9`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L101`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`, `docs/PROGRESS.md` ("P5-05 check")
-**Last verified:** 2026-11-09 against commit `02630bb`
+**Sources:** `src/lib/server/proxy.ts:L12-L67`, `src/lib/server/timing.ts:L26-L95`, `src/lib/server/patch.ts:L82-L146`, `src/hooks.server.ts:L11-L13,L34-L38`, `src/lib/server/profile.ts:L93,L119`, `src/routes/healthz/+server.ts:L7-L9`, `playwright.config.ts:L18-L20`, `package.json:L21-L50`, `README.md:L101`, `riot-proxy:src/http/request_id.rs:L1-L3`, `riot-proxy:src/telemetry.rs:L101-L121`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L847`, `riot-proxy:docs/design/13-admin-dashboard.md:L51,L60,L69`, `docs/PROGRESS.md` ("P5-05 check"), `riot-proxy:docs/design/12-object-storage-and-hosting.md:L839-L845`, `ninja-monitor` at `v0.2.3` (see [integration/monitoring-hooks.md](../integration/monitoring-hooks.md))
+**Last verified:** 2026-11-03 against commit `e183749`

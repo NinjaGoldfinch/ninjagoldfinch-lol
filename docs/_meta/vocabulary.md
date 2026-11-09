@@ -4,25 +4,26 @@ The one list of names used across `docs/`. If a document needs a name that is no
 
 ## Services and external systems
 
-| Name (use exactly)    | What it is                                                                    | In diagrams as          |
-| --------------------- | ----------------------------------------------------------------------------- | ----------------------- |
-| Browser               | A visitor's web browser                                                       | `Browser`               |
-| Cloudflare            | Cloudflare's edge: DNS, cache, WAF and the Tunnel's public side               | `Cloudflare`            |
-| cloudflared           | The Tunnel connector running as a system service on the production host       | `cloudflared`           |
-| ninjagoldfinch.lol    | This repo: the SvelteKit site, run in production as `node build`              | `ninjagoldfinch.lol`    |
-| riot-proxy            | The API in front of Riot; owns the Riot key, caching, archive and analytics   | `riot-proxy`            |
-| ninja-monitor         | Per-service CPU, RAM and disk monitoring with Discord alerts                  | `ninja-monitor`         |
-| Healthchecks.io       | Pinged by ninja-monitor each minute; emails the owner 5 min after pings stop  | `Healthchecks.io`       |
-| Riot API              | Riot Games' developer API                                                     | `Riot API`              |
-| Data Dragon CDN       | `ddragon.leagueoflegends.com`, where the Browser loads game images            | `Data Dragon CDN`       |
-| CommunityDragon       | `raw.communitydragon.org` (or a mirror set by `CDRAGON_URL`)                  | `CommunityDragon`       |
-| Onidel Object Storage | Onidel's S3-compatible storage in Sydney; riot-proxy's archive store          | `Onidel Object Storage` |
-| Cloudflare R2         | Cloudflare's S3-compatible storage; riot-proxy's archive replica and backups  | `Cloudflare R2`         |
-| GitHub                | Hosts both repos and riot-proxy's releases                                    | `GitHub`                |
-| GitHub Actions        | CI for both repositories; the site's runs the gate (ADR-050)                  | `GitHub Actions`        |
-| mock proxy            | `tests/mock-proxy/`, a stand-in for riot-proxy that replays `tests/fixtures/` | `mock proxy`            |
-| production host       | The Onidel ONI-4 VPS `ngf-prod-syd1` in Sydney that runs both services        | `ngf-prod-syd1`         |
-| monitoring host       | `ngf-mon-syd1`, the former production box, now running ninja-monitor          | `ngf-mon-syd1`          |
+| Name (use exactly)    | What it is                                                                                                              | In diagrams as          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Browser               | A visitor's web browser                                                                                                 | `Browser`               |
+| Cloudflare            | Cloudflare's edge: DNS, cache, WAF and the Tunnel's public side                                                         | `Cloudflare`            |
+| cloudflared           | The Tunnel connector running as a system service on the production host                                                 | `cloudflared`           |
+| ninjagoldfinch.lol    | This repo: the SvelteKit site, run in production as `node build`                                                        | `ninjagoldfinch.lol`    |
+| riot-proxy            | The API in front of Riot; owns the Riot key, caching, archive and analytics                                             | `riot-proxy`            |
+| ninja-monitor         | Per-service CPU, RAM and disk monitoring with Discord alerts                                                            | `ninja-monitor`         |
+| ninja-ingest          | ninja-monitor's central server, in the same repository: weeks of history for several hosts, with a heartbeat of its own | `ninja-ingest`          |
+| Healthchecks.io       | Pinged each minute by a heartbeat from `ngf-mon-syd1`; emails the owner when the pings stop                             | `Healthchecks.io`       |
+| Riot API              | Riot Games' developer API                                                                                               | `Riot API`              |
+| Data Dragon CDN       | `ddragon.leagueoflegends.com`, where the Browser loads game images                                                      | `Data Dragon CDN`       |
+| CommunityDragon       | `raw.communitydragon.org` (or a mirror set by `CDRAGON_URL`)                                                            | `CommunityDragon`       |
+| Onidel Object Storage | Onidel's S3-compatible storage in Sydney; riot-proxy's archive store                                                    | `Onidel Object Storage` |
+| Cloudflare R2         | Cloudflare's S3-compatible storage; riot-proxy's archive replica and backups                                            | `Cloudflare R2`         |
+| GitHub                | Hosts both repos and riot-proxy's releases                                                                              | `GitHub`                |
+| GitHub Actions        | CI for both repositories; the site's runs the gate (ADR-050)                                                            | `GitHub Actions`        |
+| mock proxy            | `tests/mock-proxy/`, a stand-in for riot-proxy that replays `tests/fixtures/`                                           | `mock proxy`            |
+| production host       | The Onidel ONI-4 VPS `ngf-prod-syd1` in Sydney that runs both services                                                  | `ngf-prod-syd1`         |
+| monitoring host       | `ngf-mon-syd1`, the former production box, now running ninja-monitor                                                    | `ngf-mon-syd1`          |
 
 ### Components inside ninjagoldfinch.lol
 
@@ -115,5 +116,5 @@ None belong to ninjagoldfinch.lol. All are riot-proxy's.
 
 ---
 
-**Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L69-L78`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`
-**Last verified:** 2026-11-09 against commit `02630bb`
+**Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L69-L78`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `docs/PROGRESS.md` ("P5-05 check"), `ninja-monitor` at `v0.2.3`: `README.md:L1-L10`, `src/heartbeat.rs:L1-L28`
+**Last verified:** 2026-11-03 against commit `2658c48`

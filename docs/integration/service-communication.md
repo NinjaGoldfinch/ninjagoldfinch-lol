@@ -15,6 +15,8 @@ flowchart LR
   CDragon[CommunityDragon]
   DDragon[Data Dragon CDN]
   Monitor[ninja-monitor]
+  MonHost[ngf-mon-syd1]
+  HC[Healthchecks.io]
   GitHub[GitHub]
 
   Browser -->|1 HTTPS pages| Cloudflare
@@ -23,8 +25,9 @@ flowchart LR
   Site -->|3 HTTPS perks.json| CDragon
   Browser -->|4 HTTPS images| DDragon
   Browser -->|4 HTTPS icons| CDragon
-  Monitor -.->|5 process watch| Site
+  Monitor -.->|5 unit cgroup, on the host| Site
   Site -.->|6 git pull, deploy key| GitHub
+  MonHost -.->|7 heartbeat ping| HC
 ```
 
 | #   | From → to                            | Protocol and auth                                     | Frequency                   | Failure behaviour                                    |
@@ -33,8 +36,9 @@ flowchart LR
 | 2   | ninjagoldfinch.lol → riot-proxy      | HTTP, `Authorization: Bearer <PROXY_KEY>`             | 1–9 calls per uncached page | Page error or section notice; no retry               |
 | 3   | ninjagoldfinch.lol → CommunityDragon | HTTPS GET, none                                       | Once per patch per process  | Stat shards left out; retried on the next match page |
 | 4   | Browser → image CDNs                 | HTTPS GET, none                                       | Every page with images      | Broken image in the Browser                          |
-| 5   | ninja-monitor → ninjagoldfinch.lol   | Not in this repo                                      | Continuous                  | Discord alert                                        |
+| 5   | ninja-monitor → ninjagoldfinch.lol   | Reads the unit's cgroup, no request (public source)   | Each sample (15 s default)  | Discord alert                                        |
 | 6   | Host → GitHub                        | SSH, read-only deploy key                             | Each manual deploy          | Deploy stops; running version unaffected             |
+| 7   | `ngf-mon-syd1` → Healthchecks.io     | A ping to a secret URL; not in this repo              | Every minute                | Healthchecks.io emails the owner when pings stop     |
 
 The site never calls the Riot API, Onidel Object Storage or Cloudflare R2.
 
@@ -114,7 +118,12 @@ Image URLs are built in `src/lib/assets.ts` and fetched by the Browser: Data Dra
 
 ## 5. ninja-monitor
 
-ninja-monitor runs on `ngf-prod-syd1` and watches `ninjagoldfinch-lol` alongside `riot-proxy` and `cloudflared`, alerting on Discord when a service is down for 30 s or uses more than 1 GiB (`riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`). Nothing in this repo calls it or is called by it. See [monitoring-hooks.md](./monitoring-hooks.md).
+ninja-monitor runs on both hosts, each instance posting to its own Discord webhook (`riot-proxy:docs/design/12-object-storage-and-hosting.md:839-845`):
+
+- **On `ngf-prod-syd1`** it watches `ninjagoldfinch-lol` alongside `riot-proxy` and `cloudflared`, alerting on Discord when a service is down for 30 s or uses more than 1 GiB. Its public source (`v0.2.3`) watches a service through its systemd unit's cgroup and sends the site no request (`ninja-monitor:src/config.rs:106-116`, `ninja-monitor:src/alerts/mod.rs:175-178`); samples are taken every 15 s by default (`ninja-monitor:README.md:266`).
+- **On `ngf-mon-syd1`**, a heartbeat pings a Healthchecks.io check every minute, and Healthchecks.io emails the owner when the pings stop (P5-05).
+
+Nothing in this repo calls ninja-monitor. Whether anything requests the site from outside, such as `/healthz` from `ngf-mon-syd1` as the P5-05 answers say, is unverified: ninja-monitor's public source has no setting that fetches a URL, and which process sends the heartbeat is not known. See [monitoring-hooks.md](./monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio).
 
 ## 6. Deploys from GitHub
 
@@ -122,5 +131,5 @@ A deploy pulls `main` over SSH with a read-only deploy key belonging to the `nin
 
 ---
 
-**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L113-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L73`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19), `docs/DECISIONS.md:L1024-L1044` (ADR-065), the owner's Cloudflare dashboard and checks from outside (2026-11-07)
+**Sources:** `src/lib/server/proxy.ts:L7-L154`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L113-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L17-L25`, `src/lib/server/cache.ts:L5-L16`, `src/lib/assets.ts:L9-L73`, `README.md:L56-L65,L97-L112`, `docs/DECISIONS.md:L319,L509`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L617-L619,L630,L832-L838`, `riot-proxy:src/fetcher.rs:L9-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L107-L115`, owner-supplied env names (2026-10-19), `docs/DECISIONS.md:L1024-L1044` (ADR-065), the owner's Cloudflare dashboard and checks from outside (2026-11-07), `riot-proxy:docs/design/12-object-storage-and-hosting.md:L839-L845`, `docs/PROGRESS.md` ("P5-05 check"), `ninja-monitor` at `v0.2.3`: `src/config.rs:L106-L116`, `src/alerts/mod.rs:L175-L178`, `README.md:L266`
 **Last verified:** 2026-11-07 against commit `79f1842`

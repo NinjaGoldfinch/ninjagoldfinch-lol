@@ -47,7 +47,15 @@ curl -sI https://ninjagoldfinch.lol/healthz | head -1                       # th
 
 `/healthz` never calls riot-proxy (`src/routes/healthz/+server.ts:7-9`), so a healthy `/healthz` with failing pages points at riot-proxy, the key, or Riot. The site has no readiness endpoint ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#endpoints)).
 
-From outside, ninja-monitor on `ngf-mon-syd1` fetches `https://ninjagoldfinch.lol/healthz` through Cloudflare every minute and pings Healthchecks.io each minute (P5-05). An email from Healthchecks.io means the pings stopped for 5 minutes: either ninja-monitor on `ngf-mon-syd1` is down, or the site is and ninja-monitor's Discord alert did not reach you. Run the checks above first, then look at ninja-monitor ([ninja-monitor alerts](#ninja-monitor-alerts)).
+### An email from Healthchecks.io
+
+A heartbeat from `ngf-mon-syd1`, the monitoring host, pings a Healthchecks.io check every minute (P5-05). An email from Healthchecks.io says only that those pings stopped. What sends them, and whether they depend on the site, are unverified ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio)). Check in this order:
+
+1. The monitoring box, `ngf-mon-syd1`: whether it is up, and whether whatever sends the heartbeat is running.
+2. The site, with the health checks above.
+3. ninja-monitor's Discord alerts for the production host ([ninja-monitor alerts](#ninja-monitor-alerts)).
+
+> **TODO (unverified):** the commands to check `ngf-mon-syd1` and the process that sends its heartbeat (how to reach the box, the unit's name, where its logs are). They are not recorded anywhere.
 
 ## Keys
 
@@ -163,9 +171,9 @@ ninja-monitor posts to Discord. Its checks on this host, from riot-proxy's notes
 | Host memory below 15 % free                                  | `free -m`, `systemctl status` for each service's memory; riot-proxy's page cache use is normal                                                                                |
 | Host CPU over 90 % for 20 min                                | `top`; usually riot-proxy's background jobs                                                                                                                                   |
 
-> **TODO (unverified):** ninja-monitor's alert texts, its threshold for a failed `/healthz` probe, and whether it still pings Healthchecks.io after a failed probe. Neither repository contains its configuration.
+> **TODO (unverified):** ninja-monitor's alert texts on this host. Its public source (`v0.2.3`) formats an alert as `**FIRING** [<host>] <rule name>: …` and `**RESOLVED** …` (`ninja-monitor:README.md:343-347`), but the rules set on `ngf-prod-syd1` are known only from riot-proxy's notes; neither repository contains its configuration. Whether anything probes `/healthz` from outside, and what it does when that fails, is in [integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio).
 
 ---
 
-**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L7-L9`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key), `docs/PROGRESS.md` ("P5-05 check")
-**Last verified:** 2026-11-09 against commit `02630bb`
+**Sources:** owner-supplied unit (inventory section 14), `README.md:L95-L112`, `src/routes/healthz/+server.ts:L7-L9`, `src/lib/server/proxy.ts:L12-L20,L125-L129`, `src/lib/server/errors.ts:L16-L33`, `src/hooks.server.ts:L18-L39`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`; observed with the production build and riot-proxy v2.7.0 on 2026-10-20 (refused connection, hung socket, invalid consumer key, invalid Riot key), `docs/PROGRESS.md` ("P5-05 check"), `ninja-monitor` at `v0.2.3`: `README.md:L343-L347`
+**Last verified:** 2026-11-03 against commit `e183749`

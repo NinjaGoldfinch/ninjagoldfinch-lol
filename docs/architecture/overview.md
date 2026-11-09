@@ -52,7 +52,7 @@ flowchart LR
 
 Read left to right: a visitor reaches Cloudflare over HTTPS, and Cloudflare either answers from its cache or forwards the request through the Tunnel to `cloudflared` on the production host, which passes it to the site on `127.0.0.1:3000`. The site calls riot-proxy over loopback. Images never pass through the host: the Browser loads them from the Data Dragon CDN and CommunityDragon (`src/lib/assets.ts:1-10`). Only riot-proxy talks to Riot and to the object stores. The R2 copy is made by an `rclone` job on the host, not by riot-proxy (`riot-proxy:deploy/README.md:14-18`). The `X-Riot-Token` label is the Riot API's standard header and is riot-proxy's concern; this repo does not show it.
 
-> **TODO (unverified):** how ninja-monitor's `/healthz` probe (every minute from `ngf-mon-syd1`, through Cloudflare; P5-05) feeds its `ninjagoldfinch-lol` down alert, and whether it also watches the unit's state. Source seen: `riot-proxy:docs/design/12-object-storage-and-hosting.md:832-838`; ninja-monitor's repo was not available.
+> **TODO (unverified):** whether anything probes the site from outside the host. The P5-05 answers say ninja-monitor on `ngf-mon-syd1` fetches `https://ninjagoldfinch.lol/healthz` every minute through Cloudflare, but ninja-monitor's public source (`v0.2.3`) has no setting that fetches a URL: it watches a service through its systemd unit, and its one outbound check is a heartbeat ping. What is known is that a heartbeat from `ngf-mon-syd1` pings Healthchecks.io every minute, which emails the owner when the pings stop ([integration/monitoring-hooks.md](../integration/monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio)). Source for the instance on the production host: `riot-proxy:docs/design/12-object-storage-and-hosting.md:839-845`.
 
 ## The production host
 
@@ -88,5 +88,5 @@ Sources for the table: `riot-proxy:docs/DECISIONS.md:1512`, `docs/DECISIONS.md:5
 
 ---
 
-**Sources:** `src/lib/assets.ts:L1-L10`, `src/hooks.server.ts:L20-L32`, `README.md:L91-L102`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L51,L471`, `docs/DECISIONS.md:L504,L538`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19)
-**Last verified:** 2026-11-09 against commit `02630bb`
+**Sources:** `src/lib/assets.ts:L1-L10`, `src/hooks.server.ts:L20-L32`, `README.md:L91-L102`, `CLAUDE.md:L18-L25`, `docs/IMPLEMENTATION.md:L51,L471`, `docs/DECISIONS.md:L504,L538`, `docs/PROGRESS.md:L71`, `riot-proxy:docs/DECISIONS.md:L1510-L1512`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L531-L533,L630,L832-L838`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `riot-proxy:deploy/README.md:L14-L18`, owner-supplied `systemctl cat ninjagoldfinch-lol` (2026-10-19), `riot-proxy:docs/design/12-object-storage-and-hosting.md:L839-L845`, `ninja-monitor` at `v0.2.3` (see [integration/monitoring-hooks.md](../integration/monitoring-hooks.md))
+**Last verified:** 2026-11-03 against commit `e183749`
