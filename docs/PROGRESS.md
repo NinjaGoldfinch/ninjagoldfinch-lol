@@ -79,6 +79,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-10 An empty `STATE_DIRECTORY=` kept out of the host's env file, in `.env.example` and the configuration docs — #130
 - [x] FIX-11 The events URL a private field behind `enabled`; the watch tested through a real `EventQueue` with no URL, in the unit and package tests; a receiver changed or removed mid-outage pinned, and a runbook step for it (review of #128, issue #131) — #133
 - [x] FIX-12 The gate reads `docs/PROGRESS.md`: a task ticked twice, or a tick for a task the plan does not define, fails `just check` (`scripts/check-progress.ts`, ADR-069; review of #134) — #142
+- [x] FIX-13 Front-page cards: a status entry without a title or an id kept under a generic one and logged, not read as all clear; a rotation with no champions to show unavailable and not cached; the Middle East left out until riot-proxy serves `me1`; the region picker keeps the scroll; the front page's log lines in the operator docs; the cost of a degraded `/` (ADR-072; review of #140)
 - [x] FIX-15 The tick check counts every task item for duplicates, ticked or not, so a section a merge repeated fails; it also runs when started through a symlinked path; README.md and CLAUDE.md list it among the gate's steps, checked by a test (ADR-069; review of #142) — #144
 
 ## RV — fixes from the code review of 2026-11-03

@@ -27,6 +27,7 @@ Start from the symptom table, then read the entry.
 | 19  | `pnpm install` refuses to run                                        | Node or pnpm version                                              |
 | 20  | `status checks failed:` or `riot_proxy check failed:` in the journal | A bug in the status checks or the proxy alarm                     |
 | 21  | No events at the receiver, or `event … dropped` in the journal       | `EVENTS_URL` unset or wrong, receiver down, or no state directory |
+| 22  | A front-page card shows a notice, or `/` is never cached at the edge | A front-page call failed or its payload was unreadable            |
 
 ## 1. Service exits at start
 
@@ -216,7 +217,24 @@ If the old patch stays well past that, the refresh is failing, and every request
 
 **Fix.** Set `EVENTS_URL` to the receiver's final URL and restart. For the state directory, see [deployment/releases.md](../deployment/releases.md). A dropped event is not sent again; the status bot's polls of `/api/status` carry the same state.
 
+## 22. A front-page card shows a notice, or `/` is never cached
+
+**Cause.** The front page makes three optional calls to riot-proxy, all with a 2 s deadline (`frontClient`), besides the held patch and lookups: the analytics for the games-analysed pill and the top-win-rate card, and the region's free rotation and server status (ADR-066, ADR-071). When one fails, its card shows a notice, the rest of the page is served, and the page is sent `no-store`, so every view of it calls riot-proxy again (ADR-072). Each is logged with a `front page:` prefix (`src/lib/server/front-page.ts:57-164`):
+
+- `front page: analytics unavailable: <status>`, `front page: rotations unavailable for <platform>: <status>`, `front page: status unavailable for <platform>: <status>`: riot-proxy answered with an error, or 503 when it did not answer in 2 s, with a `proxy timeout` or `proxy unreachable` line beside it.
+- `front page: unexpected rotations payload for <platform>`, `front page: unexpected status payload for <platform>`: riot-proxy passes Riot's payloads through, and Riot's shape changed (ADR-071).
+- `front page: no free champions to show for <platform>`: the rotation was empty, held no integer ids, or named only champions the lookups lack, which also logs `front page: free champions without lookups: <id>, …` (ADR-072).
+- `front page: patch unavailable:`: no patch or lookups, so no patch pill, no icons and plain names.
+
+`front page: free champions without lookups` alone, with other champions shown, is usually a champion newer than the held patch (entry 14); the page is still cached. So is `front page: status entries shown with a fallback for <platform>: …`, which means Riot sent an incident or maintenance without a title or an id: the card shows it as `Incident` or `Maintenance`, not as all clear (ADR-072).
+
+`/?region=me` is not a failure: the Middle East is left out of the front page's regions, because riot-proxy 2.10.0 does not accept its platform `me1`, and the URL redirects to `/` (ADR-072).
+
+**Confirm.** `sudo journalctl -u ninjagoldfinch-lol --since '-30 min' | grep 'front page:'`; for a failed call, the `proxy` line before it names riot-proxy's status and `request-id`. On the host, `curl -sI http://127.0.0.1:3000/` shows `cache-control: no-store` while a card is missing.
+
+**Fix.** A failed call or a timeout is riot-proxy's or Riot's; the next view tries again. An unexpected payload needs the parser in `src/lib/domain/front-page.ts` changed to the new shape; record a fixture of it first (`just fixture`).
+
 ---
 
-**Sources:** `src/lib/server/env.ts:L11-L161`, `src/lib/server/proxy.ts:L38-L136`, `src/lib/server/errors.ts:L16-L84`, `src/lib/server/timing.ts:L67-L95`, `src/lib/server/profile.ts:L75-L119`, `src/lib/server/match.ts:L41-L74`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/cdragon.ts:L12-L34`, `src/lib/server/cache.ts:L14-L15`, `src/lib/domain/riot-id.ts:L14-L19,L51-L60`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `src/lib/server/status.ts:L100-L113,L144-L166`, `src/lib/server/events.ts:L86-L91,L140-L263`, `vite.config.ts:L30-L33`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565,L684-L715`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
-**Last verified:** 2026-11-06 against commit `8cbb8c4` (entries 7 and 15 describe the checkout deploy that releases replaced, ADR-054; not re-verified)
+**Sources:** `src/lib/server/env.ts:L11-L161`, `src/lib/server/proxy.ts:L38-L136`, `src/lib/server/errors.ts:L16-L84`, `src/lib/server/timing.ts:L67-L95`, `src/lib/server/profile.ts:L75-L119`, `src/lib/server/match.ts:L41-L74`, `src/lib/server/champion-page.ts:L86-L99`, `src/lib/server/front-page.ts:L57-L164`, `src/lib/server/errors.ts:L54-L58`, `src/lib/server/patch.ts:L51-L146`, `src/lib/server/cdragon.ts:L12-L34`, `src/lib/server/cache.ts:L14-L15`, `src/lib/domain/riot-id.ts:L14-L19,L51-L60`, `src/routes/match/[matchId]/+page.server.ts:L17-L19`, `src/lib/server/status.ts:L100-L113,L144-L166`, `src/lib/server/events.ts:L86-L91,L140-L263`, `vite.config.ts:L30-L33`, `tests/mock-proxy/mock.ts:L19-L43`, `package.json:L7-L9`, `.npmrc:L1`, `README.md:L16-L17`, `docs/DECISIONS.md:L517-L565,L684-L715`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L804`; reproductions on 2026-10-20 as described in each entry
+**Last verified:** 2026-11-06 against commit `8cbb8c4` (entries 7 and 15 describe the checkout deploy that releases replaced, ADR-054; not re-verified); entry 22 on 2026-11-09 against `a193653`
