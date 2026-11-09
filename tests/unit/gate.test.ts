@@ -30,6 +30,43 @@ describe('the gate', () => {
 		]);
 	});
 
+	// The step lists people read: README's `just check` row and CLAUDE.md's
+	// Commands block. Each names every step above, in its own words (FIX-15).
+	it('is described with every step in README.md and CLAUDE.md', () => {
+		const readme = read('README.md')
+			.split('\n')
+			.find((line) => line.startsWith('| `just check`'));
+		for (const step of [
+			'Prettier',
+			'`docs/PROGRESS.md` tick check',
+			'spec drift',
+			'ESLint',
+			'`svelte-kit sync`',
+			'svelte-check',
+			'Vitest',
+			'build',
+			'package test'
+		]) {
+			expect(readme, step).toContain(step);
+		}
+
+		const claude = /^just check {4}([^\n]*\n(?: {14}[^\n]*\n)*)/m
+			.exec(read('CLAUDE.md'))?.[1]
+			.replace(/\s+/g, ' ');
+		for (const step of [
+			'format',
+			'progress ticks',
+			'spec drift',
+			'lint',
+			'svelte-check',
+			'unit tests',
+			'build',
+			'release package test'
+		]) {
+			expect(claude, step).toContain(step);
+		}
+	});
+
 	it('stops at the first failing step', () => {
 		expect(read('scripts/check.sh')).toContain('set -euo pipefail');
 	});

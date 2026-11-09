@@ -27,14 +27,14 @@ just dev     # dev server
 
 ## Commands
 
-| Command        | Does                                                                                                                                                                                                          |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `just setup`   | Install dependencies, enable git hooks, create `.env`                                                                                                                                                         |
-| `just dev`     | Dev server with hot reload                                                                                                                                                                                    |
-| `just gen`     | Regenerate `src/lib/api/schema.d.ts` from `openapi/riot-proxy.json`                                                                                                                                           |
-| `just check`   | The only gate: Prettier check, spec drift check (`schema.d.ts` against the spec), ESLint, `svelte-kit sync`, svelte-check, Vitest unit tests, build, and the release package test (`scripts/package.test.sh`) |
-| `just e2e`     | Playwright smoke tests against the mock proxy                                                                                                                                                                 |
-| `just fixture` | Record one riot-proxy response as a test fixture (spends Riot rate limit)                                                                                                                                     |
+| Command        | Does                                                                                                                                                                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `just setup`   | Install dependencies, enable git hooks, create `.env`                                                                                                                                                                                                                                   |
+| `just dev`     | Dev server with hot reload                                                                                                                                                                                                                                                              |
+| `just gen`     | Regenerate `src/lib/api/schema.d.ts` from `openapi/riot-proxy.json`                                                                                                                                                                                                                     |
+| `just check`   | The only gate: Prettier check, the `docs/PROGRESS.md` tick check (`scripts/check-progress.ts`, ADR-069), spec drift check (`schema.d.ts` against the spec), ESLint, `svelte-kit sync`, svelte-check, Vitest unit tests, build, and the release package test (`scripts/package.test.sh`) |
+| `just e2e`     | Playwright smoke tests against the mock proxy                                                                                                                                                                                                                                           |
+| `just fixture` | Record one riot-proxy response as a test fixture (spends Riot rate limit)                                                                                                                                                                                                               |
 
 CI runs the same gate as `just check` (`scripts/check.sh`) on every pull request and on `main` (`.github/workflows/ci.yml`, ADR-050). The pre-push hook runs `just check` too, and the pre-commit hook refuses commits on `main` and staged content that looks like a riot-proxy or Riot API key.
 
