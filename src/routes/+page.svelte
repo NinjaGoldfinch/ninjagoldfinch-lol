@@ -50,7 +50,7 @@
 </section>
 
 <div class="mx-auto max-w-2xl">
-	<RecentSearches />
+	<RecentSearches patch={data.patch} />
 </div>
 
 <div class="mt-12 grid gap-4 lg:grid-cols-3">

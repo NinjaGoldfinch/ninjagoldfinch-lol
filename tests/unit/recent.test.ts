@@ -34,12 +34,45 @@ describe('parseRecent', () => {
 		expect(parseRecent(JSON.stringify([faker, { region: 'kr' }, 7]))).toEqual([faker]);
 	});
 
-	it('drops the region stored before profiles lost theirs, keeping each player once', () => {
+	it('keeps a known region, once per player, the newest copy first', () => {
 		const stored = [
 			{ region: 'kr', ...faker },
 			{ region: 'oce', ...other },
 			{ region: 'euw', ...faker, gameName: 'HIDE ON BUSH' }
 		];
-		expect(parseRecent(JSON.stringify(stored))).toEqual([faker, other]);
+		expect(parseRecent(JSON.stringify(stored))).toEqual([
+			{ region: 'kr', ...faker },
+			{ region: 'oce', ...other }
+		]);
+	});
+
+	it('keeps the region a profile loaded with before ADR-037', () => {
+		const stored = [{ region: 'kr', gameName: 'Hide on bush', tagLine: 'KR1' }];
+		expect(parseRecent(JSON.stringify(stored))).toEqual([{ ...faker, region: 'kr' }]);
+	});
+
+	it('reads back everything a profile records', () => {
+		const full: RecentSearch = {
+			gameName: 'NinjaGoldfinch',
+			tagLine: 'OCENZ',
+			region: 'oce',
+			profileIconId: 7173,
+			rank: 'Emerald III',
+			viewedAt: 1_762_650_000_000
+		};
+		expect(parseRecent(JSON.stringify([full]))).toEqual([full]);
+	});
+
+	it('reads an entry stored before icons and ranks as a bare Riot ID', () => {
+		expect(parseRecent(JSON.stringify([faker]))).toEqual([faker]);
+		expect(Object.keys(parseRecent(JSON.stringify([faker]))[0])).toEqual(['gameName', 'tagLine']);
+	});
+
+	it('leaves out each field that is not well-formed, keeping the entry', () => {
+		const stored = [
+			{ ...faker, region: 'mars', profileIconId: -1, rank: '', viewedAt: 'x' },
+			{ ...other, region: 'OCE', profileIconId: 1.5, rank: 7, viewedAt: Number.NaN }
+		];
+		expect(parseRecent(JSON.stringify(stored))).toEqual([faker, { ...other, region: 'oce' }]);
 	});
 });

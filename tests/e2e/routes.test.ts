@@ -188,10 +188,39 @@ test('opened profiles appear under recent searches', async ({ page }) => {
 	await page.goto('/');
 
 	const recent = page.getByRole('region', { name: 'Recent searches' });
-	await expect(recent.getByRole('link', { name: /NinjaGoldfinch#OCENZ/ })).toHaveAttribute(
-		'href',
-		'/summoner/NinjaGoldfinch-OCENZ'
+	const card = recent.getByRole('link', { name: /NinjaGoldfinch#OCENZ/ });
+	await expect(card).toHaveAttribute('href', '/summoner/NinjaGoldfinch-OCENZ');
+	// The profile records its icon, region and Solo/Duo rank (ADR-068).
+	await expect(card).toContainText('Oceania · Emerald III · viewed just now');
+	await expect(card.locator('img')).toHaveAttribute(
+		'src',
+		'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/profileicon/7173.png'
 	);
+});
+
+test('a recent search stored before icons and ranks still shows', async ({ page }) => {
+	await page.addInitScript(() => {
+		localStorage.setItem('recent-searches', JSON.stringify([{ gameName: 'Old', tagLine: 'ONE' }]));
+	});
+	await page.goto('/');
+
+	const card = page
+		.getByRole('region', { name: 'Recent searches' })
+		.getByRole('link', { name: 'Old#ONE' });
+	await expect(card).toHaveAttribute('href', '/summoner/Old-ONE');
+	await expect(card.locator('img')).toHaveCount(0);
+	// The initial stands in for the icon, and there is no region, rank or age line.
+	await expect(card).toHaveText(/^O\s*Old#ONE\s*$/);
+});
+
+test.describe('without JavaScript, recent searches', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('are not on the page: they live in the browser', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Look up any League player');
+		await expect(page.getByRole('region', { name: 'Recent searches' })).toHaveCount(0);
+	});
 });
 
 test('a profile reached from another profile is remembered too', async ({ page }) => {
