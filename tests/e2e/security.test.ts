@@ -6,7 +6,7 @@ import { hydrated } from './hydrated.ts';
 
 const PROFILE = '/summoner/NinjaGoldfinch-OCENZ';
 const MATCH = '/match/OC1_712351051';
-const PAGES = ['/', '/about', PROFILE, MATCH, '/champions', '/champions/ahri'];
+const PAGES = ['/', '/?region=kr', '/about', PROFILE, MATCH, '/champions', '/champions/ahri'];
 
 const HEADERS = {
 	'strict-transport-security': 'max-age=31536000',

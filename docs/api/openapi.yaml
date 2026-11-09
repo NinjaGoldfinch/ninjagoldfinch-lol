@@ -48,12 +48,27 @@ paths:
       summary: Front page with the search form and live cards
       description: >-
         The patch, the ranked games analysed and the top win rates, from
-        riot-proxy's analytics within a 2 s deadline; a card whose call fails
-        shows a notice and the page is sent with `Cache-Control: no-store`
-        (ADR-066). Recent searches are filled in by the browser.
+        riot-proxy's analytics, and the region's free rotation and server
+        status, each within a 2 s deadline; a card whose call fails shows a
+        notice and the page is sent with `Cache-Control: no-store` (ADR-066,
+        ADR-071). Recent searches are filled in by the browser.
+      parameters:
+        - name: region
+          in: query
+          description: >-
+            The region for the rotation and status cards, as a lower-case
+            slug. Left out for Oceania, the default; any other spelling, an
+            unknown region or an extra parameter redirects to the canonical
+            URL.
+          schema:
+            type: string
+            enum: [br, eune, euw, jp, kr, lan, las, me, na, oce, ru, sea, tw, tr, vn]
+            default: oce
       responses:
         '200':
           $ref: '#/components/responses/Html'
+        '307':
+          $ref: '#/components/responses/CanonicalRedirect'
   /about:
     get:
       tags: [pages]

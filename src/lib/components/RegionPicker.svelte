@@ -1,0 +1,32 @@
+<script lang="ts">
+	import { REGIONS } from '#lib/domain/regions.ts';
+
+	/**
+	 * The front page's region, for its rotation and status cards (ADR-071). A
+	 * GET form, so it works without JavaScript; with it, it applies on change.
+	 */
+	let { region }: { region: { slug: string } } = $props();
+
+	const submit = (event: Event & { currentTarget: HTMLSelectElement }) =>
+		event.currentTarget.form?.requestSubmit();
+</script>
+
+<form method="GET" action="/" aria-label="Region" class="flex items-center gap-1">
+	<label>
+		<span class="sr-only">Region</span>
+		<select
+			name="region"
+			onchange={submit}
+			class="h-7 max-w-36 rounded border border-border bg-bg px-1.5 text-[11px] text-muted focus:border-accent focus:outline-none"
+		>
+			{#each REGIONS as r (r.slug)}
+				<option value={r.slug} selected={r.slug === region.slug}>{r.label}</option>
+			{/each}
+		</select>
+	</label>
+	<noscript>
+		<button type="submit" class="h-7 rounded border border-border bg-surface px-2 text-[11px]">
+			Apply
+		</button>
+	</noscript>
+</form>

@@ -1,0 +1,22 @@
+{
+	"_note": "Synthetic: Riot's champion-v3 ChampionInfo for Korea, eight ids the trimmed static-champion.json knows. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/rotations/kr"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json",
+			"x-cache": "HIT",
+			"x-cache-age": "3600",
+			"x-cache-fetched-age": "60",
+			"x-request-id": "SYNTHETIC"
+		},
+		"body": {
+			"freeChampionIds": [103, 134, 143, 420, 517, 800, 74, 31],
+			"freeChampionIdsForNewPlayers": [81, 53, 111],
+			"maxNewPlayerLevel": 10
+		}
+	}
+}

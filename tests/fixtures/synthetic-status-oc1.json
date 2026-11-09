@@ -1,0 +1,24 @@
+{
+	"_note": "Synthetic: Riot's lol-status-v4 PlatformDataDto, as riot-proxy passes it through, for Oceania with nothing open. Not a recording.",
+	"request": {
+		"method": "GET",
+		"path": "/v1/lol/status/oc1"
+	},
+	"response": {
+		"status": 200,
+		"headers": {
+			"content-type": "application/json",
+			"x-cache": "HIT",
+			"x-cache-age": "3600",
+			"x-cache-fetched-age": "180",
+			"x-request-id": "SYNTHETIC"
+		},
+		"body": {
+			"id": "OC1",
+			"name": "Oceania",
+			"locales": ["en_AU"],
+			"maintenances": [],
+			"incidents": []
+		}
+	}
+}

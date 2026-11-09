@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { toChampionTable } from '#lib/domain/champion-stats.ts';
 import {
+	DEFAULT_REGION,
 	EXAMPLE_SEARCHES,
 	TOP_WIN_RATE_MIN_GAMES,
+	allRunning,
+	fetchedAge,
 	formatCount,
+	frontQuery,
+	parseRotation,
+	parseStatus,
+	pickRegion,
+	rotationChampions,
 	topWinRates,
-	winRateBar
+	winRateBar,
+	type PlatformStatus
 } from '#lib/domain/front-page.ts';
+import { findRegion } from '#lib/domain/regions.ts';
 import type { components } from '#lib/api/schema.d.ts';
 import { fixtureBody, recordedNames } from './fixtures.ts';
 
@@ -73,5 +83,123 @@ describe('EXAMPLE_SEARCHES', () => {
 			'/champions/jinx',
 			'/summoner/NinjaGoldfinch-OCENZ'
 		]);
+	});
+});
+
+describe('pickRegion and frontQuery', () => {
+	const korea = findRegion('kr');
+
+	it('reads the region from the query, without regard to case, else Oceania', () => {
+		expect(pickRegion(new URLSearchParams(''))).toBe(DEFAULT_REGION);
+		expect(DEFAULT_REGION.slug).toBe('oce');
+		expect(DEFAULT_REGION.platform).toBe('oc1');
+		expect(pickRegion(new URLSearchParams('region=KR'))).toBe(korea);
+		expect(pickRegion(new URLSearchParams('region=mars'))).toBe(DEFAULT_REGION);
+	});
+
+	it('leaves the default out of the canonical query', () => {
+		expect(frontQuery(DEFAULT_REGION)).toBe('');
+		expect(korea && frontQuery(korea)).toBe('?region=kr');
+	});
+});
+
+describe('parseRotation', () => {
+	it("reads Riot's ChampionInfo", () => {
+		const rotation = parseRotation(fixtureBody('/v1/lol/rotations/oc1'));
+		expect(rotation?.free).toHaveLength(17);
+		expect(rotation?.forNewPlayers).toEqual([81, 53, 111, 350, 432]);
+		expect(rotation?.maxNewPlayerLevel).toBe(10);
+	});
+
+	it('keeps integer ids only, and needs nothing but freeChampionIds', () => {
+		expect(parseRotation({ freeChampionIds: [1, 'x', 2.5, 3] })).toEqual({
+			free: [1, 3],
+			forNewPlayers: [],
+			maxNewPlayerLevel: null
+		});
+	});
+
+	it('reads nothing else', () => {
+		for (const body of [{}, null, [], 'free', { freeChampionIds: 'all' }]) {
+			expect(parseRotation(body)).toBeUndefined();
+		}
+	});
+});
+
+describe('rotationChampions', () => {
+	it('names the free champions by name, leaving out ids the lookups lack', () => {
+		const rotation = parseRotation(fixtureBody('/v1/lol/rotations/oc1'));
+		if (!rotation) throw new Error('unreadable rotation fixture');
+		const champions = rotationChampions(rotation, recordedNames().champions);
+
+		expect(champions).toHaveLength(16);
+		expect(champions.map((c) => c.id)).not.toContain(999);
+		expect(champions[0]).toEqual({ id: 103, key: 'Ahri', name: 'Ahri' });
+		const names = champions.map((c) => c.name);
+		expect(names).toEqual(names.toSorted((a, b) => a.localeCompare(b)));
+	});
+});
+
+describe('parseStatus', () => {
+	it('reads incidents and open maintenances, with English titles', () => {
+		const status = parseStatus(fixtureBody('/v1/lol/status/kr'));
+		expect(status?.name).toBe('Korea');
+		expect(status?.incidents).toEqual([
+			{
+				id: 9101,
+				title: 'Ranked queues are disabled',
+				severity: 'warning',
+				maintenanceStatus: null,
+				updatedAt: '2026-11-09T01:10:00Z'
+			}
+		]);
+		// The completed maintenance is dropped, and the incident without a title.
+		expect(status?.maintenances.map((m) => [m.title, m.maintenanceStatus])).toEqual([
+			['Scheduled maintenance for patch 16.21', 'scheduled']
+		]);
+	});
+
+	it('takes the first title without an English one, and drops unknown severities', () => {
+		const status = parseStatus({
+			maintenances: [],
+			incidents: [
+				{
+					id: 1,
+					incident_severity: 'catastrophic',
+					titles: [{ locale: 'ko_KR', content: '점검' }, { locale: 'ja_JP' }]
+				},
+				{ id: 'two', titles: [{ locale: 'en_US', content: 'No id' }] }
+			]
+		});
+		expect(status?.incidents).toEqual([
+			{ id: 1, title: '점검', severity: null, maintenanceStatus: null, updatedAt: null }
+		]);
+	});
+
+	it('reads nothing without both lists', () => {
+		for (const body of [{ incidents: [] }, { maintenances: [] }, null, [], 'up']) {
+			expect(parseStatus(body)).toBeUndefined();
+		}
+	});
+});
+
+describe('allRunning', () => {
+	it('is true with nothing open', () => {
+		const ok = parseStatus(fixtureBody('/v1/lol/status/oc1'));
+		const kr = parseStatus(fixtureBody('/v1/lol/status/kr'));
+		const read = (s: PlatformStatus | undefined) => {
+			if (!s) throw new Error('unreadable status fixture');
+			return allRunning(s);
+		};
+		expect(read(ok)).toBe(true);
+		expect(read(kr)).toBe(false);
+	});
+});
+
+describe('fetchedAge', () => {
+	it('reads whole non-negative seconds only', () => {
+		expect(fetchedAge('180')).toBe(180);
+		expect(fetchedAge('0')).toBe(0);
+		for (const header of ['', '-1', 'abc', '1.5', null]) expect(fetchedAge(header)).toBeNull();
 	});
 });

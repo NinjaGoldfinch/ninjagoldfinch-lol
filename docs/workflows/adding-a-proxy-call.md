@@ -95,7 +95,7 @@ No `any` and no non-null `!` on proxy data (`CLAUDE.md:60`).
 
 Every path the code requests needs a fixture, or the mock proxy answers 500 (`tests/mock-proxy/mock.ts:27-43`).
 
-- **Record** one from a riot-proxy you can reach (spends Riot rate limit): `just fixture <name> '<path exactly as the client sends it>'` (`justfile:34-36`, `README.md:71-77`). The recorder replaces `puuid`, `summonerId` and `metadata.participants` with `fixture-puuid-…` placeholders and keeps only `content-type`, `x-cache`, `x-cache-age`, `x-request-id` and `retry-after` (`tests/record-fixture.ts:41-78`, `tests/redact.ts:1-38`). Trim large Data Dragon files with `--keep`.
+- **Record** one from a riot-proxy you can reach (spends Riot rate limit): `just fixture <name> '<path exactly as the client sends it>'` (`justfile:34-36`, `README.md:71-77`). The recorder replaces `puuid`, `summonerId` and `metadata.participants` with `fixture-puuid-…` placeholders and keeps only `content-type`, `x-cache`, `x-cache-age`, `x-cache-fetched-age`, `x-request-id` and `retry-after` (`tests/record-fixture.ts:41-78`, `tests/redact.ts:1-38`). Trim large Data Dragon files with `--keep`.
 - **Write a synthetic one** for states you cannot record on demand, named `synthetic-*.json`, with a `_note` saying it is not a recording (`README.md:79`, ADR-017; example `tests/fixtures/synthetic-match-rate-limited.json`).
 
 `tests/unit/fixtures-spec.test.ts` fails if a 200 fixture lacks a field the spec requires (`tests/unit/fixtures-spec.test.ts:84-95`). Check the file has no `rpx_` or `RGAPI-` strings before staging; the pre-commit hook refuses them (`.githooks/pre-commit:10-23`).

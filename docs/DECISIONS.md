@@ -1099,3 +1099,27 @@ Date: 2026-11-09 · Task: P5
 
 - What the original check protected still holds: riot-proxy's port is closed on the public interface, where only SSH listens (`docs/deployment/security.md`), and from outside riot-proxy is reached only through the Tunnel, where a data request needs a key and the internal pages are blocked at the edge. What it serves without a key is its own decision, recorded in riot-proxy.
 - Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.
+
+## ADR-071: the front page's region in the query, Oceania by default; Riot's rotation and status payloads parsed, not typed
+
+Date: 2026-11-09 · Task: FP-02
+
+**Context.** The front page's free rotation and server status cards (ADR-066) are per platform. riot-proxy's `/v1/lol/rotations/{platform}` and `/v1/lol/status/{platform}` pass Riot's champion-v3 and lol-status-v4 payloads through with an empty schema, so the generated types have them as `unknown`. ADR-037 took the region out of search and profiles, but these two cards still need a platform. The site has no sessions or cookies.
+
+**Decision.**
+
+- **`?region=<slug>`**, a slug from `REGIONS`; Oceania (`oce`, `oc1`) when absent, the owner's platform and the fixtures'. Each region has one URL: `/` for Oceania, `/?region=kr` otherwise. Anything else (an unknown slug, upper case, `region=oce`, an extra parameter) redirects 307 to it, as `/champions` tidies its query (`pickRegion`, `frontQuery`).
+- **A picker in each card's header** (`RegionPicker`): a GET `<select>` form, which applies on change with JavaScript and has a `<noscript>` Apply button without, like the champion filters. Both cards follow the one query.
+- **What the site assumes of Riot's payloads**, read with `record()` and type guards, never a cast (`parseRotation`, `parseStatus` in `src/lib/domain/front-page.ts`):
+  - champion-v3 `ChampionInfo`: `freeChampionIds` must be a list, of which integer entries are kept; `freeChampionIdsForNewPlayers` and `maxNewPlayerLevel` are optional.
+  - lol-status-v4 `PlatformDataDto`: `incidents` and `maintenances` must be lists. An entry needs an integer `id` and a title: the `en_US` entry of `titles[].content`, else the first. `incident_severity` is kept only as `info`, `warning` or `critical`; `maintenance_status`, `updated_at` and `name` only as strings. Maintenances marked `complete` are dropped.
+  - A payload that does not fit is logged (`front page: unexpected … payload for <platform>`) and its card shows a notice.
+- **The status card** shows "All services running" when nothing is open, else each incident and maintenance with its severity or state, scheduled and in-progress maintenances alike. It has no per-service rows: the feed has none. "checked X ago" is riot-proxy's `X-Cache-Fetched-Age`, read only when it is a whole number of seconds.
+- **The rotation card** shows the free champions the Data Dragon lookups know, by name, each linking to its champion page; an id the lookups lack is left out and logged. It does not say when the rotation resets: the payload does not.
+- The fixtures for both routes are synthetic (no riot-proxy was reachable to record them), and the recorder now keeps `X-Cache-Fetched-Age`.
+
+**Consequences.**
+
+- `/` has 15 edge variants, one per region, each costing riot-proxy two calls per miss, which it answers from its own cache of Riot.
+- Most visitors outside Oceania see Oceania first and pick their region once per visit. Remembering it (a cookie) or guessing it (geolocation) would be a later decision.
+- A change in Riot's payloads shows as a logged notice and an uncached `/`, not an error page. If riot-proxy later types these routes, the generated types can replace the parsers.

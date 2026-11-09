@@ -38,7 +38,14 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 const { PROXY_URL, PROXY_KEY } = process.env;
 if (!PROXY_URL) throw new Error('PROXY_URL is not set');
 
-const KEEP_HEADERS = ['content-type', 'x-cache', 'x-cache-age', 'x-request-id', 'retry-after'];
+const KEEP_HEADERS = [
+	'content-type',
+	'x-cache',
+	'x-cache-age',
+	'x-cache-fetched-age',
+	'x-request-id',
+	'retry-after'
+];
 const { redact, placeholders } = createRedactor();
 
 const url = new URL(path, PROXY_URL);

@@ -38,6 +38,8 @@ test("the champion page's header icon and the profile icon load first", async ({
 
 test('every image keeps its size and decodes off the main thread', async ({ page }) => {
 	for (const path of [
+		'/',
+		'/?region=kr',
 		'/summoner/NinjaGoldfinch-OCENZ',
 		'/match/OC1_712351051?tab=builds&build=1',
 		'/champions/ahri'
