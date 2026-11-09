@@ -1,6 +1,6 @@
 # 0003: Production runs `node build` under systemd, not in Docker
 
-Production runs the built site as a plain systemd service beside riot-proxy, reached only through the Cloudflare Tunnel; the Docker files serve only the LAN preview VM.
+Production runs the built site as a plain systemd service beside riot-proxy, reached only through the Cloudflare Tunnel. The Docker files that served the LAN preview VM were removed in ADR-067.
 
 ## Context
 
@@ -11,7 +11,7 @@ The plan put the site in a Docker container next to `cloudflared` and riot-proxy
 - A checkout at `/opt/ninjagoldfinch-lol`, pulled with a read-only deploy key, built in place with `pnpm install --frozen-lockfile` and `ORIGIN=https://ninjagoldfinch.lol pnpm build` (`docs/DECISIONS.md:508`, `README.md:104-112`).
 - `ninjagoldfinch-lol.service` runs `/usr/bin/node build` as user `ninjagoldfinch-lol`, with `EnvironmentFile=/etc/ninjagoldfinch-lol/env`, `Restart=always`, `RestartSec=2`, `ProtectSystem=strict`, `PrivateTmp=yes`, `NoNewPrivileges=yes`, ordered `After=riot-proxy.service` (owner-supplied unit, 2026-10-19).
 - `HOST=127.0.0.1`; the Tunnel routes `ninjagoldfinch.lol` to `http://127.0.0.1:3000` (`docs/DECISIONS.md:509-510`).
-- `Dockerfile`, `deploy/compose.yaml` and `deploy/proxmox/` stay for the preview VM (`docs/DECISIONS.md:511`).
+- `Dockerfile`, `deploy/compose.yaml` and `deploy/proxmox/` stayed for the preview VM (`docs/DECISIONS.md:511`) until ADR-067 removed them.
 
 ## Consequences
 

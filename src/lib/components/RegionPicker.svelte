@@ -2,7 +2,7 @@
 	import { REGIONS } from '#lib/domain/regions.ts';
 
 	/**
-	 * The front page's region, for its rotation and status cards (ADR-067). A
+	 * The front page's region, for its rotation and status cards (ADR-071). A
 	 * GET form, so it works without JavaScript; with it, it applies on change.
 	 */
 	let { region }: { region: { slug: string } } = $props();

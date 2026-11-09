@@ -51,7 +51,7 @@ paths:
         riot-proxy's analytics, and the region's free rotation and server
         status, each within a 2 s deadline; a card whose call fails shows a
         notice and the page is sent with `Cache-Control: no-store` (ADR-066,
-        ADR-067). Recent searches are filled in by the browser.
+        ADR-071). Recent searches are filled in by the browser.
       parameters:
         - name: region
           in: query

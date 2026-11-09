@@ -74,6 +74,10 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-04 The site icon is a lavender N with a dark outline on a deep-purple square — #98
 - [x] FIX-05 The browser tests wait for the page to hydrate before using a filter that applies on change — #123
 - [x] FIX-06 The deploy test's scratch repo ignores a hook's GIT_DIR, so a push from a worktree no longer marks the real repo bare or commits into it — #124
+- [x] FIX-07 Every log line in the monitoring log table, `/api/version` and `/api/status` in the monitoring docs, troubleshooting for both — #129
+- [x] FIX-09 No proxy alarm, and no record of it, without `EVENTS_URL` (ADR-064) — #128
+- [x] FIX-10 An empty `STATE_DIRECTORY=` kept out of the host's env file, in `.env.example` and the configuration docs — #130
+- [x] FIX-11 The events URL a private field behind `enabled`; the watch tested through a real `EventQueue` with no URL, in the unit and package tests; a receiver changed or removed mid-outage pinned, and a runbook step for it (review of #128, issue #131) — #133
 
 ## RV — fixes from the code review of 2026-11-03
 
@@ -117,14 +121,14 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
 - [x] P5-02 Cloudflare: the cache rule recorded, a rate-limiting rule on `/summoner/*` and `/match/*` (20 per IP per 10 s, then blocked), `ADDRESS_HEADER` left unset (ADR-065) — #135 (check below)
 - [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
-- [x] P5-05 External uptime check on `/healthz`, and the Riot Developer Portal product page updated with `https://ninjagoldfinch.lol`; done by the owner outside the repo (reported 2026-11-07) — #136
+- [x] P5-05 External uptime check on `/healthz`, and the Riot Developer Portal product page updated with the live URL — done by the owner outside the repo, no PR (owner, 2026-11-07)
 
 ## FP — front page
 
 Owner request 2026-11-09: a search-first front page with live cards (IMPLEMENTATION.md, "FP — front page").
 
 - [x] FP-01 Hero and the top-win-rate card; `live` cache policy; 2 s front-page deadline (ADR-066) — #139
-- [x] FP-02 Free rotation and server status per region, `?region=` (ADR-067) — #140
+- [x] FP-02 Free rotation and server status per region, `?region=` (ADR-071) — #140
 - [ ] FP-03 Recent searches as cards with icon, region, rank and age (ADR-068)
 
 ## Brought forward
@@ -132,6 +136,7 @@ Owner request 2026-11-09: a search-first front page with live cards (IMPLEMENTAT
 - [~] P5-01 (part) `Dockerfile`, `deploy/compose.yaml` and a Proxmox preview VM (`deploy/proxmox/`) for viewing P1 on the LAN — #13. Production runs without Docker (ADR-038), so the rest of P5-01 (`cloudflared`, no published port, and the 200 MB image check) applies only if the Docker preview path comes back. The preview VM is dormant: VM 104 no longer exists (owner, 2026-10-19).
   - Checked on the Proxmox node, 2026-10-09: `create-vm.sh` made VM 104 (`ninjagoldfinch-web`, 192.168.68.47), cloud-init finished, `ninjagoldfinch-update` built the image on the VM, and `http://192.168.68.47:3000` served a profile (NinjaGoldfinch#OCENZ, Oceania) from the dev riot-proxy. Follow-up: `--generate-key`, and README steps using `gh`.
   - `ninjagoldfinch-update` stopped silently on VM 104 after `phase-P2` was moved: `git fetch --tags` refused to clobber the old tag and `-q` hid the message. It now forces and prunes tags, and says when the fetch fails — #37.
+  - Dropped, and the Docker files, `deploy/proxmox/` and `just image` removed (owner, 2026-11-09; ADR-067) — #138
 
 ## Open decisions resolved
 

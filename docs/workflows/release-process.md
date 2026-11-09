@@ -86,10 +86,6 @@ curl -sI https://ninjagoldfinch.lol/champions | head -5     # through the Tunnel
 
 Every published release deploys to staging (`https://staging.ninjagoldfinch.lol`) on its own: `release.yml` calls `.github/workflows/deploy.yml` with `env: staging`, with no approval (ADR-057). Prod is deployed by hand: `gh workflow run deploy.yml -f env=prod -f version=vX.Y.Z`, or Deploy → Run workflow in the Actions tab; the `prod` environment waits for the owner's approval (ADR-053). A staging deploy ends with a smoke test of staging, recorded as the commit status `staging/smoke`, and prod takes only a version that passed it or was live in prod before (ADR-060, [deployment/releases.md](../deployment/releases.md#the-prod-gate)). Either way `NinjaGoldfinch/ninja-actions/deploy@v1` checks the environment's tarball against `SHA256SUMS`, uploads it to `/srv/ninjagoldfinch-lol/releases/` unless it is already there, and activates it: the host restarts the unit and waits for `/healthz` to report the new version (ADR-051), rolling back by itself if it does not. Rolling back on purpose is deploying the previous tag, which is still on the host. Hosts, set-up and checks are in [deployment/releases.md](../deployment/releases.md).
 
-## The preview VM (dormant)
-
-The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with a read-only deploy key, `git checkout --detach`, `docker compose -f deploy/compose.yaml up -d --build`, prune old images (`deploy/proxmox/ninjagoldfinch-update:1-48`). The VM no longer exists (owner, 2026-10-19); see [deployment/preview-vm.md](../deployment/preview-vm.md).
-
 ## What does not exist
 
 | Not present                                   | Why / status                                                                                  |
@@ -101,5 +97,5 @@ The LAN preview VM deployed a ref with `ninjagoldfinch-update [ref]`: fetch with
 
 ---
 
-**Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L516`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L47-L67,L104-L114`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L7-L9`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `deploy/proxmox/ninjagoldfinch-update:L1-L48`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
+**Sources:** `package.json:L4`, `CLAUDE.md:L8-L12,L28-L29,L64-L74`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `docs/DECISIONS.md:L31-L39,L500-L516`, `docs/PROGRESS.md:L59-L61,L221`, `README.md:L47-L67,L104-L114`, `vite.config.ts:L16-L19`, `src/routes/healthz/+server.ts:L7-L9`, `node_modules/@sveltejs/adapter-node/index.js:L12-L17`, `build/server/adapter-node-handler.js:L379-L404` (generated), `src/lib/server/env.ts:L47-L55`, `git tag -n1`, `git log --oneline`, owner-supplied unit (inventory section 14)
 **Last verified:** 2026-11-03 against commit `8cc2076`

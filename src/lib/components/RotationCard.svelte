@@ -4,7 +4,7 @@
 	import { championPath } from '#lib/domain/champion-search.ts';
 	import type { RotationChampion } from '#lib/domain/front-page.ts';
 
-	/** This week's free champions on a region (ADR-067). */
+	/** This week's free champions on a region (ADR-071). */
 	let {
 		champions,
 		patch,

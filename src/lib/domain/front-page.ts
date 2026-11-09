@@ -58,7 +58,7 @@ export const EXAMPLE_SEARCHES: readonly { label: string; href: string }[] = [
 	}
 ];
 
-/** The region the rotation and status cards show when the URL names none (ADR-067). */
+/** The region the rotation and status cards show when the URL names none (ADR-071). */
 export const DEFAULT_REGION_SLUG = 'oce';
 
 function defaultRegion(): Region {
@@ -82,7 +82,7 @@ export function frontQuery(region: Region): string {
 
 /**
  * What the site reads of Riot's champion-v3 `ChampionInfo`, which riot-proxy
- * passes through without a schema (ADR-067).
+ * passes through without a schema (ADR-071).
  */
 export interface Rotation {
 	free: number[];
@@ -146,7 +146,7 @@ export interface StatusItem {
 	updatedAt: string | null;
 }
 
-/** What the site reads of lol-status-v4's `PlatformDataDto` (ADR-067). */
+/** What the site reads of lol-status-v4's `PlatformDataDto` (ADR-071). */
 export interface PlatformStatus {
 	name: string | null;
 	incidents: StatusItem[];

@@ -40,7 +40,6 @@ Guard rails against leaking it:
 - `.githooks/pre-commit` refuses staged lines matching `(rpx_|RGAPI-)[A-Za-z0-9_-]` (ADR-002).
 - `PUBLIC_` variables reach the Browser; the only one is `PUBLIC_SITE_NAME` (`src/env.ts:17-22`, `CLAUDE.md:17`).
 - The fixture recorder sends the key to riot-proxy only, never to CommunityDragon (`tests/record-fixture.ts:105-108`), and fixtures are redacted.
-- `.dockerignore` keeps `.env` files out of the image build context (`.dockerignore:4-6`).
 
 ## Issue a key
 
@@ -93,5 +92,5 @@ Covered in [../architecture/concurrency-and-rate-limiting.md](../architecture/co
 
 ---
 
-**Sources:** `src/env.ts:L5-L30`, `src/lib/server/env.ts:L42-L55`, `src/lib/server/proxy.ts:L12-L18,L137-L148`, `src/lib/server/errors.ts:L32`, `tests/record-fixture.ts:L105-L108`, `playwright.config.ts:L26`, `.gitignore:L15-L18`, `.dockerignore:L4-L6`, `CLAUDE.md:L15-L17`, `docs/IMPLEMENTATION.md:L194,L201`, `docs/PROGRESS.md:L123`, `riot-proxy:src/consumers.rs:L12-L251`, `riot-proxy:src/cli/key.rs:L10-L57`, `riot-proxy:src/http/auth.rs:L29-L52,L141-L156`, `riot-proxy:src/http/quota.rs:L1-L58`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:src/routes/admin.rs:L173-L280`, `riot-proxy:src/routes/docs.rs:L104-L126`, `riot-proxy:docs/CUTOVER.md:L108`, `riot-proxy:README.md:L70-L72`, `riot-proxy:docs/design/07-deployment.md:L75-L93`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L626-L627`, owner-supplied unit and answers (2026-10-19)
+**Sources:** `src/env.ts:L5-L30`, `src/lib/server/env.ts:L42-L55`, `src/lib/server/proxy.ts:L12-L18,L137-L148`, `src/lib/server/errors.ts:L32`, `tests/record-fixture.ts:L105-L108`, `playwright.config.ts:L26`, `.gitignore:L15-L18`, `CLAUDE.md:L15-L17`, `docs/IMPLEMENTATION.md:L194,L201`, `docs/PROGRESS.md:L123`, `riot-proxy:src/consumers.rs:L12-L251`, `riot-proxy:src/cli/key.rs:L10-L57`, `riot-proxy:src/http/auth.rs:L29-L52,L141-L156`, `riot-proxy:src/http/quota.rs:L1-L58`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:src/routes/admin.rs:L173-L280`, `riot-proxy:src/routes/docs.rs:L104-L126`, `riot-proxy:docs/CUTOVER.md:L108`, `riot-proxy:README.md:L70-L72`, `riot-proxy:docs/design/07-deployment.md:L75-L93`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L626-L627`, owner-supplied unit and answers (2026-10-19)
 **Last verified:** 2026-11-03 against commit `2658c48`

@@ -48,7 +48,7 @@ interface Lookups {
 }
 
 /**
- * The front page's cards for a region (ADR-066, ADR-067). Every call is
+ * The front page's cards for a region (ADR-066, ADR-071). Every call is
  * optional and they all start together: a card whose call fails, or does not
  * answer within the front page's deadline (`cards`), shows a notice instead,
  * and the page is still served. The patch and its lookups come from `client`,

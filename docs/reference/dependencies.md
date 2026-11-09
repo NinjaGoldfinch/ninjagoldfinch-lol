@@ -4,7 +4,7 @@ Every third-party package ninjagoldfinch.lol uses, what it is for, the version i
 
 ## How versions are pinned
 
-- `package.json` declares caret ranges (`^x.y.z`); `pnpm-lock.yaml` pins exact versions, and every install uses `--frozen-lockfile`, so local, preview and production installs get identical trees (`README.md:109`, `Dockerfile:7`).
+- `package.json` declares caret ranges (`^x.y.z`); `pnpm-lock.yaml` pins exact versions, and every install uses `--frozen-lockfile`, so local, CI and production installs get identical trees (`README.md:109`).
 - The package manager is pinned with `"packageManager": "pnpm@12.10.1"` (`package.json:6`). pnpm's own entry is kept out of the lockfile with `pmOnFail: ignore`, so GitHub's dependency graph (and Dependabot alerts) sees the app's packages; corepack, not pnpm, enforces the pin (ADR-005, `pnpm-workspace.yaml:3-7`). Production installs pnpm 12.10.1 with `npm install -g` and does not use corepack ([deployment/install.md](../deployment/install.md#2-pnpm)).
 - Node is pinned by range, `>=22.18`, enforced by `engine-strict=true` (`package.json:7-9`, `.npmrc:1`).
 - `allowBuilds: esbuild: true` lets esbuild's install script run; others are not allowed to (`pnpm-workspace.yaml:1-2`).
@@ -18,7 +18,7 @@ Version numbers below are those installed from the lockfile on 2026-10-20 (`node
 | --------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `openapi-fetch` | `^0.17.0` | 0.17.0    | The typed riot-proxy client: path templates and parameters checked against the generated types (`src/lib/server/proxy.ts:2,144-150`) | ADR-006: about 6 kB, one dependency; replaces re-typing riot-proxy's paths by hand. Listed under `devDependencies` since ADR-052, so adapter-node bundles it into `build/` and a release needs no `node_modules` |
 
-It and everything else, Svelte and SvelteKit included, is bundled into `build/` at build time: `package.json` has no `dependencies`, and adapter-node leaves only those outside the bundle. A release tarball therefore runs with no `node_modules` (ADR-052; `scripts/package.test.sh` checks it). Production still installs all dependencies while it builds on the host; the preview image prunes to production dependencies after building (`Dockerfile:12`), which leaves none.
+It and everything else, Svelte and SvelteKit included, is bundled into `build/` at build time: `package.json` has no `dependencies`, and adapter-node leaves only those outside the bundle. A release tarball therefore runs with no `node_modules` (ADR-052; `scripts/package.test.sh` checks it). Production still installs all dependencies while it builds on the host.
 
 ## Framework and build
 
@@ -64,14 +64,12 @@ It and everything else, Svelte and SvelteKit included, is bundled into `build/` 
 
 ## Tools outside `package.json`
 
-| Tool                      | Version seen                                               | Used for                                                                       |
-| ------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Node                      | 22.23.3 (development), Ubuntu 26.04's package (production) | Runtime and tooling                                                            |
-| pnpm                      | 12.10.1                                                    | Package manager                                                                |
-| just                      | 1.58.0                                                     | Task runner (`justfile`)                                                       |
-| Docker                    | not pinned                                                 | `just image` and the dormant preview VM (`Dockerfile`)                         |
-| shellcheck                | optional                                                   | Run by `deploy/proxmox/test.sh` when installed (`deploy/proxmox/README.md:98`) |
-| riot-proxy release binary | 2.7.0                                                      | Source of `openapi/riot-proxy.json` (`README.md:56-65`)                        |
+| Tool                      | Version seen                                               | Used for                                                |
+| ------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| Node                      | 22.23.3 (development), Ubuntu 26.04's package (production) | Runtime and tooling                                     |
+| pnpm                      | 12.10.1                                                    | Package manager                                         |
+| just                      | 1.58.0                                                     | Task runner (`justfile`)                                |
+| riot-proxy release binary | 2.7.0                                                      | Source of `openapi/riot-proxy.json` (`README.md:56-65`) |
 
 ## Updating dependencies
 
@@ -79,5 +77,5 @@ There is no Dependabot configuration, so updates are ordinary tasks (CI runs the
 
 ---
 
-**Sources:** `package.json:L6-L50`, `pnpm-workspace.yaml:L1-L12`, `.npmrc:L1`, `Dockerfile:L7,L12`, `vite.config.ts:L1-L37`, `justfile:L15-L25`, `tsconfig.json:L4`, `README.md:L16-L17,L56-L65,L109`, `CLAUDE.md:L26-L27`, `deploy/proxmox/README.md:L98`, `docs/DECISIONS.md:L5-L79` (ADR-001, ADR-004, ADR-005, ADR-006), `node_modules/*/package.json` (installed versions), `build/server/chunks/static-data.js` (runtime import)
+**Sources:** `package.json:L6-L50`, `pnpm-workspace.yaml:L1-L12`, `.npmrc:L1`, `vite.config.ts:L1-L37`, `justfile:L15-L25`, `tsconfig.json:L4`, `README.md:L16-L17,L56-L65,L109`, `CLAUDE.md:L26-L27`, `docs/DECISIONS.md:L5-L79` (ADR-001, ADR-004, ADR-005, ADR-006), `node_modules/*/package.json` (installed versions), `build/server/chunks/static-data.js` (runtime import)
 **Last verified:** 2026-11-03 against commit `2658c48`

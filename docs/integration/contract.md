@@ -75,7 +75,7 @@ Semantics the site relies on:
 - Without `role`, set builds name the champion's most-played role (`docs/DECISIONS.md:441`).
 - `refreshAvailableIn` is seconds until another refresh is allowed (`riot-proxy:src/routes/players/refresh.rs:22-28`).
 - A match id's platform prefix must match `region`, or riot-proxy answers `BAD_REGION`; the site checks first (`src/lib/server/match.ts:39`, `riot-proxy:src/routes/lol.rs:53-64`).
-- The rotations and status routes pass Riot's champion-v3 and lol-status-v4 payloads through with an empty schema; the shapes above are what the site assumes of Riot's, and a payload that does not fit leaves its card out and is logged, not an error page (ADR-067).
+- The rotations and status routes pass Riot's champion-v3 and lol-status-v4 payloads through with an empty schema; the shapes above are what the site assumes of Riot's, and a payload that does not fit leaves its card out and is logged, not an error page (ADR-071).
 - `MatchSummary.gameVersion` is the game build (`16.20.824.8524`), not a Data Dragon version, despite the spec's wording; the site maps it by `major.minor` (`docs/DECISIONS.md:143`, `src/lib/domain/matches.ts:160-163`).
 
 ## Headers the site reads

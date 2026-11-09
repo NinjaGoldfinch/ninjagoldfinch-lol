@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ url, untrack, setHeaders }) => {
 	const region = pickRegion(url.searchParams);
 
 	// One URL per region, for links and the edge cache: `/` for Oceania,
-	// `/?region=kr` otherwise; anything else is tidied (ADR-067).
+	// `/?region=kr` otherwise; anything else is tidied (ADR-071).
 	const query = untrack(() => frontQuery(region));
 	if (untrack(() => url.search) !== query) redirect(307, url.pathname + query);
 

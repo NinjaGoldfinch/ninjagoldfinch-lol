@@ -3,7 +3,7 @@
 	import { formatAge } from '#lib/domain/age.ts';
 	import { allRunning, type PlatformStatus, type StatusItem } from '#lib/domain/front-page.ts';
 
-	/** Riot's status feed for a region: open incidents and maintenances (ADR-067). */
+	/** Riot's status feed for a region: open incidents and maintenances (ADR-071). */
 	let {
 		status,
 		checkedSeconds,
