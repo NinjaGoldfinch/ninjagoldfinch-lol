@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { LeagueEntry } from '#lib/api/riot.ts';
-import { describeRanks, titleCase } from '#lib/domain/ranks.ts';
+import type { components } from '#lib/api/schema.d.ts';
+import { toLeagueEntries } from '#lib/api/riot.ts';
+import { describeRanks, soloRankLabel, titleCase } from '#lib/domain/ranks.ts';
+import { PROFILE_PATH, fixtureBody } from './fixtures.ts';
 
 const entry = (over: Partial<LeagueEntry>): LeagueEntry => ({
 	queueType: 'RANKED_SOLO_5x5',
@@ -48,5 +51,21 @@ describe('titleCase', () => {
 	it('keeps the first letter and lowers the rest', () => {
 		expect(titleCase('EMERALD')).toBe('Emerald');
 		expect(titleCase('GRANDMASTER')).toBe('Grandmaster');
+	});
+});
+
+describe('soloRankLabel', () => {
+	it('is the Solo/Duo rank as the profile shows it', () => {
+		const profile = fixtureBody(PROFILE_PATH) as components['schemas']['ProfileBody'];
+		expect(soloRankLabel(toLeagueEntries(profile.league))).toBe('Emerald III');
+		expect(soloRankLabel([entry({ queueType: 'RANKED_FLEX_SR' }), entry({ tier: 'MASTER' })])).toBe(
+			'Master'
+		);
+	});
+
+	it('is undefined when unranked in Solo/Duo or unknown', () => {
+		expect(soloRankLabel([])).toBeUndefined();
+		expect(soloRankLabel(null)).toBeUndefined();
+		expect(soloRankLabel([entry({ queueType: 'RANKED_FLEX_SR' })])).toBeUndefined();
 	});
 });

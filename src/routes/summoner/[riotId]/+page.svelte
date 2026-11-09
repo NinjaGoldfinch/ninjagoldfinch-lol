@@ -10,7 +10,7 @@
 	import { summariseChampions } from '#lib/domain/champion-summary.ts';
 	import { describeError } from '#lib/domain/error-view.ts';
 	import { actionUrl } from '#lib/domain/match-filters.ts';
-	import { describeRanks } from '#lib/domain/ranks.ts';
+	import { describeRanks, soloRankLabel } from '#lib/domain/ranks.ts';
 	import { rememberSearch } from '#lib/recent-storage.ts';
 	import type { PageProps } from './$types';
 
@@ -27,9 +27,16 @@
 	const queueName = $derived(profile.queueOptions.find((q) => q.id === profile.filter.queue)?.name);
 
 	// Runs again when one profile leads to another: SvelteKit keeps this
-	// component and only its data changes.
+	// component and only its data changes. The icon, region and rank make the
+	// front page's card (ADR-068).
 	$effect(() => {
-		rememberSearch(data.riotId);
+		rememberSearch({
+			...data.riotId,
+			region: data.region.slug,
+			profileIconId: data.summoner?.profileIconId,
+			rank: soloRankLabel(data.ranks),
+			viewedAt: Date.now()
+		});
 	});
 </script>
 

@@ -42,3 +42,10 @@ export function describeRanks(entries: LeagueEntry[]): RankView[] {
 export function titleCase(word: string): string {
 	return word.charAt(0) + word.slice(1).toLowerCase();
 }
+
+/** The Solo/Duo rank as the profile shows it (`Emerald III`), for recent searches; undefined when unranked or unknown. */
+export function soloRankLabel(entries: LeagueEntry[] | null): string | undefined {
+	return entries
+		? describeRanks(entries).find((r) => r.queue === QUEUES.RANKED_SOLO_5x5)?.tier
+		: undefined;
+}

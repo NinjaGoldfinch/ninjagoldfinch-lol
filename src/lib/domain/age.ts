@@ -9,3 +9,8 @@ export function formatAge(seconds: number): string {
 function plural(n: number, unit: string): string {
 	return `${n} ${unit}${n === 1 ? '' : 's'} ago`;
 }
+
+/** How long ago a moment was, in words, from ms timestamps; a moment ahead of `now` is `just now`. */
+export function ageSince(then: number, now: number): string {
+	return formatAge(Math.max(0, Math.floor((now - then) / 1000)));
+}

@@ -132,7 +132,7 @@ Owner request 2026-11-09: a search-first front page with live cards (IMPLEMENTAT
 
 - [x] FP-01 Hero and the top-win-rate card; `live` cache policy; 2 s front-page deadline (ADR-066) — #139
 - [x] FP-02 Free rotation and server status per region, `?region=` (ADR-071) — #140
-- [ ] FP-03 Recent searches as cards with icon, region, rank and age (ADR-068)
+- [x] FP-03 Recent searches as cards with icon, region, rank and age (ADR-068) — #141
 
 ## Brought forward
 

@@ -1142,3 +1142,21 @@ Date: 2026-11-09 · Task: FIX-12
 - Ids defined only in `PROGRESS.md` are not checked for existence: a mistyped FIX id passes.
 - Only a list item at column 0 with a checkbox counts; sub-bullets and prose that mention an id are not read.
 - `tests/unit/gate.test.ts` pins the step in the gate's order; `tests/unit/progress-check.test.ts` covers both rules on fixtures and the script's exit codes, and that the repository as it is passes.
+
+## ADR-068: recent searches keep the profile's region, icon and Solo/Duo rank; older entries still read
+
+Date: 2026-11-09 · Task: FP-03
+
+**Context.** Recent searches stored a Riot ID only (ADR-037), shown as plain links. The new front page (ADR-066) shows them as cards with the profile icon, the region, the rank and how long ago each was viewed. The profile page that records a search already has all of it. `/` must not call riot-proxy for these cards, and the list must still render nothing before hydration, since it lives in the visitor's browser.
+
+**Decision.**
+
+- **The profile records more.** Each view stores `region` (the profile's slug), `profileIconId`, `rank` (the Solo/Duo tier as the profile shows it, such as `Emerald III`, from `describeRanks` through `soloRankLabel`; never an estimate) and `viewedAt` (ms since the epoch). The key stays `recent-searches`, and the list still holds at most eight, newest first, one per player.
+- **Every field but the Riot ID is optional.** `parseRecent` keeps each one only when it is well-formed: a region `REGIONS` knows, a non-negative integer icon, a non-empty rank, a positive finite time. A malformed field is dropped, not its entry. Entries stored before this change read as bare Riot IDs. Entries from before ADR-037 carry the region the profile loaded with, which is kept.
+- **The card** shows the icon from the front page's held patch (`profileIconUrl`), or the game name's initial when there is no patch or icon. Its line reads `Oceania · Emerald III · viewed 2 minutes ago`, with whatever parts the entry has, and is left out when it has none. Ages come from `formatAge`, counted from the moment the list is read after mount.
+
+**Consequences.**
+
+- Each entry grows by a few dozen bytes in `localStorage`, still at most eight.
+- No migration step: old entries show as plain cards and fill in as their profiles are viewed again. An icon, rank or region shown is as of the last view; it changes when the player's profile is next opened.
+- The icon is fetched from Data Dragon at the front page's patch. An icon newer than that patch shows as a broken image until the patch moves, as on the profile.
