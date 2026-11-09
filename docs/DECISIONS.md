@@ -1083,6 +1083,23 @@ Date: 2026-11-09 · Task: P5-01 (dropped; owner request)
 - A LAN preview, if wanted again, is a new task: a release tarball runs anywhere with Node 22 (ADR-052), so it need not be Docker.
 - The ADRs and notes that describe the preview VM stay as the record of what was.
 
+## ADR-070: the P5 exit check reads riot-proxy as published only through its tunnel
+
+Date: 2026-11-09 · Task: P5
+
+**Context.** The plan's P5 exit check asks that "riot-proxy is unreachable from outside the VM". When the plan was written riot-proxy was a private service for this site. Since then riot-proxy has published itself at `https://api.ninjagoldfinch.lol` through the Tunnel, with key authentication and a WAF over its metrics, dashboard, dev, admin and docs paths, and `admin.ninjagoldfinch.lol` behind Cloudflare Access; staging reads from it with a key of its own (ADR-058). That is riot-proxy's decision, made in its own repo, and the site does not change it.
+
+**Decision.**
+
+- **The P5 exit check changes:** "`https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes". What riot-proxy serves without a key is its own decision, recorded in riot-proxy.
+- As of riot-proxy 2.10.0, it answers some routes without a key on purpose, and the check does not fail on them: `/healthz`, `/readyz`, `/openapi.json`, `/openapi.yaml`, `/ddragon/*` (Data Dragon images and data files) and the `/v1/ws` handshake. The handshake reads the key from the `Authorization: Bearer` header or the `?token=` query parameter; a missing or bad key still gets its upgrade, then an error frame and a `4401` close, and a plain `GET` gets `400`. `/readyz` returns internal readiness detail to anyone: the Riot key's cache scope (a truncated hash), the SQLite reader and writer state, the version. The scope fingerprints the Riot key, so it would show a rotation without exposing the key. Whether to keep that is riot-proxy's call; it is noted here and not changed.
+- The check is run from outside the host, against its public address and the public hostnames, without a key.
+
+**Consequences.**
+
+- What the original check protected still holds: riot-proxy's port is closed on the public interface, where only SSH listens (`docs/deployment/security.md`), and from outside riot-proxy is reached only through the Tunnel, where a data request needs a key and the internal pages are blocked at the edge. What it serves without a key is its own decision, recorded in riot-proxy.
+- Whether riot-proxy stays public, and how it is guarded, is riot-proxy's to record and change.
+
 ## ADR-071: the front page's region in the query, Oceania by default; Riot's rotation and status payloads parsed, not typed
 
 Date: 2026-11-09 · Task: FP-02

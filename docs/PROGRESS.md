@@ -118,6 +118,8 @@ Owner request 2026-11-05: the site answers the shared status contract the status
 
 ## P5 — Production
 
+Exit check (amended in ADR-070): `https://ninjagoldfinch.lol` serves a profile over HTTPS; riot-proxy's port is not reachable on the host's public address; at `https://api.ninjagoldfinch.lol` a data request without a key is refused with `401`, and riot-proxy's internal pages (metrics, dashboard, dev, admin, docs) are blocked at the edge with `403`; a rollback to the previous tag takes under five minutes. Passed 2026-11-09 (below).
+
 - [x] P5-03 Security headers on every response through `handle`, a hash-based CSP through SvelteKit's `csp` option, and `/` and `/about` rendered per request with a 10-minute `static` policy (ADR-055) — #107; Cloudflare Web Analytics allowed in the CSP (ADR-056) — #109
 - [x] P5-02 Cloudflare: the cache rule recorded, a rate-limiting rule on `/summoner/*` and `/match/*` (20 per IP per 10 s, then blocked), `ADDRESS_HEADER` left unset (ADR-065) — #135 (check below)
 - [x] P5-04 First tagged release deployed, and a rollback rehearsed: `v1.0.2` → `v1.0.1` → `v1.0.2` with `ngf-deploy`, under 30 s each (check below) — #111
@@ -313,6 +315,51 @@ not limited  25 x GET /champions, back to back
 ```
 
 The cache rule, read in the dashboard: `(http.host eq "ninjagoldfinch.lol")`, eligible for cache, edge TTL from `Cache-Control` and bypass without it, browser TTL from the origin, other settings at their defaults.
+
+### P5 exit check (amended, ADR-070) — passed 2026-11-09
+
+From outside the host (a cloud session, not on the host's network), 2026-11-08, shortly before 12:00 UTC, with production on `v1.0.4`. The host address is `ngf-prod-syd1`'s public address, the prod environment's `DEPLOY_HOST` variable (`gh variable list -e prod`), not written here.
+
+```text
+profile over HTTPS   GET https://ninjagoldfinch.lol/summoner/NinjaGoldfinch-OCENZ
+                     200, certificate verified, <title>NinjaGoldfinch#OCENZ · Oceania, 10 match links
+                     cache-control: public, s-maxage=60, stale-while-revalidate=300
+
+host ports           TCP connect to the public address
+                     22 open; 80, 443, 3000, 8080 closed or filtered
+                     curl http://<address>:3000/healthz and :8080/healthz: no connection
+
+riot-proxy, no key   https://api.ninjagoldfinch.lol
+                     GET /v1/static/versions         401 UNAUTHORIZED "Missing or invalid API key"
+                     GET /metrics                    403 (WAF)
+                     GET /v1/admin/consumers         403 (WAF)
+                     GET /dashboard                  403 (WAF)
+
+no key, 2026-11-08   the same hostname, probed again at about 13:10 UTC (riot-proxy 2.10.0 by its /readyz)
+                     GET /dev                        403 (WAF)
+                     GET /docs                       403 (WAF)
+                     the rest are served without a key by riot-proxy's design (ADR-070):
+                     GET /healthz                    200 {"ok":true}
+                     GET /readyz                     200 ok, sqlite, limiter, keyScope, SQLite reader and writer state, version
+                     GET /openapi.json               200 application/json
+                     GET /openapi.yaml               200 application/yaml
+                     GET /ddragon/15.22.1/img/champion/Ahri.png   200 image/png (an unknown version: 404)
+                     GET /v1/ws                      400 "Connection header did not include 'upgrade'"; the key is read at the
+                                                     handshake (Bearer header or ?token=), and a missing or bad key gets
+                                                     the upgrade, then an error frame and a 4401 close
+                     GET /admin                      404 NOT_FOUND (no such route; the admin API is under /v1/admin/, blocked above)
+```
+
+Rollback, against five minutes: met by the deploy timings through the current `deploy.yml`, with the ADR-060 caveat below.
+
+- The P5-04 rehearsal above, `v1.0.2` → `v1.0.1` → `v1.0.2` in under 30 s each, ran on 2026-11-04 at about 20:20 UTC, four days before this check. It ran before `deploy.yml` gained staging deploys (#112, ADR-057, merged 21:21 UTC) and the prod gate (#118, ADR-060, merged 22:32 UTC); the file has not changed since.
+- Through the current `deploy.yml`, the three production deploys of `v1.0.4` took 35 s, 38 s and 41 s from start to the run's success, approval included (runs 41926382936, 41944669229 and 41952695602, 2026-11-04 and 2026-11-05 UTC). Each passed the gate on `v1.0.4`'s `staging/smoke`, found the tarball already on the host and skipped the upload, as a rollback does. Two later runs took 2 min 51 s and 1 min 39 s, most of it waiting for approval (41952801026, 41953005384). All were deploys of the version already live, not of an earlier one.
+- A rollback goes through the same gate. The previous tag, `v1.0.3`, carries no commit status: it was live in prod on 2026-11-04 (run 41919591011) before the gate, but is not among the releases marked `prod/deployed` (`docs/deployment/releases.md`). `v1.0.4` → `v1.0.3` would be refused after the approval unless `v1.0.3` is first deployed to staging, which runs the smoke test and sets `staging/smoke`, or the deploy uses `break_glass`. `v1.0.2` carries `prod/deployed` and would pass. Times are from `gh run view`; statuses from `gh api repos/NinjaGoldfinch/ninjagoldfinch-lol/commits/<sha>/statuses`, 2026-11-09.
+- `ngf-deploy`, which the owner uses to start and wait for these runs, lives outside this repository; its history since the rehearsal is not verified here.
+
+P5-01 is dropped (ADR-067, #138): its image checks were for the Docker preview path, which is removed, and production runs without Docker (ADR-038).
+
+Tagged `phase-P5` on the commit that records this check. Paused for owner review.
 
 ### SPD-06 check — passed 2026-11-03
 
