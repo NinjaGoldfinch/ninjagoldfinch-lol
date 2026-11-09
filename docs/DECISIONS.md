@@ -1126,22 +1126,23 @@ Date: 2026-11-09 · Task: FP-02
 
 ## ADR-069: the gate reads `docs/PROGRESS.md`'s ticks
 
-Date: 2026-11-09 · Task: FIX-12
+Date: 2026-11-09 · Task: FIX-12 · Duplicate rule widened to every task item by FIX-15 (review of #142)
 
 **Context.** Nothing in the gate read `docs/PROGRESS.md`: `docs/_meta/check-docs.py` skips it with the plan and the ADRs, and `scripts/check.sh` only formats it. The review of #134 found that merging it would have left two `[x] P5-05` lines, since #136 had already ticked the task, and CI would have passed. The ticks are the record of what is done and which PR did it; a tick repeated, or made for a task the plan never defined, was a record error nothing caught.
 
 **Decision.**
 
-- `scripts/check-progress.ts`, run by `scripts/check.sh` after Prettier, fails the gate when a task id is ticked (`- [x]`) or dropped (`- [~]`) more than once in `docs/PROGRESS.md`, or when a ticked id belongs to a family the plan defines and is not a task in `docs/IMPLEMENTATION.md`.
-- The families are read from the plan's own task items (`- [ ] P5-01 …`), not listed in the script: today P0 to P5, SPD, VS and RV. FIX, DEP and STAT are defined only in `PROGRESS.md`, as owner requests after the plan, so their ids are checked for duplicates only.
+- `scripts/check-progress.ts`, run by `scripts/check.sh` after Prettier, fails the gate when a task id appears more than once as a task item in `docs/PROGRESS.md`, whether open (`- [ ]`), ticked (`- [x]`) or dropped (`- [~]`), or when a ticked or dropped id belongs to a family the plan defines and is not a task in `docs/IMPLEMENTATION.md`. As first written, the duplicate rule counted only ticked and dropped items, so a ticked item with an open copy of it, or two open copies, passed, and a section git repeated in a merge was caught only if one of its lines was ticked in both copies (review of #142, FIX-15). Every task item now counts, whatever its state; the unknown-id rule still reads ticked and dropped items only.
+- The families are read from the plan's own task items (`- [ ] P5-01 …`), not listed in the script: today P0 to P5, FP, SPD, VS and RV. FIX, DEP and STAT are defined only in `PROGRESS.md`, as owner requests after the plan, so their ids are checked for duplicates only.
 - A TypeScript script under `scripts/`, run by Node directly as `tests/record-fixture.ts` is, and imported by its unit test; no dependency added. It is not part of `check-docs.py`, which is a docs check run by hand, outside the gate, and skips `PROGRESS.md` on purpose.
 
 **Consequences.**
 
 - A tick for a new task in a family the plan defines needs the task in `IMPLEMENTATION.md` first, or the gate fails. A new family can start in `PROGRESS.md` alone, as DEP, STAT and FIX did.
 - Ids defined only in `PROGRESS.md` are not checked for existence: a mistyped FIX id passes.
-- Only a list item at column 0 with a checkbox counts; sub-bullets and prose that mention an id are not read.
-- `tests/unit/gate.test.ts` pins the step in the gate's order; `tests/unit/progress-check.test.ts` covers both rules on fixtures and the script's exit codes, and that the repository as it is passes.
+- Only a list item at column 0 with a checkbox counts; sub-bullets and prose that mention an id are not read. An open item for a task already ticked elsewhere fails: a task is listed once, in the state it is in.
+- The script runs its check when Node is started with it, also through a symlinked path: it compares its own path with the real path of `process.argv[1]` (FIX-15). Before, through a symlink it did nothing and exited 0; the gate, which runs it by its plain path, was not affected.
+- `tests/unit/gate.test.ts` pins the step in the gate's order; `tests/unit/progress-check.test.ts` covers both rules on fixtures, including an id listed twice with one copy open and a section duplicated with different ticks in each copy, and the script's exit codes, also through a symlinked path, and that the repository as it is passes.
 
 ## ADR-068: recent searches keep the profile's region, icon and Solo/Duo rank; older entries still read
 
