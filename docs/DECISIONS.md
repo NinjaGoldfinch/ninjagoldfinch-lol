@@ -1146,7 +1146,7 @@ Date: 2026-11-09 · Task: FIX-12 · Duplicate rule widened to every task item by
 
 ## ADR-068: recent searches keep the profile's region, icon and Solo/Duo rank; older entries still read
 
-Date: 2026-11-09 · Task: FP-03
+Date: 2026-11-09 · Task: FP-03 · What a Refresh records refined by ADR-073
 
 **Context.** Recent searches stored a Riot ID only (ADR-037), shown as plain links. The new front page (ADR-066) shows them as cards with the profile icon, the region, the rank and how long ago each was viewed. The profile page that records a search already has all of it. `/` must not call riot-proxy for these cards, and the list must still render nothing before hydration, since it lives in the visitor's browser.
 
@@ -1186,3 +1186,17 @@ Date: 2026-11-09 · Task: FIX-13 (review of #140; refines ADR-071)
 - A degraded `/` costs riot-proxy on every view. With a card missing, `/` is sent `no-store` (ADR-066), so the edge keeps nothing and each view makes three riot-proxy calls (analytics, rotation and status; the patch and lookups are held in memory), each counted against the site key's quota (600 a minute by default). `/` has no edge rate limit: the one rule covers `/summoner/` and `/match/` only (ADR-065). While riot-proxy, Riot's status or its rotation is failing, or for `/?region=` of a platform riot-proxy refuses, the front page's traffic reaches riot-proxy in full. ADR-071's consequence that riot-proxy answers these calls from its own cache of Riot holds for a working platform, not for this. A rate limit or a fallback held in memory for a degraded `/` would be a later decision.
 - An entry kept under a fallback is logged on every render of that region's `/` while Riot's feed holds it; the edge still keeps the page for a minute at a time, per Cloudflare data centre.
 - The log lines are in `docs/integration/monitoring-hooks.md` and `docs/operations/troubleshooting.md` (entry 22).
+
+## ADR-073: a Refresh counts as a view of the profile
+
+Date: 2026-11-09 · Task: FIX-14 (review of #141; refines ADR-068)
+
+**Context.** The profile records each view under recent searches from an effect (ADR-068). The effect read the load's `data`, while the page renders `profile`, which is `form?.profile ?? data`: after a Refresh, the action's fresh copy (ADR-012). The Refresh form calls `update({ invalidateAll: false })` on purpose, so `data` does not change and the effect neither ran again nor saw the new values. A profile shown at Emerald III from riot-proxy's cache and refreshed to Emerald II kept a front-page card reading Emerald III, with the earlier view time.
+
+**Decision.** A Refresh counts as a view. The effect records from `profile`: its Riot ID, region slug, the summoner's `profileIconId` and `soloRankLabel` of its ranks, and the time. It runs again when the refresh's result arrives, as it does when one profile leads to another.
+
+**Consequences.**
+
+- After a Refresh, the card shows the refreshed icon and rank and "viewed just now". Without JavaScript nothing is recorded, by a view or a Refresh, as before.
+- ADR-068's "it changes when the player's profile is next opened" now reads "next opened or refreshed".
+- The refresh fixture (`tests/fixtures/profile-ninjagoldfinch-refresh.json`) was edited by hand to Emerald II, 12 LP and icon 29, so a test can tell a refresh's values from the plain profile's (Emerald III, icon 7173). Its note says so.
