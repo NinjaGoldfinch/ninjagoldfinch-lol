@@ -82,7 +82,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-13 Front-page cards: a status entry without a title or an id kept under a generic one and logged, not read as all clear; a rotation with no champions to show unavailable and not cached; the Middle East left out until riot-proxy serves `me1`; the region picker keeps the scroll; the front page's log lines in the operator docs; the cost of a degraded `/` (ADR-072; review of #140) — #146
 - [x] FIX-14 Recent-search cards: a Refresh counts as a view, so the card shows the refreshed icon, rank and time (ADR-073); an unranked player's line and a card without a patch tested; the docs on what the list holds brought up to date; `architecture/components.md` and `workflows/testing.md` re-read in full and corrected (review of #141) — #147
 - [x] FIX-15 The tick check counts every task item for duplicates, ticked or not, so a section a merge repeated fails; it also runs when started through a symlinked path; README.md and CLAUDE.md list it among the gate's steps, checked by a test (ADR-069; review of #142) — #144
-- [x] FIX-16 The monitoring docs state only what is known of the outside check: a heartbeat from `ngf-mon-syd1` to Healthchecks.io, whose public source settles it; the `/healthz` fetch, the ping's dependence on it and the check's period marked unverified, with gaps rows; the runbook checks the monitoring box first (review of #143) — #145
+- [x] FIX-16 The monitoring docs state only what is known of the outside check: a heartbeat from `ngf-mon-syd1` to Healthchecks.io, whose public source settles it; the `/healthz` fetch, the ping's dependence on it and the check's period marked unverified, with gaps rows; the runbook checks the monitoring box first; stale statements in the monitoring and deployment docs corrected, each re-read in full (review of #143) — #145
 
 ## RV — fixes from the code review of 2026-11-03
 
@@ -342,6 +342,8 @@ portal         Riot Developer Portal, the product's page: https://ninjagoldfinch
 ```
 
 Note, 2026-11-09 (FIX-16, review of #143): ninja-monitor's public repository, `NinjaGoldfinch/ninja-monitor` at `v0.2.3` (its default branch on that date), has no setting that fetches a URL. Its heartbeat is a GET to one secret URL every 60 s by default, independent of sampling and alerts (`src/heartbeat.rs:1-28`, `src/config.rs:143-161`); the configuration refuses unknown keys (`src/config.rs:14-35`), and a service is watched through its systemd unit, not over HTTP. ninja-ingest, in the same repository, has a heartbeat of its own that waits on its database. So the heartbeat to Healthchecks.io matches the published source, and the fetch of `https://ninjagoldfinch.lol/healthz` from `ngf-mon-syd1` is unverified: nobody has looked at what runs on that host. The recorded answers above are unchanged; the monitoring docs now state only the heartbeat as known (`docs/integration/monitoring-hooks.md`, "From outside"; `docs/_meta/gaps.md`).
+
+Owner, 2026-11-09: P5-05 stays ticked.
 
 ### P5 exit check (amended, ADR-070) — passed 2026-11-09
 

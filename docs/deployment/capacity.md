@@ -10,10 +10,10 @@ The site is small next to riot-proxy. It keeps no data, so its disk use is fixed
 
 | Process            | Budget (ninja-monitor alert) | Source                                                            |
 | ------------------ | ---------------------------- | ----------------------------------------------------------------- |
-| riot-proxy         | 2 GiB                        | `riot-proxy:docs/design/12-object-storage-and-hosting.md:834-835` |
+| riot-proxy         | 2 GiB                        | `riot-proxy:docs/design/12-object-storage-and-hosting.md:841-842` |
 | ninjagoldfinch.lol | 1 GiB                        | same                                                              |
 | cloudflared        | 512 MiB                      | same                                                              |
-| host               | alert below 15 % free        | `riot-proxy:docs/design/12-object-storage-and-hosting.md:836`     |
+| host               | alert below 15 % free        | `riot-proxy:docs/design/12-object-storage-and-hosting.md:842-843` |
 
 The rest of the 12 GB is the kernel's page cache, which riot-proxy's SQLite relies on; ADR-142 chose the host for "RAM for SQLite's page cache and disk room for the archive" (`riot-proxy:docs/DECISIONS.md:1509`).
 
@@ -46,28 +46,30 @@ Node serves requests on one thread, so the site uses at most about one of the si
 
 **Measured on production** (ADR-039, 2026-10-15): `/champions` and `/champions/ahri` 8–15 ms with riot-proxy warm; a champion page's first view after an analytics rebuild about 200 ms; through Cloudflare `MISS` 55–69 ms, `HIT` 25–30 ms (`docs/DECISIONS.md:523-529`).
 
-Cached pages never reach the host: the edge serves them for `s-maxage` and `stale-while-revalidate` ([data/caching.md](../data/caching.md)). The host's CPU alert is above 90 % for 20 minutes (`riot-proxy:docs/design/12-object-storage-and-hosting.md:836-837`); riot-proxy's background jobs, not the site, are what would trigger it.
+Cached pages never reach the host: the edge serves them for `s-maxage` and `stale-while-revalidate` ([data/caching.md](../data/caching.md)). The host's CPU alert is above 90 % for 20 minutes (`riot-proxy:docs/design/12-object-storage-and-hosting.md:843-844`); riot-proxy's background jobs, not the site, are what would trigger it.
 
 ## The real throughput limit: riot-proxy and the Riot key
 
-An uncached profile page or Refresh can make riot-proxy call Riot. The production Riot key is a personal key with 100 requests per 2 minutes (`riot-proxy:docs/DECISIONS.md:1509`). riot-proxy caches Riot responses and reserves a share of each rate-limit bucket for interactive requests ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md)); when it cannot answer in time it returns `RATE_LIMITED` and the site shows 429. The site's own consumer quota defaults to 600 requests a minute (`riot-proxy:src/consumers.rs:14`), and one profile view costs two riot-proxy calls (profile and match list), plus the patch and Data Dragon lookups when they are not already held in memory (`src/lib/server/profile.ts:76-114`). Match and champion pages cost no Riot calls once riot-proxy has the match archived or the analytics computed.
+An uncached profile page or Refresh can make riot-proxy call Riot. The production Riot key is a personal key with 100 requests per 2 minutes (`riot-proxy:docs/DECISIONS.md:1509`). riot-proxy caches Riot responses and reserves a share of each rate-limit bucket for interactive requests ([architecture/concurrency-and-rate-limiting.md](../architecture/concurrency-and-rate-limiting.md)); when it cannot answer in time it returns `RATE_LIMITED` and the site shows 429. The site's own consumer quota defaults to 600 requests a minute (`riot-proxy:src/consumers.rs:14`), and one profile view costs two riot-proxy calls (profile and match list), plus the patch and Data Dragon lookups when they are not already held in memory (`src/lib/server/profile.ts:71-116`). Match and champion pages cost no Riot calls once riot-proxy has the match archived or the analytics computed.
 
 **Estimate:** the site can render hundreds of pages a second; the platform can serve far fewer previously unseen players than that, bounded by the Riot key. Upgrading the Riot key, not the VPS, is the lever for more new-player traffic.
 
 ## Disk
 
-**Measured** (fresh clone at `e7c395c`, 2026-10-20):
+Since `v1.0.0` production runs releases, not a checkout (ADR-054). A release is `build/`, `package.json`, `LICENSE` and `version.json`, and needs nothing installed: adapter-node bundles every dependency (ADR-052). `build/` measured 3.3 MB at `8a2bb46` (2026-11-09). `ninja-deploy` keeps the newest 5 releases, never removing the live one or the one before it (`docs/deployment/releases.md:7`, `ninja-actions:infra/deploy.sh:164-166`), so the site's releases take under 20 MB.
 
-| Item                                                           | Size                                                             |
-| -------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `node_modules` (all dependencies, as production installs them) | 181 MB                                                           |
-| pnpm content store                                             | 170 MB (hard-linked with `node_modules` on the same file system) |
-| `build/`                                                       | 2.9 MB                                                           |
-| `.git`                                                         | 8.7 MB                                                           |
+The old checkout `/opt/ninjagoldfinch-lol` is kept as a fallback until releases have settled ([releases.md](./releases.md#6-retire-the-checkout-deploy)). **Measured** (fresh clone at `e7c395c`, 2026-10-20):
 
-So the site needs about 200–400 MB, constant over time, plus the journal. Besides that it writes two files of under 100 bytes each in `/var/lib/ninjagoldfinch-lol/` (ADR-063). Production installs dev dependencies too, because it builds on the host (`README.md:109-110`).
+| Item                                                             | Size                                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `node_modules` (all dependencies, as the checkout installs them) | 181 MB                                                           |
+| pnpm content store                                               | 170 MB (hard-linked with `node_modules` on the same file system) |
+| `build/`                                                         | 2.9 MB                                                           |
+| `.git`                                                           | 8.7 MB                                                           |
 
-The shared 120 GB is riot-proxy's problem to manage: its database was 22 GB at the move and had doubled in a day, which is why raw bodies moved to object storage (`riot-proxy:docs/DECISIONS.md:1510,1513`). ninja-monitor alerts at 70 % and 85 % disk (`riot-proxy:docs/design/12-object-storage-and-hosting.md:836`).
+So while the checkout is kept the site needs about 200–400 MB, and without it about 20 MB, constant over time, plus the journal. Besides that it writes two files of under 100 bytes each in `/var/lib/ninjagoldfinch-lol/` (ADR-063).
+
+The shared 120 GB is riot-proxy's problem to manage: its database was 22 GB at the move and had doubled in a day, which is why raw bodies moved to object storage (`riot-proxy:docs/DECISIONS.md:1510,1513`). ninja-monitor alerts at 70 % and 85 % disk (`riot-proxy:docs/design/12-object-storage-and-hosting.md:843`).
 
 > **TODO (unverified):** The journal's size limit on the host (`journalctl --disk-usage`, `SystemMaxUse=` in `/etc/systemd/journald.conf`). The site logs only failures and slow calls, so its share should be small.
 
@@ -90,15 +92,15 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 
 ## When to act
 
-| Signal                                                               | Likely meaning                                 | Action                                                      |
-| -------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------- |
-| ninja-monitor: `ninjagoldfinch-lol` over 1 GiB                       | V8 heap growth under load (see Memory)         | Check for errors; consider a heap cap; restart if needed    |
-| Many 429 pages, `proxy 429`/`503` with `RATE_LIMITED` in the journal | Riot key budget exhausted                      | riot-proxy's problem: Riot key tier, cache TTLs             |
-| `proxy slow … x-cache=MISS` lines                                    | Cold analytics slices in riot-proxy            | riot-proxy warming (ADR-039)                                |
-| Disk alert at 70 %                                                   | riot-proxy's database or backups               | riot-proxy's runbook; the site cannot free meaningful space |
-| CPU alert 90 % for 20 min                                            | riot-proxy jobs, or very high uncached traffic | Check `top`; the edge cache absorbs repeat views            |
+| Signal                                                               | Likely meaning                                 | Action                                                                                         |
+| -------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| ninja-monitor: `ninjagoldfinch-lol` over 1 GiB                       | V8 heap growth under load (see Memory)         | Check for errors; consider a heap cap; restart if needed                                       |
+| Many 429 pages, `proxy 429`/`503` with `RATE_LIMITED` in the journal | Riot key budget exhausted                      | riot-proxy's problem: Riot key tier, cache TTLs                                                |
+| `proxy slow … x-cache=MISS` lines                                    | Cold analytics slices in riot-proxy            | riot-proxy warming (ADR-039)                                                                   |
+| Disk alert at 70 %                                                   | riot-proxy's database or backups               | riot-proxy's runbook; the site can free a few hundred MB at most, by removing the old checkout |
+| CPU alert 90 % for 20 min                                            | riot-proxy jobs, or very high uncached traffic | Check `top`; the edge cache absorbs repeat views                                               |
 
 ---
 
-**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L832-L838`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14`, `docs/DECISIONS.md:L517-L541,L712`, `README.md:L104-L112`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`)
-**Last verified:** 2026-11-03 against commit `a6b406b`
+**Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L839-L845`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14` (riot-proxy at `7531561`), `ninja-actions:infra/deploy.sh:L164-L166` (at `1da68ac`), `docs/DECISIONS.md:L517-L541,L712` and ADR-052, ADR-054, ADR-063, `docs/deployment/releases.md:L7,L169-L172`, `src/lib/server/profile.ts:L71-L116`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`), `du -sh build` on 2026-11-09
+**Last verified:** 2026-11-09 against commit `8a2bb46`

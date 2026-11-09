@@ -212,7 +212,7 @@ Read from `../riot-proxy` (shallow clone at `48f32aa`, 2026-10-19; `Cargo.toml:3
 - `PROXY_URL=http://127.0.0.1:8080` (same box) (`docs/design/12-object-storage-and-hosting.md:630`).
 - Install notes for the site on the new box: `nodejs`, `git`; system user `ninjagoldfinch-lol` with home `/opt/ninjagoldfinch-lol-home`; pnpm 12.10.1 from `npm install -g` because Ubuntu's `node-corepack` 0.24 cannot load pnpm 12 (`docs/design/12-object-storage-and-hosting.md:612-615,802-806`).
 - Cloudflare Tunnel: `cloudflared` system service, `--token-file /etc/cloudflared/token`; routes `ninjagoldfinch.lol` → `:3000`, `api.ninjagoldfinch.lol` → `:8080` (WAF blocks `/metrics`, `/dashboard*`, `/dev*`, `/v1/admin*`), `admin.ninjagoldfinch.lol` → `:8080` behind Cloudflare Access (`docs/design/13-admin-dashboard.md:55-67`, `docs/design/12-object-storage-and-hosting.md:805,904-917`).
-- ninja-monitor on the box watches `riot-proxy`, `ninjagoldfinch-lol` and `cloudflared` (memory limits 2 GiB, 1 GiB, 512 MiB; down after 30 s; disk 70 % and 85 %; host memory under 15 %; CPU over 90 % for 20 min), posting to Discord (`docs/design/12-object-storage-and-hosting.md:832-838`). Not code in either repo.
+- ninja-monitor on the box watches `riot-proxy`, `ninjagoldfinch-lol` and `cloudflared` (memory limits 2 GiB, 1 GiB, 512 MiB; down after 30 s; disk 70 % and 85 %; host memory under 15 %; CPU over 90 % for 20 min), posting to Discord (`docs/design/12-object-storage-and-hosting.md:839-845`, riot-proxy at `7531561`). Not code in either repo; ninja-monitor's own public repository has its code, not this host's configuration.
 
 ### Auth and consumer keys
 

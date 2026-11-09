@@ -2,11 +2,13 @@
 
 Step by step, how to install ninjagoldfinch.lol on a new Ubuntu 26.04 server next to riot-proxy, as production `ngf-prod-syd1` was installed on 2026-10-13. It reproduces the real systemd unit; there is no reverse proxy to configure, because a Cloudflare Tunnel carries all traffic.
 
+This is the checkout install production ran from 2026-10-13 until `v1.0.0`, and the fallback ADR-054 keeps. Since `v1.0.0` production runs releases from `/srv/ninjagoldfinch-lol/current`, deployed by `ninja-deploy` (ADR-052 to ADR-054). For a new host that runs releases from the start, install the unit as in [releases.md, Setting up staging](./releases.md#setting-up-staging-once), step 2, which is this page's unit with the release as its working directory and a state directory, and skip steps 2, 4 and 5 here; the other steps apply as they are.
+
 ## Before you start
 
 - riot-proxy is installed on the same host, listening on `127.0.0.1:8080`, and healthy (`curl -s http://127.0.0.1:8080/readyz`). Installing riot-proxy is riot-proxy's documentation, not this page.
-- You have a read-scope riot-proxy consumer key for the site (production's is named `ninjagoldfinch-lol-prod`); see [integration/authentication.md](../integration/authentication.md). riot-proxy refuses `AUTH_DISABLED` in production, so the site needs a key (`riot-proxy:src/config.rs:658-662`).
-- You can add a deploy key to the private GitHub repo `NinjaGoldfinch/ninjagoldfinch-lol`.
+- You have a read-scope riot-proxy consumer key for the site (production's is named `ninjagoldfinch-lol-prod`); see [integration/authentication.md](../integration/authentication.md). riot-proxy refuses `AUTH_DISABLED` in production, so the site needs a key (`riot-proxy:src/config.rs:752-756`).
+- You can add a deploy key to the GitHub repo `NinjaGoldfinch/ninjagoldfinch-lol` (public; the checkout is cloned over SSH with that key, as production's was).
 - You have the Cloudflare account that owns the `ninjagoldfinch.lol` zone and its Tunnel.
 
 What this install creates, matching [overview.md](./overview.md#who-owns-what-on-the-host):
@@ -27,7 +29,7 @@ sudo apt-get install -y nodejs git
 node --version     # must be v22.18 or later
 ```
 
-Ubuntu 26.04's packaged Node is new enough (`riot-proxy:docs/design/12-object-storage-and-hosting.md:614`; `docs/DECISIONS.md:513`). The repo's `.npmrc` sets `engine-strict=true`, so `pnpm install` refuses an older Node (`.npmrc:1`, `package.json:7-9`).
+Ubuntu 26.04's packaged Node is new enough (`riot-proxy:docs/design/12-object-storage-and-hosting.md:621`; `docs/DECISIONS.md:513`). The repo's `.npmrc` sets `engine-strict=true`, so `pnpm install` refuses an older Node (`.npmrc:1`, `package.json:8-10`).
 
 ## 2. pnpm
 
@@ -36,7 +38,7 @@ sudo npm install -g pnpm@12.10.1
 pnpm --version     # 12.10.1
 ```
 
-The repo pins `pnpm@12.10.1` (`package.json:6`). Ubuntu 26.04's `node-corepack` (0.24) cannot load pnpm 12, so production installs it with `npm install -g` rather than `corepack enable` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-804`). If `npm` is not on the box, `sudo apt-get install -y npm` first.
+The repo pins `pnpm@12.10.1` (`package.json:7`). Ubuntu 26.04's `node-corepack` (0.24) cannot load pnpm 12, so production installed it with `npm install -g` rather than `corepack enable` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:809-811`). If `npm` is not on the box, `sudo apt-get install -y npm` first.
 
 ## 3. System user and directories
 
@@ -46,11 +48,11 @@ sudo useradd --system --create-home --home /opt/ninjagoldfinch-lol-home \
 sudo install -d -o ninjagoldfinch-lol -g ninjagoldfinch-lol /opt/ninjagoldfinch-lol
 ```
 
-The `useradd` line is the one production used (`riot-proxy:docs/design/12-object-storage-and-hosting.md:615`). The checkout directory is separate from the home so the home can hold the user's SSH key and pnpm's store.
+The `useradd` line is the one production used (`riot-proxy:docs/design/12-object-storage-and-hosting.md:622`). The checkout directory is separate from the home so the home can hold the user's SSH key and pnpm's store.
 
 ## 4. Deploy key
 
-Generate a new read-only key on this server; never copy one from another machine (`riot-proxy:docs/design/12-object-storage-and-hosting.md:617-619`).
+Generate a new read-only key on this server; never copy one from another machine (`riot-proxy:docs/design/12-object-storage-and-hosting.md:625-627`).
 
 ```sh
 sudo -H -u ninjagoldfinch-lol ssh-keygen -t ed25519 -N '' -C ninjagoldfinch-lol@$(hostname) \
@@ -71,9 +73,9 @@ sudo -H -u ninjagoldfinch-lol pnpm install --frozen-lockfile
 sudo -H -u ninjagoldfinch-lol env ORIGIN=https://ninjagoldfinch.lol pnpm build
 ```
 
-- `ORIGIN` must be given on the build command: adapter-node 6 does not read it at runtime, and form posts (Refresh) are accepted only from the origin fixed at build time (`vite.config.ts:16-19`, ADR-014, `README.md:114`). Without it the site guesses the origin from the `Host` header and assumes HTTPS.
-- The build output is `build/`; `node build` runs it (`README.md:93`).
-- The build itself never reads `PROXY_URL` or `PROXY_KEY`: env validation is skipped while building (`src/env.ts:5-10`).
+- `ORIGIN` must be given on the build command: adapter-node 6 does not read it at runtime, and form posts (Refresh) are accepted only from the origin fixed at build time (`vite.config.ts:30-33`, ADR-014, `README.md:207`). Without it the site guesses the origin from the `Host` header and assumes HTTPS.
+- The build output is `build/`; `node build` runs it (`README.md:184`).
+- The build itself never reads `PROXY_URL` or `PROXY_KEY`: env validation is skipped while building (`src/env.ts:14-18`).
 
 ## 6. Settings file
 
@@ -91,7 +93,7 @@ EOF
 sudo stat -c '%a %U' /etc/ninjagoldfinch-lol/env   # 600 root
 ```
 
-These five names are the ones production sets (owner-supplied, [inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo); `README.md:99`). `HOST=127.0.0.1` keeps the site off the public interface (ADR-038, `docs/DECISIONS.md:509`). Every setting is described in [configuration.md](./configuration.md). Never paste the key into a shell history you keep, a ticket or this repo.
+These five names are the ones production set on 2026-10-19 (owner-supplied, [inventory section 14](../_meta/inventory.md#14-owner-supplied-evidence-not-in-any-repo)). Production's settings now also hold `STATUS_TOKEN`, for `/api/status` (`README.md:192`, ADR-062); `EVENTS_URL` is optional (ADR-063). `HOST=127.0.0.1` keeps the site off the public interface (ADR-038, `docs/DECISIONS.md:509`). Every setting is described in [configuration.md](./configuration.md). Never paste the key into a shell history you keep, a ticket or this repo.
 
 ## 7. systemd unit
 
@@ -142,21 +144,21 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/champions   # 200
 sudo journalctl -u ninjagoldfinch-lol -n 20 --no-pager # "Listening on http://127.0.0.1:3000"
 ```
 
-If the service exits at once, the journal shows SvelteKit's `env_invalid` with the variable, for example `PROXY_KEY is required when NODE_ENV=production` or `PROXY_URL is required` (`src/lib/server/env.ts:10-15,47-55`). These outputs were reproduced on 2026-10-20 by running the same build with the same five variables outside systemd.
+If the service exits at once, the journal shows SvelteKit's `env_invalid` with the variable, for example `PROXY_KEY is required when NODE_ENV=production` or `PROXY_URL is required` (`src/lib/server/env.ts:12-15,61-66`). These outputs were reproduced on 2026-10-20 by running the same build with the same five variables outside systemd.
 
-`/healthz` does not touch riot-proxy (`src/routes/healthz/+server.ts:7-9`); `/champions` does, so a 503 there with a healthy `/healthz` means the site cannot use riot-proxy ([operations/troubleshooting.md](../operations/troubleshooting.md)).
+`/healthz` does not touch riot-proxy (`src/routes/healthz/+server.ts:6-9`); `/champions` does, so a 503 there with a healthy `/healthz` means the site cannot use riot-proxy ([operations/troubleshooting.md](../operations/troubleshooting.md)).
 
 ## 9. Cloudflare Tunnel
 
-There is no nginx or Caddy. `cloudflared` runs as a system service with `--token-file /etc/cloudflared/token` and forwards the public hostname to the site (`riot-proxy:docs/design/12-object-storage-and-hosting.md:803-806`).
+There is no nginx or Caddy. `cloudflared` runs as a system service with `--token-file /etc/cloudflared/token` and forwards the public hostname to the site (`riot-proxy:docs/design/12-object-storage-and-hosting.md:811-813`).
 
 If `cloudflared` is already running on the host for riot-proxy, add nothing on the host. Otherwise:
 
-1. Install `cloudflared` from Cloudflare's apt repository (`riot-proxy:docs/design/12-object-storage-and-hosting.md:804-805`).
+1. Install `cloudflared` from Cloudflare's apt repository (`riot-proxy:docs/design/12-object-storage-and-hosting.md:811-812`).
 2. Put the Tunnel token in `/etc/cloudflared/token`, root-only, and install the service so it reads `--token-file /etc/cloudflared/token`.
 3. In the Cloudflare dashboard, make sure the Tunnel has the public hostname `ninjagoldfinch.lol` → `http://127.0.0.1:3000` (`riot-proxy:docs/design/13-admin-dashboard.md:66`).
 
-Moving the Tunnel's connector to a new host needs no DNS change (`riot-proxy:docs/design/12-object-storage-and-hosting.md:532-537`).
+Moving the Tunnel's connector to a new host needs no DNS change (`riot-proxy:docs/design/12-object-storage-and-hosting.md:542-545`).
 
 > **TODO (unverified):** The exact `cloudflared` install commands and service unit on `ngf-prod-syd1` are not recorded in either repo. Read them with `systemctl cat cloudflared` and add them here.
 
@@ -173,9 +175,9 @@ Expect `cache-control: public, s-maxage=600, stale-while-revalidate=600` on `/ch
 
 - Do not use port 8080 or any of riot-proxy's paths (`/var/lib/riot-proxy`, `/etc/riot-proxy`); see [overview.md](./overview.md#who-owns-what-on-the-host).
 - A riot-proxy restart does not need a site restart; the site reconnects per request.
-- ninja-monitor watches the `ninjagoldfinch-lol` unit with a 1 GiB memory limit (`riot-proxy:docs/design/12-object-storage-and-hosting.md:832-836`); a new host needs the same entry in ninja-monitor's configuration.
+- ninja-monitor watches the `ninjagoldfinch-lol` unit with a 1 GiB memory limit (`riot-proxy:docs/design/12-object-storage-and-hosting.md:839-842`); a new host needs the same entry in ninja-monitor's configuration, by default `/etc/ninja-monitor/config.toml` (`ninja-monitor:README.md:254`, `v0.2.3`).
 
 ---
 
-**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L6-L9`, `.npmrc:L1`, `vite.config.ts:L16-L19`, `src/env.ts:L5-L10`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L7-L9`, `README.md:L89-L114`, `docs/DECISIONS.md:L171-L184,L500-L516`, `riot-proxy:src/config.rs:L658-L662`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L532-L537,L612-L627,L802-L806,L832-L836`, `riot-proxy:docs/design/13-admin-dashboard.md:L66`
-**Last verified:** 2026-11-03 against commit `6d46c74` (citations only; build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)
+**Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L7-L10`, `.npmrc:L1`, `vite.config.ts:L30-L33`, `src/env.ts:L14-L18`, `src/lib/server/env.ts:L12-L66`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L6-L9`, `README.md:L184-L207`, `docs/DECISIONS.md:L171-L184,L500-L516` and ADR-052 to ADR-054, ADR-062, ADR-063, `docs/deployment/releases.md` ("Setting up staging"), `riot-proxy:src/config.rs:L752-L756`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L542-L545,L616-L635,L808-L813,L839-L842`, `riot-proxy:docs/design/13-admin-dashboard.md:L66` (riot-proxy at `7531561`), `ninja-monitor:README.md:L254` (`v0.2.3`)
+**Last verified:** 2026-11-09 against commit `8a2bb46` (statements and citations; the build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)

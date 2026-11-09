@@ -4,26 +4,30 @@ The one list of names used across `docs/`. If a document needs a name that is no
 
 ## Services and external systems
 
-| Name (use exactly)    | What it is                                                                                                              | In diagrams as          |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Browser               | A visitor's web browser                                                                                                 | `Browser`               |
-| Cloudflare            | Cloudflare's edge: DNS, cache, WAF and the Tunnel's public side                                                         | `Cloudflare`            |
-| cloudflared           | The Tunnel connector running as a system service on the production host                                                 | `cloudflared`           |
-| ninjagoldfinch.lol    | This repo: the SvelteKit site, run in production as `node build`                                                        | `ninjagoldfinch.lol`    |
-| riot-proxy            | The API in front of Riot; owns the Riot key, caching, archive and analytics                                             | `riot-proxy`            |
-| ninja-monitor         | Per-service CPU, RAM and disk monitoring with Discord alerts                                                            | `ninja-monitor`         |
-| ninja-ingest          | ninja-monitor's central server, in the same repository: weeks of history for several hosts, with a heartbeat of its own | `ninja-ingest`          |
-| Healthchecks.io       | Pinged each minute by a heartbeat from `ngf-mon-syd1`; emails the owner when the pings stop                             | `Healthchecks.io`       |
-| Riot API              | Riot Games' developer API                                                                                               | `Riot API`              |
-| Data Dragon CDN       | `ddragon.leagueoflegends.com`, where the Browser loads game images                                                      | `Data Dragon CDN`       |
-| CommunityDragon       | `raw.communitydragon.org` (or a mirror set by `CDRAGON_URL`)                                                            | `CommunityDragon`       |
-| Onidel Object Storage | Onidel's S3-compatible storage in Sydney; riot-proxy's archive store                                                    | `Onidel Object Storage` |
-| Cloudflare R2         | Cloudflare's S3-compatible storage; riot-proxy's archive replica and backups                                            | `Cloudflare R2`         |
-| GitHub                | Hosts both repos and riot-proxy's releases                                                                              | `GitHub`                |
-| GitHub Actions        | CI for both repositories; the site's runs the gate (ADR-050)                                                            | `GitHub Actions`        |
-| mock proxy            | `tests/mock-proxy/`, a stand-in for riot-proxy that replays `tests/fixtures/`                                           | `mock proxy`            |
-| production host       | The Onidel ONI-4 VPS `ngf-prod-syd1` in Sydney that runs both services                                                  | `ngf-prod-syd1`         |
-| monitoring host       | `ngf-mon-syd1`, the former production box, now running ninja-monitor                                                    | `ngf-mon-syd1`          |
+| Name (use exactly)    | What it is                                                                                                                   | In diagrams as          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Browser               | A visitor's web browser                                                                                                      | `Browser`               |
+| Cloudflare            | Cloudflare's edge: DNS, cache, WAF and the Tunnel's public side                                                              | `Cloudflare`            |
+| cloudflared           | The Tunnel connector running as a system service on the production host                                                      | `cloudflared`           |
+| ninjagoldfinch.lol    | This repo: the SvelteKit site, run in production and staging as a release, `node build` under systemd                        | `ninjagoldfinch.lol`    |
+| riot-proxy            | The API in front of Riot; owns the Riot key, caching, archive and analytics                                                  | `riot-proxy`            |
+| ninja-monitor         | Per-service CPU, RAM and disk monitoring with Discord alerts                                                                 | `ninja-monitor`         |
+| ninja-ingest          | ninja-monitor's central server, in the same repository: weeks of history for several hosts, with a heartbeat of its own      | `ninja-ingest`          |
+| Healthchecks.io       | Pinged each minute by a heartbeat from `ngf-mon-syd1`; emails the owner when the pings stop                                  | `Healthchecks.io`       |
+| Riot API              | Riot Games' developer API                                                                                                    | `Riot API`              |
+| Data Dragon CDN       | `ddragon.leagueoflegends.com`, where the Browser loads game images                                                           | `Data Dragon CDN`       |
+| CommunityDragon       | `raw.communitydragon.org` (or a mirror set by `CDRAGON_URL`)                                                                 | `CommunityDragon`       |
+| Onidel Object Storage | Onidel's S3-compatible storage in Sydney; riot-proxy's archive store                                                         | `Onidel Object Storage` |
+| Cloudflare R2         | Cloudflare's S3-compatible storage; riot-proxy's archive replica and backups                                                 | `Cloudflare R2`         |
+| GitHub                | Hosts both repos and their releases                                                                                          | `GitHub`                |
+| GitHub Actions        | CI for both repositories; the site's runs the gate, builds releases and deploys them (ADR-050, ADR-052, ADR-053, ADR-057)    | `GitHub Actions`        |
+| ninja-actions         | `NinjaGoldfinch/ninja-actions`, the shared pipeline: the deploy action and the host scripts (ADR-050)                        | `ninja-actions`         |
+| ninja-deploy          | ninja-actions' script on each deploy host: unpacks a release, links `current`, restarts, health-checks, rolls back (ADR-053) | `ninja-deploy`          |
+| status bot            | The owner's bot that polls each service's status endpoint, here `/api/status` (ADR-062); not in this repo                    | `status bot`            |
+| events receiver       | Whatever `EVENTS_URL` points at, which takes the site's events (ADR-063); not in this repo                                   | `events receiver`       |
+| mock proxy            | `tests/mock-proxy/`, a stand-in for riot-proxy that replays `tests/fixtures/`                                                | `mock proxy`            |
+| production host       | The Onidel ONI-4 VPS `ngf-prod-syd1` in Sydney that runs both services                                                       | `ngf-prod-syd1`         |
+| monitoring host       | `ngf-mon-syd1`, the former production box, now running ninja-monitor and the site's staging copy (OVH, `ENV=staging`)        | `ngf-mon-syd1`          |
 
 ### Components inside ninjagoldfinch.lol
 
@@ -45,31 +49,35 @@ The one list of names used across `docs/`. If a document needs a name that is no
 
 ## Environments
 
-| Name                    | Site URL                                                | riot-proxy (`PROXY_URL`)             | Key                                                  | Status      |
-| ----------------------- | ------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------- | ----------- |
-| production              | `https://ninjagoldfinch.lol` (listens `127.0.0.1:3000`) | `http://127.0.0.1:8080`              | `ninjagoldfinch-lol-prod`                            | live        |
-| local dev               | Vite dev server on your machine                         | a riot-proxy you run yourself        | none if `AUTH_DISABLED=true`, else your own read key | active      |
-| test                    | `http://localhost:4173` (`node build`)                  | mock proxy `http://127.0.0.1:8787`   | placeholder `e2e-placeholder`                        | active      |
-| LAN dev proxy (dormant) | —                                                       | `http://192.168.68.46:8080`, no auth | none                                                 | not running |
+| Name                    | Site URL                                                                                                     | riot-proxy (`PROXY_URL`)                                | Key                                                  | Status      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ---------------------------------------------------- | ----------- |
+| production              | `https://ninjagoldfinch.lol` (listens `127.0.0.1:3000`)                                                      | `http://127.0.0.1:8080`                                 | `ninjagoldfinch-lol-prod`                            | live        |
+| local dev               | Vite dev server on your machine                                                                              | a riot-proxy you run yourself                           | none if `AUTH_DISABLED=true`, else your own read key | active      |
+| staging                 | `https://staging.ninjagoldfinch.lol`, behind Cloudflare Access, on `ngf-mon-syd1` (listens `127.0.0.1:3000`) | production riot-proxy, `https://api.ninjagoldfinch.lol` | `ninjagoldfinch-lol-staging`                         | live        |
+| test                    | `http://localhost:4173` (`node build`)                                                                       | mock proxy `http://127.0.0.1:8787`                      | placeholder `e2e-placeholder`                        | active      |
+| LAN dev proxy (dormant) | —                                                                                                            | `http://192.168.68.46:8080`, no auth                    | none                                                 | not running |
 
-Public hostnames on the same Tunnel: `ninjagoldfinch.lol` (the site), `api.ninjagoldfinch.lol` and `admin.ninjagoldfinch.lol` (riot-proxy).
+Public hostnames on the production Tunnel: `ninjagoldfinch.lol` (the site), `api.ninjagoldfinch.lol` and `admin.ninjagoldfinch.lol` (riot-proxy). `staging.ninjagoldfinch.lol` is on a tunnel of its own, from `ngf-mon-syd1` (ADR-057, ADR-058).
 
 ## Keys and credentials
 
 Names only. Values never appear in `docs/`.
 
-| Name                      | Holder                                                                | Purpose and scope                                                    |
-| ------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `PROXY_KEY`               | ninjagoldfinch.lol (env var)                                          | The variable that carries the site's riot-proxy consumer key         |
-| `ninjagoldfinch-lol-prod` | riot-proxy consumer                                                   | Production's consumer key, `read` scope                              |
-| `admin-main`              | riot-proxy consumer                                                   | Admin key used by riot-proxy's dashboard; never given to the site    |
-| `bootstrap-admin`         | riot-proxy consumer                                                   | Created on riot-proxy's first start with an empty key table          |
-| `RIOT_API_KEY`            | riot-proxy only                                                       | The Riot API key                                                     |
-| Onidel archive key        | riot-proxy (`ARCHIVE_OBJECT_ACCESS_KEY`, `ARCHIVE_OBJECT_SECRET_KEY`) | Read and write on Onidel `riot-proxy-archive`; also used by `rclone` |
-| R2 archive token          | `rclone` on the production host                                       | Read and write on R2 `riot-proxy-archive` only                       |
-| R2 backups token          | riot-proxy's off-box backup job                                       | R2 `ngf-backups` only                                                |
-| Tunnel token              | cloudflared (`/etc/cloudflared/token`)                                | Connects the production host to Cloudflare                           |
-| site deploy key           | `ninjagoldfinch-lol` user on the production host                      | Read-only GitHub deploy key for this private repo                    |
+| Name                         | Holder                                                                | Purpose and scope                                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `PROXY_KEY`                  | ninjagoldfinch.lol (env var)                                          | The variable that carries the site's riot-proxy consumer key                                                         |
+| `ninjagoldfinch-lol-prod`    | riot-proxy consumer                                                   | Production's consumer key, `read` scope                                                                              |
+| `ninjagoldfinch-lol-staging` | riot-proxy consumer on production riot-proxy                          | Staging's own consumer key, quota 120 a minute (ADR-058)                                                             |
+| `STATUS_TOKEN`               | ninjagoldfinch.lol (env var)                                          | Bearer token for `/api/status` (ADR-062)                                                                             |
+| `DEPLOY_SSH_KEY`             | GitHub environments `prod` and `staging`, one key each                | Uploads and activates a release over SSH; forced to `ninja-deploy ninjagoldfinch-lol` on the host (ADR-053, ADR-057) |
+| `admin-main`                 | riot-proxy consumer                                                   | Admin key used by riot-proxy's dashboard; never given to the site                                                    |
+| `bootstrap-admin`            | riot-proxy consumer                                                   | Created on riot-proxy's first start with an empty key table                                                          |
+| `RIOT_API_KEY`               | riot-proxy only                                                       | The Riot API key                                                                                                     |
+| Onidel archive key           | riot-proxy (`ARCHIVE_OBJECT_ACCESS_KEY`, `ARCHIVE_OBJECT_SECRET_KEY`) | Read and write on Onidel `riot-proxy-archive`; also used by `rclone`                                                 |
+| R2 archive token             | `rclone` on the production host                                       | Read and write on R2 `riot-proxy-archive` only                                                                       |
+| R2 backups token             | riot-proxy's off-box backup job                                       | R2 `ngf-backups` only                                                                                                |
+| Tunnel token                 | cloudflared (`/etc/cloudflared/token`)                                | Connects the production host to Cloudflare                                                                           |
+| site deploy key              | `ninjagoldfinch-lol` user on the production host                      | Read-only GitHub deploy key for the fallback checkout (ADR-054)                                                      |
 
 ## Buckets and prefixes
 
@@ -111,7 +119,7 @@ None belong to ninjagoldfinch.lol. All are riot-proxy's.
 - Site routes: `GET /summoner/{riotId}`; riot-proxy routes: `GET /v1/lol/matches/{region}/{matchId}`. Path parameters in braces, named as in the code or spec.
 - Environment variables in code font, upper case: `PROXY_URL`.
 - Dates: ISO `YYYY-MM-DD`. Durations: `30 s`, `5 min`.
-- Source citations: `path/to/file.ts:L10-L42` in footers; inline as `src/lib/server/proxy.ts:74-78`. riot-proxy paths are prefixed `riot-proxy:` (e.g. `riot-proxy:src/config.rs:658-662`) and refer to commit `48f32aa`.
+- Source citations: `path/to/file.ts:L10-L42` in footers; inline as `src/lib/server/proxy.ts:74-78`. riot-proxy paths are prefixed `riot-proxy:` (e.g. `riot-proxy:src/config.rs:752-756`) and refer to the riot-proxy commit a document's Sources line names, else to `48f32aa`. Likewise `ninja-monitor:` and `ninja-actions:`.
 - Unknowns: `> **TODO (unverified):** <what and where you looked>`, also listed in `_meta/gaps.md`.
 
 ---
