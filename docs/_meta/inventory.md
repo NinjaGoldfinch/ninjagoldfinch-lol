@@ -292,3 +292,8 @@ Cited elsewhere as `owner:systemctl-cat-2026-10-19`.
 - Production consumer key name: `ninjagoldfinch-lol-prod`.
 - The Proxmox preview VM no longer exists; it may be recreated.
 - Keep `docs/api/openapi.yaml`; omit `data/schema.md` and `data/migrations.md`.
+
+### Owner answers, 2026-11-09 (P5-05)
+
+- The external uptime check: ninja-monitor, on `ngf-mon-syd1`, fetches `https://ninjagoldfinch.lol/healthz` through Cloudflare every minute and pings a Healthchecks.io check every minute. Healthchecks.io's grace period is 5 minutes; after 5 minutes without a ping it emails the owner, who also sees each ping's data there. Downtime is handled through ninja-monitor's Discord alerts; the email is the check that still fires when both Discord and ninja-monitor are down. Not given: what ninja-monitor does when the probe fails, and whether it still pings after a failed probe.
+- The Riot Developer Portal product page: `https://ninjagoldfinch.lol` set as the product URL; nothing else on the page changed.

@@ -317,6 +317,26 @@ not limited  25 x GET /champions, back to back
 
 The cache rule, read in the dashboard: `(http.host eq "ninjagoldfinch.lol")`, eligible for cache, edge TTL from `Cache-Control` and bypass without it, browser TTL from the origin, other settings at their defaults.
 
+### P5-05 check — recorded 2026-11-09
+
+Done by the owner outside the repo and reported 2026-11-07 (the tick above); the details are the owner's answers of 2026-11-09.
+
+```text
+uptime check   ninja-monitor, on ngf-mon-syd1, fetches https://ninjagoldfinch.lol/healthz every minute,
+               through Cloudflare (the public hostname, not the host's address),
+               and pings a Healthchecks.io check every minute
+Healthchecks   grace period 5 minutes: after 5 minutes without a ping it emails the owner;
+               the owner sees each ping's data there
+alerting       downtime is otherwise handled through ninja-monitor's Discord alerts
+               (docs/integration/monitoring-hooks.md); the Healthchecks.io email is the check that
+               still fires when both Discord and ninja-monitor are down
+not recorded   what ninja-monitor does when the probe fails (threshold, Discord text), and whether
+               it still pings Healthchecks.io after a failed probe
+
+portal         Riot Developer Portal, the product's page: https://ninjagoldfinch.lol set as the
+               product URL; nothing else on the page changed
+```
+
 ### P5 exit check (amended, ADR-070) — passed 2026-11-09
 
 From outside the host (a cloud session, not on the host's network), 2026-11-08, shortly before 12:00 UTC, with production on `v1.0.4`. The host address is `ngf-prod-syd1`'s public address, the prod environment's `DEPLOY_HOST` variable (`gh variable list -e prod`), not written here.
