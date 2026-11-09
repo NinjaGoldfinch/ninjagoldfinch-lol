@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_REGION } from '#lib/domain/front-page.ts';
+import { DEFAULT_REGION, allRunning } from '#lib/domain/front-page.ts';
 import { findRegion } from '#lib/domain/regions.ts';
 import { loadFrontPage } from '#lib/server/front-page.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
@@ -97,6 +97,7 @@ describe('loadFrontPage', () => {
 	it("asks for another region's rotation and status", async () => {
 		const korea = findRegion('kr');
 		if (!korea) throw new Error('no Korea');
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const cards = answering();
 		const page = await loadFrontPage(korea, clients(undefined, cards.fetch));
 
@@ -104,7 +105,11 @@ describe('loadFrontPage', () => {
 		expect(cards.asked).toContain('/v1/lol/status/kr');
 		expect(page.region).toEqual({ slug: 'kr', label: 'Korea' });
 		expect(page.rotation).toHaveLength(8);
-		expect(page.status?.incidents.map((i) => i.title)).toEqual(['Ranked queues are disabled']);
+		// The fixture's incident without a title is kept, under a generic one.
+		expect(page.status?.incidents.map((i) => i.title)).toEqual([
+			'Ranked queues are disabled',
+			'Incident'
+		]);
 		expect(page.complete).toBe(true);
 	});
 
@@ -134,6 +139,100 @@ describe('loadFrontPage', () => {
 		expect(page.rotation).toHaveLength(16);
 		expect(page.complete).toBe(false);
 		expect(log).toHaveBeenCalledWith('front page: unexpected status payload for oc1');
+	});
+
+	it('keeps a status entry without a title, logs it, and does not show all clear', async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const page = await loadFrontPage(
+			OCEANIA,
+			clients((path) =>
+				path === '/v1/lol/status/oc1'
+					? json(200, {
+							incidents: [{ id: 1, incident_severity: 'critical', titles: [] }],
+							maintenances: []
+						})
+					: undefined
+			)
+		);
+
+		expect(page.status?.incidents.map((i) => [i.title, i.severity])).toEqual([
+			['Incident', 'critical']
+		]);
+		expect(page.status && allRunning(page.status)).toBe(false);
+		expect(log).toHaveBeenCalledWith(
+			'front page: status entries shown with a fallback for oc1: incident id-1 missing title'
+		);
+	});
+
+	it('keeps a status entry without a usable id, and logs it', async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const page = await loadFrontPage(
+			OCEANIA,
+			clients((path) =>
+				path === '/v1/lol/status/oc1'
+					? json(200, {
+							incidents: [],
+							maintenances: [
+								{
+									id: '42',
+									maintenance_status: 'in_progress',
+									titles: [{ locale: 'en_US', content: 'Store maintenance' }]
+								}
+							]
+						})
+					: undefined
+			)
+		);
+
+		expect(page.status?.maintenances.map((m) => [m.id, m.key, m.title])).toEqual([
+			[null, 'at-0', 'Store maintenance']
+		]);
+		expect(page.status && allRunning(page.status)).toBe(false);
+		expect(log).toHaveBeenCalledWith(
+			'front page: status entries shown with a fallback for oc1: maintenance at-0 missing id'
+		);
+	});
+
+	it("logs Korea's fixture incident without a title", async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const korea = findRegion('kr');
+		if (!korea) throw new Error('no Korea');
+		await loadFrontPage(korea, clients());
+		expect(log).toHaveBeenCalledWith(
+			'front page: status entries shown with a fallback for kr: incident id-9103 missing title'
+		);
+	});
+
+	it('does not log a status feed it could read whole', async () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		await loadFrontPage(OCEANIA, clients());
+		expect(log.mock.calls.flat().join(' ')).not.toContain('status entries');
+	});
+
+	describe('a rotation with no champions to show is unavailable, logged and not kept', () => {
+		const cases: [string, unknown[], string[]][] = [
+			['an empty list', [], []],
+			['a list of strings', ['Ahri', 'Jinx'], []],
+			['ids the lookups lack', [998, 999], ['front page: free champions without lookups: 998, 999']]
+		];
+		for (const [name, ids, also] of cases) {
+			it(name, async () => {
+				const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+				const page = await loadFrontPage(
+					OCEANIA,
+					clients((path) =>
+						path === '/v1/lol/rotations/oc1' ? json(200, { freeChampionIds: ids }) : undefined
+					)
+				);
+
+				expect(page.rotation).toBeNull();
+				expect(page.status).not.toBeNull();
+				expect(page.topWinRates).toHaveLength(6);
+				expect(page.complete).toBe(false);
+				expect(log).toHaveBeenCalledWith('front page: no free champions to show for oc1');
+				for (const line of also) expect(log).toHaveBeenCalledWith(line);
+			});
+		}
 	});
 
 	it('gives up on a rotation that never answers, keeping the other cards', async () => {

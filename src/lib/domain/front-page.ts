@@ -7,7 +7,7 @@ import {
 	type ChampionRow,
 	type ChampionTable
 } from './champion-stats.ts';
-import { findRegion, type Region } from './regions.ts';
+import { REGIONS, findRegion, type Region } from './regions.ts';
 import { profilePath } from './riot-id.ts';
 
 // The front page's cards (ADR-066): shaped here, loaded by
@@ -70,9 +70,18 @@ function defaultRegion(): Region {
 /** Oceania: the owner's platform, and the fixtures'. */
 export const DEFAULT_REGION: Region = defaultRegion();
 
-/** The region `?region=` names, without regard to case, or the default. */
+/**
+ * The regions the rotation and status cards offer: every region but the
+ * Middle East. Its platform, `me1`, is not in riot-proxy 2.10.0's platform
+ * list, which answers 400 for it; it comes back when a riot-proxy release
+ * accepts `me1` (ADR-072). Profiles still use the whole of `REGIONS`.
+ */
+export const FRONT_REGIONS: readonly Region[] = REGIONS.filter((region) => region.slug !== 'me');
+
+/** The region `?region=` names, without regard to case, if the front page offers it; else the default. */
 export function pickRegion(params: URLSearchParams): Region {
-	return findRegion(params.get('region') ?? '') ?? DEFAULT_REGION;
+	const region = findRegion(params.get('region') ?? '');
+	return region && FRONT_REGIONS.includes(region) ? region : DEFAULT_REGION;
 }
 
 /** The canonical query for a region: `` for the default, `?region=kr` otherwise. */
@@ -136,14 +145,19 @@ const SEVERITIES: readonly StatusSeverity[] = ['info', 'warning', 'critical'];
 
 /** An incident or a maintenance from lol-status-v4. */
 export interface StatusItem {
-	id: number;
-	/** The `en_US` title, else the first. */
+	/** Riot's id; null when the entry had no integer id. */
+	id: number | null;
+	/** For a keyed list: `id-9101`, or `at-2`, the entry's place in its list, when it has no id. */
+	key: string;
+	/** The `en_US` title, else the first; `Incident` or `Maintenance` when it has none. */
 	title: string;
 	/** An incident's severity; null for a maintenance or an unknown value. */
 	severity: StatusSeverity | null;
 	/** A maintenance's `scheduled` or `in_progress`; null for an incident. */
 	maintenanceStatus: string | null;
 	updatedAt: string | null;
+	/** What the entry lacked and was filled in for it; empty when it was whole. */
+	missing: ('id' | 'title')[];
 }
 
 /** What the site reads of lol-status-v4's `PlatformDataDto` (ADR-071). */
@@ -167,26 +181,34 @@ function title(titles: unknown): string | undefined {
 
 const stringOrNull = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
-/** One status entry; none without an integer id or a title. */
-function statusItem(value: unknown): StatusItem[] {
-	const entry = record(value);
-	const text = entry && title(entry.titles);
-	if (!entry || !isInteger(entry.id) || text === undefined) return [];
-	const severity = SEVERITIES.find((s) => s === entry.incident_severity) ?? null;
-	return [
-		{
-			id: entry.id,
-			title: text,
-			severity,
+/**
+ * One status entry, whatever it lacks (ADR-072): an entry without an integer
+ * id is keyed by its place in the list, and one without a title is called
+ * `fallback`, so that something open is never read as all clear.
+ */
+function statusItem(fallback: 'Incident' | 'Maintenance') {
+	return (value: unknown, index: number): StatusItem => {
+		const entry = record(value) ?? {};
+		const id = isInteger(entry.id) ? entry.id : null;
+		const text = title(entry.titles);
+		return {
+			id,
+			key: id === null ? `at-${index}` : `id-${id}`,
+			title: text ?? fallback,
+			severity: SEVERITIES.find((s) => s === entry.incident_severity) ?? null,
 			maintenanceStatus: stringOrNull(entry.maintenance_status),
-			updatedAt: stringOrNull(entry.updated_at)
-		}
-	];
+			updatedAt: stringOrNull(entry.updated_at),
+			missing: [
+				...(id === null ? ['id' as const] : []),
+				...(text === undefined ? ['title' as const] : [])
+			]
+		};
+	};
 }
 
 /**
  * A platform's status, read narrowly; undefined unless `maintenances` and
- * `incidents` are lists. Completed maintenances are dropped.
+ * `incidents` are lists. Every entry is kept but completed maintenances.
  */
 export function parseStatus(body: unknown): PlatformStatus | undefined {
 	const data = record(body);
@@ -195,9 +217,9 @@ export function parseStatus(body: unknown): PlatformStatus | undefined {
 	}
 	return {
 		name: stringOrNull(data.name),
-		incidents: data.incidents.flatMap(statusItem),
+		incidents: data.incidents.map(statusItem('Incident')),
 		maintenances: data.maintenances
-			.flatMap(statusItem)
+			.map(statusItem('Maintenance'))
 			.filter((m) => m.maintenanceStatus !== 'complete')
 	};
 }

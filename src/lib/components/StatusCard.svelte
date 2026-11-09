@@ -54,7 +54,7 @@
 			</p>
 		{:else}
 			<ul class="mt-3 space-y-2" aria-label="Open incidents and maintenances">
-				{#each items as { item, kind } (`${kind}-${item.id}`)}
+				{#each items as { item, kind } (`${kind}-${item.key}`)}
 					{@const label = state(item, kind)}
 					<li class="flex gap-2">
 						<span class="mt-1.5 size-2.5 shrink-0 rounded-full {dot(item, kind)}" aria-hidden="true"

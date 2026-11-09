@@ -103,13 +103,17 @@ test.describe('without JavaScript', () => {
 
 		const status = page.getByRole('region', { name: 'Server status' });
 		const open = status.getByRole('list', { name: 'Open incidents and maintenances' });
-		await expect(open.getByRole('listitem')).toHaveCount(2);
+		await expect(open.getByRole('listitem')).toHaveCount(3);
 		await expect(open.getByRole('listitem').first()).toContainText('Ranked queues are disabled');
 		await expect(open.getByRole('listitem').first()).toContainText('Incident · warning');
-		await expect(open.getByRole('listitem').nth(1)).toContainText(
+		// The fixture's incident without a title shows under a generic one (ADR-072).
+		await expect(open.getByRole('listitem').nth(1)).toHaveText(
+			/^\s*Incident\s*Incident · info\s*$/
+		);
+		await expect(open.getByRole('listitem').nth(2)).toContainText(
 			'Scheduled maintenance for patch 16.21'
 		);
-		await expect(open.getByRole('listitem').nth(1)).toContainText('Maintenance · scheduled');
+		await expect(open.getByRole('listitem').nth(2)).toContainText('Maintenance · scheduled');
 		await expect(status).not.toContainText('All services running');
 		await expect(status).not.toContainText('Store maintenance');
 		await expect(status.getByRole('combobox', { name: 'Region' })).toHaveValue('kr');
@@ -148,6 +152,28 @@ test('a region named any other way redirects to the canonical URL, uncached', as
 	expect(korea.headers()['location']).toBe('/?region=kr');
 });
 
+test('the Middle East is not offered until riot-proxy serves me1, and its URL redirects to /', async ({
+	page,
+	request
+}) => {
+	for (const path of ['/?region=me', '/?region=ME']) {
+		const response = await request.get(path, { maxRedirects: 0 });
+		expect(response.status(), path).toBe(307);
+		expect(response.headers()['location'], path).toBe('/');
+		expect(response.headers()['cache-control'], path).toBe('no-store');
+	}
+
+	await page.goto('/');
+	for (const card of ['Free this week', 'Server status']) {
+		const picker = page
+			.getByRole('region', { name: card })
+			.getByRole('combobox', { name: 'Region' });
+		await expect(picker.getByRole('option')).toHaveCount(14);
+		await expect(picker.getByRole('option', { name: 'Middle East' })).toHaveCount(0);
+		await expect(picker.getByRole('option', { name: 'Korea' })).toHaveCount(1);
+	}
+});
+
 test("the edge keeps another region's front page for a minute", async ({ request }) => {
 	const response = await request.get('/?region=kr');
 	expect(response.status()).toBe(200);
@@ -168,4 +194,28 @@ test('with JavaScript, choosing a region applies it at once', async ({ page }) =
 		'Ranked queues are disabled'
 	);
 	await expect(page.getByRole('button', { name: 'Apply' })).toHaveCount(0);
+});
+
+test('on a narrow screen, choosing a region keeps the scroll', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 700 });
+	await page.goto('/');
+	await hydrated(page);
+	const picker = page
+		.getByRole('region', { name: 'Server status' })
+		.getByRole('combobox', { name: 'Region' });
+	await picker.scrollIntoViewIfNeeded();
+	const before = await page.evaluate(() => window.scrollY);
+	expect(before).toBeGreaterThan(0);
+
+	await picker.selectOption({ label: 'Korea' });
+	await expect(page).toHaveURL('/?region=kr');
+	await expect(page.getByRole('region', { name: 'Server status' })).toContainText(
+		'Ranked queues are disabled'
+	);
+	// Not sent back to the top. Korea's shorter rotation moves the card up a
+	// little, and the browser's scroll anchoring follows it.
+	expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before / 2);
+	await expect(
+		page.getByRole('region', { name: 'Server status' }).getByRole('combobox', { name: 'Region' })
+	).toBeInViewport();
 });
