@@ -11,13 +11,15 @@ describe('the gate', () => {
 		expect(read('justfile')).toMatch(/^check:\n {4}bash scripts\/check\.sh\n/m);
 	});
 
-	// ADR-050's steps, then the release package test (ADR-052).
+	// ADR-050's steps, the PROGRESS.md tick check after Prettier (ADR-069), then
+	// the release package test (ADR-052).
 	it('runs every step, in order', () => {
 		const steps = read('scripts/check.sh')
 			.split('\n')
-			.filter((line) => /^(pnpm|bash) /.test(line));
+			.filter((line) => /^(pnpm|bash|node) /.test(line));
 		expect(steps).toEqual([
 			'pnpm prettier --check .',
+			'node scripts/check-progress.ts',
 			'pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts --check',
 			'pnpm eslint .',
 			'pnpm svelte-kit sync',

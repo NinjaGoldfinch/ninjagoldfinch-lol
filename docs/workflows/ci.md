@@ -10,7 +10,7 @@ Every pull request and every push to `main` run two jobs, `just check` and `just
 2. Node 22 (`actions/setup-node`), then `corepack enable`, which provides pnpm at the version `package.json`'s `packageManager` names.
 3. `pnpm install --frozen-lockfile`.
 4. `cp .env.example .env`: the unit tests load the server env, and the example's values are placeholders.
-5. `scripts/check.sh`, the gate: Prettier, the schema drift check, ESLint, `svelte-kit sync`, svelte-check, Vitest, the build and the release package test.
+5. `scripts/check.sh`, the gate: Prettier, the `docs/PROGRESS.md` tick check (`scripts/check-progress.ts`, ADR-069), the schema drift check, ESLint, `svelte-kit sync`, svelte-check, Vitest, the build and the release package test.
 
 A pull request from this repository runs on the self-hosted Proxmox runner (`self-hosted, linux, proxmox`); one from a fork runs on `ubuntu-24.04`, so outside code never reaches that runner, and the repository requires approval before an outside contributor's workflows run. The token is read-only and the job reads no secrets. Every action is pinned to a commit.
 
@@ -24,5 +24,5 @@ A pull request from this repository runs on the self-hosted Proxmox runner (`sel
 
 ---
 
-**Sources:** `.github/workflows/ci.yml`, `scripts/check.sh`, `justfile`, `.githooks/pre-push`, `tests/unit/gate.test.ts`, `docs/DECISIONS.md` (ADR-050, ADR-059)
-**Last verified:** 2026-11-05 against commit `31d3eed`
+**Sources:** `.github/workflows/ci.yml`, `scripts/check.sh`, `scripts/check-progress.ts`, `justfile`, `.githooks/pre-push`, `tests/unit/gate.test.ts`, `docs/DECISIONS.md` (ADR-050, ADR-059, ADR-069)
+**Last verified:** 2026-11-09 against commit `02630bb`

@@ -1123,3 +1123,22 @@ Date: 2026-11-09 · Task: FP-02
 - `/` has 15 edge variants, one per region, each costing riot-proxy two calls per miss, which it answers from its own cache of Riot.
 - Most visitors outside Oceania see Oceania first and pick their region once per visit. Remembering it (a cookie) or guessing it (geolocation) would be a later decision.
 - A change in Riot's payloads shows as a logged notice and an uncached `/`, not an error page. If riot-proxy later types these routes, the generated types can replace the parsers.
+
+## ADR-069: the gate reads `docs/PROGRESS.md`'s ticks
+
+Date: 2026-11-09 · Task: FIX-12
+
+**Context.** Nothing in the gate read `docs/PROGRESS.md`: `docs/_meta/check-docs.py` skips it with the plan and the ADRs, and `scripts/check.sh` only formats it. The review of #134 found that merging it would have left two `[x] P5-05` lines, since #136 had already ticked the task, and CI would have passed. The ticks are the record of what is done and which PR did it; a tick repeated, or made for a task the plan never defined, was a record error nothing caught.
+
+**Decision.**
+
+- `scripts/check-progress.ts`, run by `scripts/check.sh` after Prettier, fails the gate when a task id is ticked (`- [x]`) or dropped (`- [~]`) more than once in `docs/PROGRESS.md`, or when a ticked id belongs to a family the plan defines and is not a task in `docs/IMPLEMENTATION.md`.
+- The families are read from the plan's own task items (`- [ ] P5-01 …`), not listed in the script: today P0 to P5, SPD, VS and RV. FIX, DEP and STAT are defined only in `PROGRESS.md`, as owner requests after the plan, so their ids are checked for duplicates only.
+- A TypeScript script under `scripts/`, run by Node directly as `tests/record-fixture.ts` is, and imported by its unit test; no dependency added. It is not part of `check-docs.py`, which is a docs check run by hand, outside the gate, and skips `PROGRESS.md` on purpose.
+
+**Consequences.**
+
+- A tick for a new task in a family the plan defines needs the task in `IMPLEMENTATION.md` first, or the gate fails. A new family can start in `PROGRESS.md` alone, as DEP, STAT and FIX did.
+- Ids defined only in `PROGRESS.md` are not checked for existence: a mistyped FIX id passes.
+- Only a list item at column 0 with a checkbox counts; sub-bullets and prose that mention an id are not read.
+- `tests/unit/gate.test.ts` pins the step in the gate's order; `tests/unit/progress-check.test.ts` covers both rules on fixtures and the script's exit codes, and that the repository as it is passes.
