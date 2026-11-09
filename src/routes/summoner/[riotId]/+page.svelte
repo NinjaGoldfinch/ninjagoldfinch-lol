@@ -26,15 +26,16 @@
 	);
 	const queueName = $derived(profile.queueOptions.find((q) => q.id === profile.filter.queue)?.name);
 
-	// Runs again when one profile leads to another: SvelteKit keeps this
-	// component and only its data changes. The icon, region and rank make the
+	// Runs again when one profile leads to another (SvelteKit keeps this
+	// component and only its data changes) and when a refresh's result arrives:
+	// a refresh counts as a view (ADR-073). The icon, region and rank make the
 	// front page's card (ADR-068).
 	$effect(() => {
 		rememberSearch({
-			...data.riotId,
-			region: data.region.slug,
-			profileIconId: data.summoner?.profileIconId,
-			rank: soloRankLabel(data.ranks),
+			...profile.riotId,
+			region: profile.region.slug,
+			profileIconId: profile.summoner?.profileIconId,
+			rank: soloRankLabel(profile.ranks),
 			viewedAt: Date.now()
 		});
 	});
