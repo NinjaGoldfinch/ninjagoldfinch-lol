@@ -25,7 +25,7 @@ Prettier also formats Markdown, including everything under `docs/`. Excluded: lo
 ## Svelte and styling
 
 - Svelte 5 runes only: `$state`, `$derived`, `$props`, `$effect`. No `export let`, no `$:`, no stores for component state (`CLAUDE.md:55-56`). Runes mode is forced for every file outside `node_modules` (`vite.config.ts:10-13`).
-- Tailwind utilities with the colour tokens defined in `src/app.css:6-16` (`bg-surface`, `text-muted`, `text-accent`, `text-win`, `text-loss`, …). No inline hex colours (`CLAUDE.md:61`).
+- Tailwind utilities with the colour tokens defined in `src/app.css:6-20` (`bg-surface`, `text-muted`, `text-accent`, `text-win`, `text-loss`, …). No inline hex colours (`CLAUDE.md:61`).
 - Asset URLs only through `src/lib/assets.ts` (`CLAUDE.md:63`).
 - Pages work without JavaScript; enhancements go on top (`CLAUDE.md:59`). Filters are GET forms; Refresh is a POST form action.
 
@@ -81,4 +81,4 @@ A new runtime dependency needs the owner's agreement first (`CLAUDE.md:26-27`). 
 ---
 
 **Sources:** `CLAUDE.md:L8-L29,L55-L68`, `prettier.config.js:L1-L12`, `.prettierignore:L1-L22`, `eslint.config.js:L11-L43`, `tsconfig.json:L1-L8`, `vite.config.ts:L10-L13`, `justfile:L19-L28`, `package.json:L17,L45-L50`, `src/app.css:L6-L16`, `src/lib/server/errors.ts:L6-L58`, `src/lib/server/proxy.ts:L3,L7-L20`, `src/hooks.server.ts:L15-L39`, `src/lib/server/profile.ts:L93,L119`, `docs/DECISIONS.md:L41-L55`, `src/lib/api/match.ts:L1-L4`, `git log --format=%s`, `git branch -a`
-**Last verified:** 2026-11-03 against commit `e183749`
+**Last verified:** 2026-11-03 against commit `e183749`; the token lines on 2026-11-10 against `91c83d3` with FP-04's changes

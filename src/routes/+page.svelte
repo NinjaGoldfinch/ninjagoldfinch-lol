@@ -58,6 +58,7 @@
 	<TopWinRates rows={data.topWinRates} patch={data.patch} minGames={TOP_WIN_RATE_MIN_GAMES} />
 	<StatusCard
 		status={data.status}
+		statusPage={data.statusPage}
 		checkedSeconds={data.statusCheckedSeconds}
 		region={data.region}
 	/>

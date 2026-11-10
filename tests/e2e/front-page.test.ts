@@ -83,8 +83,13 @@ test.describe('without JavaScript', () => {
 
 		const status = page.getByRole('region', { name: 'Server status' });
 		await expect(status).toContainText('All services running');
+		await expect(status).toContainText('No open incidents or maintenance on Oceania.');
 		await expect(status).toContainText(
 			"From Riot's status feed for Oceania · checked 3 minutes ago"
+		);
+		await expect(status.getByRole('link', { name: "Riot's status page" })).toHaveAttribute(
+			'href',
+			'https://status.riotgames.com/lol?region=oc1&locale=en_US'
 		);
 	});
 
@@ -105,18 +110,47 @@ test.describe('without JavaScript', () => {
 		const open = status.getByRole('list', { name: 'Open incidents and maintenances' });
 		await expect(open.getByRole('listitem')).toHaveCount(3);
 		await expect(open.getByRole('listitem').first()).toContainText('Ranked queues are disabled');
-		await expect(open.getByRole('listitem').first()).toContainText('Incident · warning');
-		// The fixture's incident without a title shows under a generic one (ADR-072).
+		// Each entry's age is counted from now, so only its form is checked (ADR-075).
+		await expect(open.getByRole('listitem').first()).toContainText(
+			/Incident · warning · updated \d+ (minute|hour|day)s? ago/
+		);
+		await expect(open.getByRole('listitem').first()).toContainText(
+			'Ranked queues are disabled while we investigate an issue.'
+		);
+		// The fixture's incident without a title shows under a generic one (ADR-072);
+		// never updated, it says when it was opened, and has no update to show.
 		await expect(open.getByRole('listitem').nth(1)).toHaveText(
-			/^\s*Incident\s*Incident · info\s*$/
+			/^\s*Incident\s*Incident · info · opened \d+ (minute|hour|day)s? ago\s*$/
 		);
 		await expect(open.getByRole('listitem').nth(2)).toContainText(
 			'Scheduled maintenance for patch 16.21'
 		);
 		await expect(open.getByRole('listitem').nth(2)).toContainText('Maintenance · scheduled');
+		await expect(status).toContainText('2 incidents · 1 maintenance');
 		await expect(status).not.toContainText('All services running');
+		await expect(status.getByRole('link', { name: "Riot's status page" })).toHaveAttribute(
+			'href',
+			'https://status.riotgames.com/lol?region=kr&locale=en_US'
+		);
 		await expect(status).not.toContainText('Store maintenance');
 		await expect(status.getByRole('combobox', { name: 'Region' })).toHaveValue('kr');
+	});
+
+	test("a region whose status is unavailable still links to Riot's status page", async ({
+		page
+	}) => {
+		// No fixture for Japan's status, so the mock answers 500.
+		const response = await page.goto('/?region=jp');
+		expect(response?.status()).toBe(200);
+		expect(response?.headers()['cache-control']).toBe('no-store');
+
+		const status = page.getByRole('region', { name: 'Server status' });
+		await expect(status).toContainText('Server status is unavailable right now.');
+		await expect(status).not.toContainText("From Riot's status feed");
+		await expect(status.getByRole('link', { name: "Riot's status page" })).toHaveAttribute(
+			'href',
+			'https://status.riotgames.com/lol?region=jp1&locale=en_US'
+		);
 	});
 
 	test('the hero search opens a profile', async ({ page }) => {

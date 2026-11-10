@@ -90,7 +90,8 @@ describe('loadFrontPage', () => {
 		expect(page.region).toEqual({ slug: 'oce', label: 'Oceania' });
 		expect(page.rotation).toHaveLength(16);
 		expect(page.rotation?.[0]).toEqual({ id: 103, key: 'Ahri', name: 'Ahri' });
-		expect(page.status?.incidents).toEqual([]);
+		expect(page.status).toEqual({ incidents: 0, maintenances: 0, entries: [] });
+		expect(page.statusPage).toBe('https://status.riotgames.com/lol?region=oc1&locale=en_US');
 		expect(page.statusCheckedSeconds).toBe(180);
 		expect(page.complete).toBe(true);
 	});
@@ -100,17 +101,27 @@ describe('loadFrontPage', () => {
 		if (!korea) throw new Error('no Korea');
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const cards = answering();
-		const page = await loadFrontPage(korea, clients(undefined, cards.fetch));
+		// Two hours after the fixture's warning incident was last updated.
+		const now = () => Date.parse('2026-11-09T03:10:00Z');
+		const page = await loadFrontPage(korea, { ...clients(undefined, cards.fetch), now });
 
 		expect(cards.asked).toContain('/v1/lol/rotations/kr');
 		expect(cards.asked).toContain('/v1/lol/status/kr');
 		expect(page.region).toEqual({ slug: 'kr', label: 'Korea' });
 		expect(page.rotation).toHaveLength(8);
 		// The fixture's incident without a title is kept, under a generic one.
-		expect(page.status?.incidents.map((i) => i.title)).toEqual([
+		expect(page.status?.entries.map((e) => e.title)).toEqual([
 			'Ranked queues are disabled',
-			'Incident'
+			'Incident',
+			'Scheduled maintenance for patch 16.21'
 		]);
+		expect(page.status).toMatchObject({ incidents: 2, maintenances: 1 });
+		// Ages are counted from the loader's clock, on the server (ADR-075).
+		expect(page.status?.entries[0]).toMatchObject({
+			update: 'Ranked queues are disabled while we investigate an issue.',
+			age: { event: 'updated', seconds: 7200 }
+		});
+		expect(page.statusPage).toBe('https://status.riotgames.com/lol?region=kr&locale=en_US');
 		expect(page.complete).toBe(true);
 	});
 
@@ -137,6 +148,8 @@ describe('loadFrontPage', () => {
 
 		expect(page.status).toBeNull();
 		expect(page.statusCheckedSeconds).toBeNull();
+		// The card still links to Riot's own page.
+		expect(page.statusPage).toBe('https://status.riotgames.com/lol?region=oc1&locale=en_US');
 		expect(page.rotation).toHaveLength(16);
 		expect(page.complete).toBe(false);
 		expect(log).toHaveBeenCalledWith('front page: unexpected status payload for oc1');
@@ -156,8 +169,8 @@ describe('loadFrontPage', () => {
 			)
 		);
 
-		expect(page.status?.incidents.map((i) => [i.title, i.severity])).toEqual([
-			['Incident', 'critical']
+		expect(page.status?.entries.map((e) => [e.title, e.state, e.tone])).toEqual([
+			['Incident', 'critical', 'critical']
 		]);
 		expect(page.status && allRunning(page.status)).toBe(false);
 		expect(log).toHaveBeenCalledWith(
@@ -185,8 +198,8 @@ describe('loadFrontPage', () => {
 			)
 		);
 
-		expect(page.status?.maintenances.map((m) => [m.id, m.key, m.title])).toEqual([
-			[null, 'at-0', 'Store maintenance']
+		expect(page.status?.entries.map((e) => [e.key, e.title, e.state])).toEqual([
+			['Maintenance-at-0', 'Store maintenance', 'in progress']
 		]);
 		expect(page.status && allRunning(page.status)).toBe(false);
 		expect(log).toHaveBeenCalledWith(

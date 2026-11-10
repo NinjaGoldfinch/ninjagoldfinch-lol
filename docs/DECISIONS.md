@@ -1102,7 +1102,7 @@ Date: 2026-11-09 · Task: P5
 
 ## ADR-071: the front page's region in the query, Oceania by default; Riot's rotation and status payloads parsed, not typed
 
-Date: 2026-11-09 · Task: FP-02 · Status entries, empty rotations, the Middle East and the cost of a degraded `/` refined by ADR-072
+Date: 2026-11-09 · Task: FP-02 · Status entries, empty rotations, the Middle East and the cost of a degraded `/` refined by ADR-072; what the status card shows extended by ADR-075
 
 **Context.** The front page's free rotation and server status cards (ADR-066) are per platform. riot-proxy's `/v1/lol/rotations/{platform}` and `/v1/lol/status/{platform}` pass Riot's champion-v3 and lol-status-v4 payloads through with an empty schema, so the generated types have them as `unknown`. ADR-037 took the region out of search and profiles, but these two cards still need a platform. The site has no sessions or cookies.
 
@@ -1217,3 +1217,28 @@ Date: 2026-11-10 · Task: FIX-17 (owner, 2026-11-10; corrects ADR-066)
 
 - The pill reads about a tenth of what it did: 21,159 against the fixture, about 2.3 million in production.
 - A slice that is not ten a game would be wrong by this rule: a role or tier filter, or a queue with another team size. `FRONT_FILTER` has none, and a unit test pins that the recording's `totalGames` is the rows' sum and a multiple of ten.
+
+## ADR-075: the status card shows the feed's updates and ages, worst first, and links to Riot's status page
+
+Date: 2026-11-10 · Task: FP-04 (owner, 2026-11-10; extends ADR-071 and ADR-072)
+
+**Context.** With nothing open, the status card (ADR-071) was one line over an empty card; with something open, a title and a severity. The owner asked for it to be improved, and for what riot-proxy would have to change to be labelled. The site may read Riot's status only through riot-proxy, whose `/v1/lol/status/{platform}` passes one platform's lol-status-v4 `PlatformDataDto` through. That payload has more than the card read (each entry's `updates[]`, `created_at` and `updated_at`), and nothing at all about a platform that is clear, about other platforms, or about what has closed.
+
+**Decision.**
+
+- **The card shows everything the feed has that a visitor can use.** A first line counts what is open (`2 incidents · 1 maintenance`) beside a dot for the worst entry. Each entry has its title, `Incident · warning · updated 3 hours ago`, and the text of its newest update, cut at three lines.
+- **More the site assumes of the payload**, read as ADR-071 reads the rest, never a cast (`latestUpdate`, `statusView` in `src/lib/domain/front-page.ts`):
+  - `updates[]`: each update's text is `translations[].content`, the `en_US` entry else the first, as for `titles[]`. An update with `publish: false`, or with no text, is passed over. The newest is the one with the latest `updated_at`, else `created_at`; an update without a readable time counts as the oldest, and of equals the first in the list wins. This is Riot's documented DTO, not a recording: both status fixtures are synthetic.
+  - `updated_at`, else `created_at`, of the entry, as RFC 3339 times: `updated …` or `opened …`. Neither readable: no age. A time ahead of the server's clock reads `just now`.
+- **Worst first** (`STATUS_ORDER`): critical incidents; warnings, with an incident whose severity is unreadable (open, so never less than a warning, ADR-072) and a maintenance `in_progress`; `info` incidents; then any other maintenance. Within one, the feed's order. A dot per tone: `loss` red, a new `warn` amber, `muted`, `accent`. Before, every incident but an `info` was red.
+- **Ages are counted in the load**, from the server's clock (`loadFrontPage`'s `now`), and sent as seconds, so the page hydrates to the text it was rendered with. They are as old as the edge's copy of the page: up to three minutes (ADR-066), as "checked X ago" already is.
+- **All clear fills the card**: a green mark, "All services running" and "No open incidents or maintenance on Oceania.", centred. The feed has nothing more to say of a platform that is clear.
+- **A link to Riot's status page** for the region, `https://status.riotgames.com/lol?region=<platform>&locale=en_US` (`riotStatusUrl`), in every state, the unavailable one included: it has the whole of each update, Riot's recently closed entries and its other games. `rel="external noreferrer"`, same tab. Loaded in a browser for `oc1` and `kr` on 2026-11-10. It is the site's first link to a page that is not its own; the owner approved it on 2026-11-10.
+- **What needs riot-proxy is not built.** Other regions at a glance, recently closed entries and typed payloads are labelled RP-1 to RP-3 in `docs/notes/status-card.md`, with the tasks they would unlock; RP-4 (`me1`, ADR-072) and RP-5 (`totalMatches`, ADR-074) are listed there too. The site does not ask the per-platform route fourteen times instead: fourteen calls inside the 2 s deadline for every uncached view, each against the key's quota, and one failure would send `/` as `no-store` (ADR-072).
+
+**Consequences.**
+
+- The card's data is `StatusView` (counts and entries), shaped in the load; `PlatformStatus` stays what `parseStatus` returns and what the fallback log reads.
+- An update's text is Riot's, in whatever language the platform has when there is no `en_US`; it is rendered as text, never as HTML.
+- An entry's age moves with the clock, so the browser test checks its form, not its value; the unit tests pin the clock.
+- A real recording of a feed with something open would confirm the order of `updates[]` and whether unpublished updates appear. Until then the newest-by-time rule does not depend on either.
