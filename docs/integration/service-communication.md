@@ -120,7 +120,7 @@ sequenceDiagram
 
 ## 4. The Browser to the image CDNs
 
-Image URLs are built in `src/lib/assets.ts` and fetched by the Browser: Data Dragon CDN for champion, item, profile-icon, spell and rune images (`src/lib/assets.ts:9-44`), and CommunityDragon for lane icons and stat shard icons (`src/lib/assets.ts:46-73`). No credentials, no traffic through the host. Pages ask the Browser to open these connections early with `<link rel="preconnect">`: every page to Data Dragon CDN, the profile and match pages to CommunityDragon as well (`src/lib/assets.ts:12-19`, `src/routes/+layout.svelte:29`, `src/routes/summoner/[riotId]/+page.svelte:45`, `src/routes/match/[matchId]/+page.svelte:128`, SPD-10).
+Image URLs are built in `src/lib/assets.ts` and fetched by the Browser: Data Dragon CDN for champion, item, profile-icon, spell and rune images (`src/lib/assets.ts:9-44`), and CommunityDragon for lane icons and stat shard icons (`src/lib/assets.ts:46-73`). No credentials, no traffic through the host. Pages ask the Browser to open these connections early with `<link rel="preconnect">`: every page to Data Dragon CDN, the profile and match pages to CommunityDragon as well (`src/lib/assets.ts:12-19`, `src/routes/+layout.svelte:29`, `src/routes/summoner/[riotId]/+page.svelte:46`, `src/routes/match/[matchId]/+page.svelte:128`, SPD-10).
 
 ## 5. ninja-monitor
 
@@ -144,4 +144,4 @@ The owner's status bot polls `GET /api/status` with `STATUS_TOKEN` (ADR-062); a 
 ---
 
 **Sources:** `src/lib/server/proxy.ts:L7-L156`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/patch.ts:L51-L60,L108-L146`, `src/lib/server/match.ts:L44-L56`, `src/lib/server/env.ts:L19-L27`, `src/lib/server/cache.ts:L5-L20`, `src/lib/server/events.ts`, `src/lib/assets.ts:L9-L73`, `src/routes/+layout.svelte:L29`, `README.md:L56-L65,L84-L179`, `docs/DECISIONS.md:L319,L509` and ADR-051 to ADR-054, ADR-057, ADR-058, ADR-060, ADR-062, ADR-063, ADR-065, `docs/deployment/releases.md`, the owner's Cloudflare dashboard and checks from outside (2026-11-07), owner-supplied env names (2026-10-19), `docs/PROGRESS.md` ("P5-05 check"), `riot-proxy:docs/design/12-object-storage-and-hosting.md:L637,L839-L845`, `riot-proxy:src/fetcher.rs:L12-L14`, `riot-proxy:src/http/request_id.rs:L49-L66`, `riot-proxy:src/app.rs:L109-L114` (riot-proxy at `7531561`), `ninja-monitor` at `v0.2.3`: `src/config.rs:L106-L116,L147,L156`, `src/heartbeat.rs:L16`, `src/alerts/mod.rs:L175-L178`, `README.md:L266,L279-L281`
-**Last verified:** 2026-11-09 against commit `4986766`
+**Last verified:** 2026-11-09 against commit `4986766`; the profile page's preconnect citation on 2026-11-10 against `d6696ce` (#147)
