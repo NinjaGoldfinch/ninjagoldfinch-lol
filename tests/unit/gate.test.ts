@@ -6,64 +6,77 @@ import { describe, expect, it } from 'vitest';
 const root = join(import.meta.dirname, '../..');
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
+// One row per command in scripts/check.sh, in order: ADR-050's steps, the
+// PROGRESS.md tick check after Prettier (ADR-069), then the release package
+// test (ADR-052). Each row gives the words README.md's `just check` row and
+// CLAUDE.md's Commands block use for that step; CLAUDE.md leaves
+// `svelte-kit sync` out (FIX-15).
+const gate: { command: string; readme: string; claude: string | null }[] = [
+	{ command: 'pnpm prettier --check .', readme: 'Prettier', claude: 'format' },
+	{
+		command: 'node scripts/check-progress.ts',
+		readme: '`docs/PROGRESS.md` tick check',
+		claude: 'progress ticks'
+	},
+	{
+		command: 'pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts --check',
+		readme: 'spec drift',
+		claude: 'spec drift'
+	},
+	{ command: 'pnpm eslint .', readme: 'ESLint', claude: 'lint' },
+	{ command: 'pnpm svelte-kit sync', readme: '`svelte-kit sync`', claude: null },
+	{
+		command: 'pnpm svelte-check --tsconfig ./tsconfig.json',
+		readme: 'svelte-check',
+		claude: 'svelte-check'
+	},
+	{ command: 'pnpm vitest run', readme: 'Vitest', claude: 'unit tests' },
+	{ command: 'pnpm build', readme: 'build', claude: 'build' },
+	{
+		command: 'bash scripts/package.test.sh',
+		readme: 'package test',
+		claude: 'release package test'
+	}
+];
+
+const checkSteps = () =>
+	read('scripts/check.sh')
+		.split('\n')
+		.filter((line) => /^(pnpm|bash|node) /.test(line));
+
+// A step in scripts/check.sh without a row in the table fails here, so it
+// cannot go unnamed in README.md and CLAUDE.md.
+const expectEveryStepInTable = (steps: string[]) => {
+	expect(steps).toEqual(gate.map((row) => row.command));
+};
+
 describe('the gate', () => {
 	it('is one script that `just check` runs', () => {
 		expect(read('justfile')).toMatch(/^check:\n {4}bash scripts\/check\.sh\n/m);
 	});
 
-	// ADR-050's steps, the PROGRESS.md tick check after Prettier (ADR-069), then
-	// the release package test (ADR-052).
-	it('runs every step, in order', () => {
-		const steps = read('scripts/check.sh')
-			.split('\n')
-			.filter((line) => /^(pnpm|bash|node) /.test(line));
-		expect(steps).toEqual([
-			'pnpm prettier --check .',
-			'node scripts/check-progress.ts',
-			'pnpm openapi-typescript openapi/riot-proxy.json -o src/lib/api/schema.d.ts --check',
-			'pnpm eslint .',
-			'pnpm svelte-kit sync',
-			'pnpm svelte-check --tsconfig ./tsconfig.json',
-			'pnpm vitest run',
-			'pnpm build',
-			'bash scripts/package.test.sh'
-		]);
+	it('runs every step, in order, each with a row in the table', () => {
+		expectEveryStepInTable(checkSteps());
+	});
+
+	it('fails when scripts/check.sh has a step the table lacks', () => {
+		const steps = checkSteps();
+		const added = [...steps.slice(0, 4), 'pnpm knip', ...steps.slice(4)];
+		expect(() => expectEveryStepInTable(added)).toThrow();
 	});
 
 	// The step lists people read: README's `just check` row and CLAUDE.md's
-	// Commands block. Each names every step above, in its own words (FIX-15).
+	// Commands block. Each names every step in the table, in its own words.
 	it('is described with every step in README.md and CLAUDE.md', () => {
 		const readme = read('README.md')
 			.split('\n')
 			.find((line) => line.startsWith('| `just check`'));
-		for (const step of [
-			'Prettier',
-			'`docs/PROGRESS.md` tick check',
-			'spec drift',
-			'ESLint',
-			'`svelte-kit sync`',
-			'svelte-check',
-			'Vitest',
-			'build',
-			'package test'
-		]) {
-			expect(readme, step).toContain(step);
-		}
-
 		const claude = /^just check {4}([^\n]*\n(?: {14}[^\n]*\n)*)/m
 			.exec(read('CLAUDE.md'))?.[1]
 			.replace(/\s+/g, ' ');
-		for (const step of [
-			'format',
-			'progress ticks',
-			'spec drift',
-			'lint',
-			'svelte-check',
-			'unit tests',
-			'build',
-			'release package test'
-		]) {
-			expect(claude, step).toContain(step);
+		for (const row of gate) {
+			expect(readme, row.command).toContain(row.readme);
+			if (row.claude !== null) expect(claude, row.command).toContain(row.claude);
 		}
 	});
 
