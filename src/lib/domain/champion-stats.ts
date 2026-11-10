@@ -156,8 +156,14 @@ export const RANK_OPTIONS: { ranges: RankFilter[]; tiers: RankFilter[] } = {
  * written as is, not as `%2B`, so the URL reads as the picker does.
  */
 export function championQuery(filter: ChampionFilter, sort: ChampionSort = DEFAULT_SORT): string {
-	const params = new URLSearchParams(filterFields(filter, sort));
-	const query = params.toString().replace(/(^|&)rank=([a-z]+)%2B(?=&|$)/, '$1rank=$2+');
+	return queryString(filterFields(filter, sort));
+}
+
+/** `?a=1&rank=diamond+`, or `` for no fields; a rank's `+` is left unencoded. */
+export function queryString(fields: [string, string][]): string {
+	const query = new URLSearchParams(fields)
+		.toString()
+		.replace(/(^|&)rank=([a-z]+)%2B(?=&|$)/, '$1rank=$2+');
 	return query ? `?${query}` : '';
 }
 

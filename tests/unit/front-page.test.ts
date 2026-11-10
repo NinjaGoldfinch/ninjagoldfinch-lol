@@ -1,21 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { toChampionTable } from '#lib/domain/champion-stats.ts';
+import { toChampionTable, type ChampionRow } from '#lib/domain/champion-stats.ts';
 import {
 	DEFAULT_REGION,
 	EXAMPLE_SEARCHES,
 	FRONT_REGIONS,
+	FRONT_CARD,
+	GAMES_FLOORS,
 	TOP_WIN_RATE_MIN_GAMES,
+	cardFields,
+	cardHeading,
+	cardScope,
 	allRunning,
 	fetchedAge,
 	formatCount,
 	frontQuery,
 	gamesAnalysed,
+	gamesFloor,
+	isFrontFilter,
+	parseFrontCard,
 	parseStatus,
 	pickRegion,
+	rateBar,
+	regionFields,
 	riotStatusUrl,
 	statusHeadline,
 	statusView,
-	topWinRates,
+	topChampions,
 	winRateBar,
 	type PlatformStatus
 } from '#lib/domain/front-page.ts';
@@ -37,10 +47,24 @@ function recordedTable() {
 	return toChampionTable(body, recordedNames());
 }
 
-describe('topWinRates', () => {
+/** A row with only what the card reads; rates 0–1. */
+function row(
+	name: string,
+	games: number,
+	winRate = 0.5,
+	pickRate: number | null = 0.1,
+	banRate: number | null = 0.05
+): ChampionRow {
+	return { id: games, key: null, name, games, winRate, pickRate, banRate };
+}
+
+/** `n` rows of `games` games each. */
+const rows = (n: number, games: number) => Array.from({ length: n }, (_, i) => row(`C${i}`, games));
+
+describe('topChampions', () => {
 	it('lists the six highest win rates over 800 games, highest first', () => {
-		const rows = topWinRates(recordedTable());
-		expect(rows.map((r) => r.name)).toEqual([
+		const top = topChampions(recordedTable());
+		expect(top.rows.map((r) => r.name)).toEqual([
 			'Taliyah',
 			'Gragas',
 			'Riven',
@@ -48,17 +72,156 @@ describe('topWinRates', () => {
 			"Vel'Koz",
 			'Nocturne'
 		]);
-		expect(rows.every((r) => r.games >= TOP_WIN_RATE_MIN_GAMES)).toBe(true);
-		const rates = rows.map((r) => r.winRate);
+		expect(top.minGames).toBe(TOP_WIN_RATE_MIN_GAMES);
+		expect(top.patch).toBe('all');
+		expect(top.rows.every((r) => r.games >= 800)).toBe(true);
+		const rates = top.rows.map((r) => r.winRate);
 		expect(rates).toEqual(rates.toSorted((a, b) => b - a));
 	});
 
-	it('leaves out every champion under the floor', () => {
-		expect(topWinRates(recordedTable(), 10_000_000)).toEqual([]);
+	it('ranks by pick or ban rate over the same floor', () => {
+		const table = recordedTable();
+		for (const sort of ['pick', 'ban'] as const) {
+			const top = topChampions(table, sort);
+			const rate = (r: ChampionRow) => (sort === 'pick' ? r.pickRate : r.banRate) ?? -1;
+			const best = table.rows
+				.filter((r) => r.games >= 800)
+				.toSorted((a, b) => rate(b) - rate(a))
+				.slice(0, 6);
+			expect(top.rows.map(rate)).toEqual(best.map(rate));
+			expect(top.minGames).toBe(800);
+		}
+	});
+
+	it('lowers the floor until six champions reach it, never under 100', () => {
+		const table = { patch: '16.20', rows: [...rows(3, 900), ...rows(2, 450), row('Small', 250)] };
+		const top = topChampions(table);
+		expect(top.minGames).toBe(200);
+		expect(top.rows).toHaveLength(6);
+
+		const thin = topChampions({ patch: '16.20', rows: [...rows(2, 150), ...rows(9, 99)] });
+		expect(thin.minGames).toBe(100);
+		expect(thin.rows).toHaveLength(2);
 	});
 
 	it('lists as many as asked', () => {
-		expect(topWinRates(recordedTable(), 800, 2).map((r) => r.name)).toEqual(['Taliyah', 'Gragas']);
+		expect(topChampions(recordedTable(), 'win', 2).rows.map((r) => r.name)).toEqual([
+			'Taliyah',
+			'Gragas'
+		]);
+	});
+});
+
+describe('gamesFloor', () => {
+	it('is the highest step six champions reach', () => {
+		expect(GAMES_FLOORS).toEqual([800, 400, 200, 100]);
+		expect(gamesFloor(rows(6, 800))).toBe(800);
+		expect(gamesFloor([...rows(5, 800), row('x', 799)])).toBe(400);
+		expect(gamesFloor(rows(6, 399))).toBe(200);
+		expect(gamesFloor(rows(6, 100))).toBe(100);
+	});
+
+	it('is the lowest step when too few reach any', () => {
+		expect(gamesFloor([])).toBe(100);
+		expect(gamesFloor(rows(5, 5000))).toBe(100);
+	});
+
+	it('counts as many champions as the card lists', () => {
+		expect(gamesFloor(rows(2, 800), 2)).toBe(800);
+	});
+});
+
+describe('the card in the query', () => {
+	const params = (query: string) => new URLSearchParams(query);
+
+	it('is the default slice, by win rate, when the query names nothing', () => {
+		expect(parseFrontCard(params(''))).toEqual(FRONT_CARD);
+		expect(FRONT_CARD).toEqual({
+			filter: { role: null, rank: null, patch: 'all' },
+			sort: 'win'
+		});
+		expect(cardFields(FRONT_CARD)).toEqual([]);
+	});
+
+	it("reads /champions' words: role, rank, patch=newest and sort", () => {
+		const card = parseFrontCard(params('role=mid&rank=diamond+&patch=newest&sort=ban'));
+		expect(card).toEqual({
+			filter: { role: 'mid', rank: { tier: 'diamond', andAbove: true }, patch: null },
+			sort: 'ban'
+		});
+		expect(cardFields(card)).toEqual([
+			['role', 'mid'],
+			['rank', 'diamond+'],
+			['patch', 'newest'],
+			['sort', 'ban']
+		]);
+	});
+
+	it('offers this patch or every patch, not a patch by number', () => {
+		expect(parseFrontCard(params('patch=16.19')).filter.patch).toBe('all');
+		expect(parseFrontCard(params('patch=all')).filter.patch).toBe('all');
+	});
+
+	it('falls back to the defaults for anything else', () => {
+		expect(parseFrontCard(params('role=feeder&rank=wood&sort=kda&patch=next'))).toEqual(FRONT_CARD);
+		expect(parseFrontCard(params('sort=win')).sort).toBe('win');
+	});
+
+	it('is in a canonical query with the region, defaults left out, `+` unencoded', () => {
+		const korea = findRegion('kr');
+		if (!korea) throw new Error('no Korea');
+		const card = parseFrontCard(params('sort=pick&rank=emerald+&role=top&patch=newest'));
+		expect(frontQuery(korea, card)).toBe(
+			'?region=kr&role=top&rank=emerald+&patch=newest&sort=pick'
+		);
+		expect(frontQuery(DEFAULT_REGION, card)).toBe('?role=top&rank=emerald+&patch=newest&sort=pick');
+		expect(frontQuery(korea, FRONT_CARD)).toBe('?region=kr');
+		expect(regionFields(DEFAULT_REGION)).toEqual([]);
+		expect(regionFields(korea)).toEqual([['region', 'kr']]);
+	});
+
+	it('knows the default slice, which the games-analysed pill counts', () => {
+		expect(isFrontFilter(FRONT_CARD.filter)).toBe(true);
+		for (const query of ['role=mid', 'rank=iron', 'patch=newest']) {
+			expect(isFrontFilter(parseFrontCard(params(query)).filter), query).toBe(false);
+		}
+		// The order is not the slice.
+		expect(isFrontFilter(parseFrontCard(params('sort=pick')).filter)).toBe(true);
+	});
+});
+
+describe("the card's words", () => {
+	it('names its sort', () => {
+		expect(cardHeading('win')).toBe('Top win rate');
+		expect(cardHeading('pick')).toBe('Top pick rate');
+		expect(cardHeading('ban')).toBe('Top ban rate');
+	});
+
+	it('says what the rows count, with the patch riot-proxy named', () => {
+		expect(cardScope(FRONT_CARD.filter, 'all')).toBe('All patches');
+		const card = parseFrontCard(new URLSearchParams('role=support&rank=master+&patch=newest'));
+		expect(cardScope(card.filter, '16.20')).toBe('Patch 16.20 · Support · Master+');
+		expect(cardScope(card.filter, null)).toBe('Newest patch · Support · Master+');
+	});
+});
+
+describe('rateBar', () => {
+	const top = [
+		row('A', 900, 0.6, 0.2, 0.4),
+		row('B', 900, 0.525, 0.05, 0.1),
+		row('C', 900, 0.5, null, null)
+	];
+
+	it('puts win rates on the fixed scale', () => {
+		expect(rateBar(top[1], 'win', top)).toBe(50);
+	});
+
+	it("measures pick and ban rates against the card's highest", () => {
+		expect(rateBar(top[0], 'pick', top)).toBe(100);
+		expect(rateBar(top[1], 'pick', top)).toBe(25);
+		expect(rateBar(top[1], 'ban', top)).toBe(25);
+		expect(rateBar(top[2], 'ban', top)).toBe(0);
+		expect(rateBar(top[2], 'ban', [top[2]])).toBe(0);
 	});
 });
 

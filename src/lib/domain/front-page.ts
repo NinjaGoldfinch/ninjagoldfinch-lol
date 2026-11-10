@@ -1,9 +1,16 @@
 import { record } from '#lib/api/json.ts';
 import { championPath } from './champion-search.ts';
 import {
+	ROLES,
+	filterFields,
+	parseChampionFilter,
+	patchLabel,
+	queryString,
+	rankLabel,
 	sortRows,
 	type ChampionFilter,
 	type ChampionRow,
+	type ChampionSort,
 	type ChampionTable
 } from './champion-stats.ts';
 import { REGIONS, findRegion, type Region } from './regions.ts';
@@ -12,28 +19,120 @@ import { profilePath } from './riot-id.ts';
 // The front page's cards (ADR-066): shaped here, loaded by
 // src/lib/server/front-page.ts.
 
-/** The top-win-rate card's rows: Ranked Solo, every role, tier, region and patch, as `/champions`. */
+/**
+ * The top-win-rate card's default slice, and the games-analysed pill's only
+ * one: Ranked Solo, every role, tier, region and patch, as `/champions`.
+ */
 export const FRONT_FILTER: ChampionFilter = { role: null, patch: 'all', rank: null };
 
+/** The card's default order. `/champions` defaults to pick rate; the card leads with win rate. */
+export const FRONT_SORT: ChampionSort = 'win';
+
+/** What the top-win-rate card shows: a slice of riot-proxy's analytics, and an order (ADR-077). */
+export interface FrontCard {
+	/** `patch` is `all`, or null for riot-proxy's newest patch: the card offers no other. */
+	filter: ChampionFilter;
+	sort: ChampionSort;
+}
+
+export const FRONT_CARD: FrontCard = { filter: FRONT_FILTER, sort: FRONT_SORT };
+
 /**
- * Games a champion needs before its win rate can lead the front page. Applied
- * here, not on the wire: riot-proxy is still asked for every row (ADR-035).
+ * The card's view from the query, in `/champions`' words (`role`, `rank`,
+ * `patch`, `sort`), so its link to `/champions` carries it. A patch other
+ * than `newest` is every patch; a sort other than `pick` or `ban` is win rate.
  */
-export const TOP_WIN_RATE_MIN_GAMES = 800;
+export function parseFrontCard(params: URLSearchParams): FrontCard {
+	const filter = parseChampionFilter(params);
+	const sort = params.get('sort');
+	return {
+		filter: { ...filter, patch: filter.patch === null ? null : 'all' },
+		sort: sort === 'pick' || sort === 'ban' ? sort : FRONT_SORT
+	};
+}
+
+/** Whether a filter is the default slice, so the card's call is the pill's too. */
+export function isFrontFilter(filter: ChampionFilter): boolean {
+	return filter.role === null && filter.rank === null && filter.patch === FRONT_FILTER.patch;
+}
+
+/** The card's fields in a URL, defaults left out: a form's hidden inputs keep the view. */
+export function cardFields(card: FrontCard): [string, string][] {
+	const fields = filterFields(card.filter);
+	if (card.sort !== FRONT_SORT) fields.push(['sort', card.sort]);
+	return fields;
+}
+
+/**
+ * Games a champion needs to be on the card, highest first. The card takes
+ * the first that six champions reach, so the default slice keeps 800, and a
+ * narrow one (a new patch, a role, a tier) still fills; it never goes under
+ * 100, where `/champions` marks a rate as a low sample (ADR-035, ADR-077).
+ * Applied here, not on the wire: riot-proxy is still asked for every row.
+ */
+export const GAMES_FLOORS = [800, 400, 200, 100] as const;
+
+/** The default slice's floor, the highest. */
+export const TOP_WIN_RATE_MIN_GAMES = GAMES_FLOORS[0];
 
 /** How many champions the card lists. */
 export const TOP_WIN_RATE_COUNT = 6;
 
-/** Highest win rate first, over the floor; ties by games, then name (`sortRows`). */
-export function topWinRates(
+/** The highest of `GAMES_FLOORS` that `count` champions reach; else the lowest. */
+export function gamesFloor(rows: ChampionRow[], count = TOP_WIN_RATE_COUNT): number {
+	const reached = GAMES_FLOORS.find((f) => rows.filter((r) => r.games >= f).length >= count);
+	return reached ?? GAMES_FLOORS[GAMES_FLOORS.length - 1];
+}
+
+/** The card's rows and the floor they were picked over. */
+export interface TopChampions {
+	/** The patch the rows are for: `all`, or riot-proxy's newest by number. */
+	patch: string | null;
+	minGames: number;
+	rows: ChampionRow[];
+}
+
+/** Highest first by the card's sort, over the floor; ties by games, then name (`sortRows`). */
+export function topChampions(
 	table: ChampionTable,
-	minGames = TOP_WIN_RATE_MIN_GAMES,
+	sort: ChampionSort = FRONT_SORT,
 	count = TOP_WIN_RATE_COUNT
-): ChampionRow[] {
-	return sortRows(
-		table.rows.filter((row) => row.games >= minGames),
-		'win'
-	).slice(0, count);
+): TopChampions {
+	const minGames = gamesFloor(table.rows, count);
+	return {
+		patch: table.patch,
+		minGames,
+		rows: sortRows(
+			table.rows.filter((row) => row.games >= minGames),
+			sort
+		).slice(0, count)
+	};
+}
+
+/** The card's heading for its sort. */
+export function cardHeading(sort: ChampionSort): string {
+	return { win: 'Top win rate', pick: 'Top pick rate', ban: 'Top ban rate' }[sort];
+}
+
+/** `Patch 16.20 · Mid · Diamond+`: what the rows count, in the card's words. */
+export function cardScope(filter: ChampionFilter, patch: string | null): string {
+	const role = ROLES.find((r) => r.slug === filter.role)?.label;
+	return [
+		patchLabel(patch ?? filter.patch),
+		...(role ? [role] : []),
+		...(filter.rank ? [rankLabel(filter.rank)] : [])
+	].join(' · ');
+}
+
+/**
+ * A row's bar, in whole percent. Win rates on a fixed scale (`winRateBar`);
+ * pick and ban rates against the card's highest, which fills its bar.
+ */
+export function rateBar(row: ChampionRow, sort: ChampionSort, rows: ChampionRow[]): number {
+	if (sort === 'win') return winRateBar(row.winRate);
+	const rate = (r: ChampionRow) => (sort === 'pick' ? r.pickRate : r.banRate) ?? 0;
+	const top = Math.max(0, ...rows.map(rate));
+	return top > 0 ? Math.round((rate(row) / top) * 100) : 0;
 }
 
 /** The bar behind a win rate, in whole percent: 0 at `lo` (45 %), 100 at `hi` (60 %), clamped. */
@@ -95,9 +194,17 @@ export function pickRegion(params: URLSearchParams): Region {
 	return region && FRONT_REGIONS.includes(region) ? region : DEFAULT_REGION;
 }
 
-/** The canonical query for a region: `` for the default, `?region=kr` otherwise. */
-export function frontQuery(region: Region): string {
-	return region.slug === DEFAULT_REGION_SLUG ? '' : `?region=${region.slug}`;
+/**
+ * The canonical query for a region and the card: `` for the defaults,
+ * `?region=kr&role=mid&rank=diamond+&patch=newest&sort=pick` at most.
+ */
+export function frontQuery(region: { slug: string }, card: FrontCard = FRONT_CARD): string {
+	return queryString([...regionFields(region), ...cardFields(card)]);
+}
+
+/** The region's field in a URL, the default left out: the card's forms keep it. */
+export function regionFields(region: { slug: string }): [string, string][] {
+	return region.slug === DEFAULT_REGION_SLUG ? [] : [['region', region.slug]];
 }
 
 const isInteger = (value: unknown): value is number =>

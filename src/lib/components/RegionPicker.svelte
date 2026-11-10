@@ -4,9 +4,17 @@
 	/**
 	 * The front page's region, for its status card (ADR-071, ADR-076). A
 	 * GET form, so it works without JavaScript; with it, it applies on change
-	 * and keeps the scroll, as the other in-place controls do (ADR-072).
+	 * and keeps the scroll, as the other in-place controls do (ADR-072). The
+	 * top-win-rate card's view goes with it as hidden inputs (ADR-077).
 	 */
-	let { region }: { region: { slug: string } } = $props();
+	let {
+		region,
+		keep = []
+	}: {
+		region: { slug: string };
+		/** Fields of the page's other controls, kept when the region changes. */
+		keep?: [string, string][];
+	} = $props();
 
 	const submit = (event: Event & { currentTarget: HTMLSelectElement }) =>
 		event.currentTarget.form?.requestSubmit();
@@ -19,6 +27,9 @@
 	data-sveltekit-reset="false"
 	class="flex items-center gap-1"
 >
+	{#each keep as [name, value] (name)}
+		<input type="hidden" {name} {value} />
+	{/each}
 	<label>
 		<span class="sr-only">Region</span>
 		<select

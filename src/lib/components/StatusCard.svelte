@@ -17,7 +17,8 @@
 		status,
 		statusPage,
 		checkedSeconds,
-		region
+		region,
+		keep = []
 	}: {
 		/** null when riot-proxy's status was unavailable or unreadable. */
 		status: StatusView | null;
@@ -26,6 +27,8 @@
 		/** Seconds since riot-proxy read the feed from Riot, when it said. */
 		checkedSeconds: number | null;
 		region: { slug: string; label: string };
+		/** The page's other controls' fields, kept by the region picker. */
+		keep?: [string, string][];
 	} = $props();
 
 	const id = $props.id();
@@ -50,7 +53,7 @@
 <section aria-labelledby={id} class="flex flex-col rounded-lg border border-border bg-surface p-4">
 	<div class="flex items-center justify-between gap-2">
 		<h2 {id} class="text-xs font-medium tracking-wide text-muted uppercase">Server status</h2>
-		<RegionPicker {region} />
+		<RegionPicker {region} {keep} />
 	</div>
 	{#if status === null}
 		<p class="mt-3 text-sm text-muted">Server status is unavailable right now.</p>

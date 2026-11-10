@@ -140,6 +140,7 @@ Owner request 2026-11-09: a search-first front page with live cards (IMPLEMENTAT
 - [x] FP-03 Recent searches as cards with icon, region, rank and age (ADR-068) — #141
 - [x] FP-04 The status card shows what Riot's feed has: a count, entries worst first with their newest update and age, a full all-clear state, a link to Riot's status page; riot-proxy requests RP-1 to RP-5 labelled in `docs/notes/status-card.md` (ADR-075; owner, 2026-11-10) — #150
 - [x] FP-08 The free-rotation card removed; the top win rates take two columns of the row (ADR-076; owner, 2026-11-10) — #151
+- [x] FP-09 The top-win-rate card: this patch or all, role, tier, sort by win, pick or ban rate, each row's rates and games, a floor that fills six rows; 7D and 30D raised with riot-proxy as RP-6 (ADR-077; owner, 2026-11-10) — #152
 
 ## Brought forward
 
