@@ -126,10 +126,10 @@ Image URLs are built in `src/lib/assets.ts` and fetched by the Browser: Data Dra
 
 ninja-monitor runs on both hosts, each instance posting to its own Discord webhook (`riot-proxy:docs/design/12-object-storage-and-hosting.md:839-845`):
 
-- **On `ngf-prod-syd1`** it watches `ninjagoldfinch-lol` alongside `riot-proxy` and `cloudflared`, alerting on Discord when a service is down for 30 s or uses more than 1 GiB. Its public source (`v0.2.3`) watches a service through its systemd unit's cgroup and sends the site no request (`ninja-monitor:src/config.rs:106-116`, `ninja-monitor:src/alerts/mod.rs:175-178`); samples are taken every 15 s by default (`ninja-monitor:README.md:266`).
+- **On `ngf-prod-syd1`** it watches `ninjagoldfinch-lol` alongside `riot-proxy` and `cloudflared`, alerting on Discord when a service is down for 30 s or uses more than 1 GiB. Its public source (`v0.2.3`) watches a service through its systemd unit's cgroup; its checks send the site no request (`ninja-monitor:src/config.rs:106-116`, `ninja-monitor:src/alerts/mod.rs:175-178`); samples are taken every 15 s by default (`ninja-monitor:README.md:266`).
 - **On `ngf-mon-syd1`**, a heartbeat pings a Healthchecks.io check every minute, and Healthchecks.io emails the owner when the pings stop (P5-05).
 
-Nothing in this repo calls ninja-monitor, and ninja-monitor sends the site no request. Whether anything requests the site from outside, such as `/healthz` from `ngf-mon-syd1` as the P5-05 answers say, is unverified: ninja-monitor's public source has no HTTP probe: the only timed GET is the heartbeat's, to whatever URL its env variable holds, and its result is only logged. Which process sends the heartbeat to Healthchecks.io is not known. See [monitoring-hooks.md](./monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio).
+Nothing in this repo calls ninja-monitor, and ninja-monitor's checks send the site no request. Whether anything requests the site from outside, such as `/healthz` from `ngf-mon-syd1` as the P5-05 answers say, is unverified: ninja-monitor's public source has no HTTP probe: the only timed GET is the heartbeat's, to whatever URL its env variable holds, and its result is only logged. Which process sends the heartbeat to Healthchecks.io is not known. See [monitoring-hooks.md](./monitoring-hooks.md#from-outside-the-heartbeat-to-healthchecksio).
 
 ## 6. Deploys from GitHub
 
