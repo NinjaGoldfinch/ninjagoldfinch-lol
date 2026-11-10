@@ -100,7 +100,11 @@ export async function loadFrontPage(
 
 type Answer = { data?: unknown; response: Response };
 
-/** The free champions, or null when riot-proxy failed, sent something else, or they cannot be named. */
+/**
+ * The free champions, or null when riot-proxy failed, sent something else, or
+ * none of them can be named: an empty rotation is unavailable, not a notice
+ * worth keeping at the edge (ADR-072).
+ */
 function readRotation(
 	answer: Answer,
 	region: Region,
@@ -124,7 +128,12 @@ function readRotation(
 	if (unknown.length > 0) {
 		console.error(`front page: free champions without lookups: ${unknown.join(', ')}`);
 	}
-	return rotationChampions(rotation, names.champions);
+	const champions = rotationChampions(rotation, names.champions);
+	if (champions.length === 0) {
+		console.error(`front page: no free champions to show for ${region.platform}`);
+		return null;
+	}
+	return champions;
 }
 
 /** The platform's status, or null when riot-proxy failed or sent something else. */
@@ -134,6 +143,22 @@ function readStatus(answer: Answer, region: Region): PlatformStatus | null {
 		return null;
 	}
 	const status = parseStatus(answer.data);
-	if (!status) console.error(`front page: unexpected status payload for ${region.platform}`);
-	return status ?? null;
+	if (!status) {
+		console.error(`front page: unexpected status payload for ${region.platform}`);
+		return null;
+	}
+	// Entries kept under a generic title or a positional key (ADR-072).
+	const patched = [
+		...status.incidents.map((item) => ({ item, kind: 'incident' })),
+		...status.maintenances.map((item) => ({ item, kind: 'maintenance' }))
+	].filter(({ item }) => item.missing.length > 0);
+	if (patched.length > 0) {
+		const list = patched
+			.map(({ item, kind }) => `${kind} ${item.key} missing ${item.missing.join(' and ')}`)
+			.join(', ');
+		console.error(
+			`front page: status entries shown with a fallback for ${region.platform}: ${list}`
+		);
+	}
+	return status;
 }

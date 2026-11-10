@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { REGIONS } from '#lib/domain/regions.ts';
+	import { FRONT_REGIONS } from '#lib/domain/front-page.ts';
 
 	/**
 	 * The front page's region, for its rotation and status cards (ADR-071). A
-	 * GET form, so it works without JavaScript; with it, it applies on change.
+	 * GET form, so it works without JavaScript; with it, it applies on change
+	 * and keeps the scroll, as the other in-place controls do (ADR-072).
 	 */
 	let { region }: { region: { slug: string } } = $props();
 
@@ -11,7 +12,13 @@
 		event.currentTarget.form?.requestSubmit();
 </script>
 
-<form method="GET" action="/" aria-label="Region" class="flex items-center gap-1">
+<form
+	method="GET"
+	action="/"
+	aria-label="Region"
+	data-sveltekit-reset="false"
+	class="flex items-center gap-1"
+>
 	<label>
 		<span class="sr-only">Region</span>
 		<select
@@ -19,7 +26,7 @@
 			onchange={submit}
 			class="h-7 max-w-36 rounded border border-border bg-bg px-1.5 text-[11px] text-muted focus:border-accent focus:outline-none"
 		>
-			{#each REGIONS as r (r.slug)}
+			{#each FRONT_REGIONS as r (r.slug)}
 				<option value={r.slug} selected={r.slug === region.slug}>{r.label}</option>
 			{/each}
 		</select>

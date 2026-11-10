@@ -3,6 +3,7 @@ import { toChampionTable } from '#lib/domain/champion-stats.ts';
 import {
 	DEFAULT_REGION,
 	EXAMPLE_SEARCHES,
+	FRONT_REGIONS,
 	TOP_WIN_RATE_MIN_GAMES,
 	allRunning,
 	fetchedAge,
@@ -16,7 +17,7 @@ import {
 	winRateBar,
 	type PlatformStatus
 } from '#lib/domain/front-page.ts';
-import { findRegion } from '#lib/domain/regions.ts';
+import { REGIONS, findRegion } from '#lib/domain/regions.ts';
 import type { components } from '#lib/api/schema.d.ts';
 import { fixtureBody, recordedNames } from './fixtures.ts';
 
@@ -97,6 +98,16 @@ describe('pickRegion and frontQuery', () => {
 		expect(pickRegion(new URLSearchParams('region=mars'))).toBe(DEFAULT_REGION);
 	});
 
+	it('leaves out the Middle East, which riot-proxy 2.10.0 does not serve, until it does', () => {
+		const middleEast = findRegion('me');
+		expect(middleEast?.platform).toBe('me1');
+		expect(FRONT_REGIONS).not.toContain(middleEast);
+		expect(pickRegion(new URLSearchParams('region=me'))).toBe(DEFAULT_REGION);
+		expect(pickRegion(new URLSearchParams('region=ME'))).toBe(DEFAULT_REGION);
+		// Every other region is still offered, in REGIONS' order.
+		expect(FRONT_REGIONS).toEqual(REGIONS.filter((r) => r.slug !== 'me'));
+	});
+
 	it('leaves the default out of the canonical query', () => {
 		expect(frontQuery(DEFAULT_REGION)).toBe('');
 		expect(korea && frontQuery(korea)).toBe('?region=kr');
@@ -147,13 +158,25 @@ describe('parseStatus', () => {
 		expect(status?.incidents).toEqual([
 			{
 				id: 9101,
+				key: 'id-9101',
 				title: 'Ranked queues are disabled',
 				severity: 'warning',
 				maintenanceStatus: null,
-				updatedAt: '2026-11-09T01:10:00Z'
+				updatedAt: '2026-11-09T01:10:00Z',
+				missing: []
+			},
+			// The incident without a title is kept, under a generic one.
+			{
+				id: 9103,
+				key: 'id-9103',
+				title: 'Incident',
+				severity: 'info',
+				maintenanceStatus: null,
+				updatedAt: null,
+				missing: ['title']
 			}
 		]);
-		// The completed maintenance is dropped, and the incident without a title.
+		// The completed maintenance is dropped.
 		expect(status?.maintenances.map((m) => [m.title, m.maintenanceStatus])).toEqual([
 			['Scheduled maintenance for patch 16.21', 'scheduled']
 		]);
@@ -167,13 +190,72 @@ describe('parseStatus', () => {
 					id: 1,
 					incident_severity: 'catastrophic',
 					titles: [{ locale: 'ko_KR', content: '점검' }, { locale: 'ja_JP' }]
-				},
-				{ id: 'two', titles: [{ locale: 'en_US', content: 'No id' }] }
+				}
 			]
 		});
 		expect(status?.incidents).toEqual([
-			{ id: 1, title: '점검', severity: null, maintenanceStatus: null, updatedAt: null }
+			{
+				id: 1,
+				key: 'id-1',
+				title: '점검',
+				severity: null,
+				maintenanceStatus: null,
+				updatedAt: null,
+				missing: []
+			}
 		]);
+	});
+
+	it('keeps an incident without a title, under a generic one, so the card is not all clear', () => {
+		const status = parseStatus({
+			maintenances: [],
+			incidents: [{ id: 1, incident_severity: 'critical', titles: [] }]
+		});
+		if (!status) throw new Error('unreadable status');
+		expect(status.incidents).toEqual([
+			{
+				id: 1,
+				key: 'id-1',
+				title: 'Incident',
+				severity: 'critical',
+				maintenanceStatus: null,
+				updatedAt: null,
+				missing: ['title']
+			}
+		]);
+		expect(allRunning(status)).toBe(false);
+	});
+
+	it('keeps entries without a usable id, keyed by their place in the feed', () => {
+		const status = parseStatus({
+			incidents: [
+				{ id: 'two', titles: [{ locale: 'en_US', content: 'No id' }] },
+				{ id: 3, titles: [{ locale: 'en_US', content: 'Has an id' }] },
+				{ id: 2.5, titles: 'none' }
+			],
+			maintenances: [
+				{ maintenance_status: 'in_progress', titles: [] },
+				{ maintenance_status: 'complete', titles: [] },
+				null
+			]
+		});
+		if (!status) throw new Error('unreadable status');
+		expect(status.incidents.map((i) => [i.id, i.key, i.title, i.missing])).toEqual([
+			[null, 'at-0', 'No id', ['id']],
+			[3, 'id-3', 'Has an id', []],
+			[null, 'at-2', 'Incident', ['id', 'title']]
+		]);
+		// A completed maintenance is still dropped, with or without an id; an
+		// entry that is not even an object is kept as an unknown maintenance.
+		expect(
+			status.maintenances.map((m) => [m.key, m.title, m.maintenanceStatus, m.missing])
+		).toEqual([
+			['at-0', 'Maintenance', 'in_progress', ['id', 'title']],
+			['at-2', 'Maintenance', null, ['id', 'title']]
+		]);
+		expect(allRunning(status)).toBe(false);
+		const keys = [...status.incidents, ...status.maintenances].map((i) => i.key);
+		expect(new Set(keys.slice(0, 3)).size).toBe(3);
 	});
 
 	it('reads nothing without both lists', () => {

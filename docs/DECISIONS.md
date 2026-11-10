@@ -1102,7 +1102,7 @@ Date: 2026-11-09 · Task: P5
 
 ## ADR-071: the front page's region in the query, Oceania by default; Riot's rotation and status payloads parsed, not typed
 
-Date: 2026-11-09 · Task: FP-02
+Date: 2026-11-09 · Task: FP-02 · Status entries, empty rotations, the Middle East and the cost of a degraded `/` refined by ADR-072
 
 **Context.** The front page's free rotation and server status cards (ADR-066) are per platform. riot-proxy's `/v1/lol/rotations/{platform}` and `/v1/lol/status/{platform}` pass Riot's champion-v3 and lol-status-v4 payloads through with an empty schema, so the generated types have them as `unknown`. ADR-037 took the region out of search and profiles, but these two cards still need a platform. The site has no sessions or cookies.
 
@@ -1161,3 +1161,28 @@ Date: 2026-11-09 · Task: FP-03
 - Each entry grows by a few dozen bytes in `localStorage`, still at most eight.
 - No migration step: old entries show as plain cards and fill in as their profiles are viewed again. An icon, rank or region shown is as of the last view; it changes when the player's profile is next opened.
 - The icon is fetched from Data Dragon at the front page's patch. An icon newer than that patch shows as a broken image until the patch moves, as on the profile.
+
+## ADR-072: status entries kept whatever they lack, an empty rotation unavailable, no Middle East on the front page yet
+
+Date: 2026-11-09 · Task: FIX-13 (review of #140; refines ADR-071)
+
+**Context.** The review of #140 found four ways the front page's rotation and status cards (ADR-071) said less than they knew, or the wrong thing:
+
+- `parseStatus` dropped, without a word, an incident or open maintenance that had no integer `id` or no usable title. A feed whose only incident was `{ id: 1, incident_severity: "critical", titles: [] }` read as nothing open: a green "All services running", nothing logged, and the page kept at the edge as complete.
+- A rotation whose `freeChampionIds` was empty, held no integers, or named only champions the lookups lack came back as an empty list, not as unavailable. The card showed "Free rotation is unavailable right now.", nothing was logged, and the page was kept at the edge with the notice.
+- The picker offered every entry of `REGIONS`, the Middle East (`me`, platform `me1`) included. riot-proxy's released 2.10.0 has no `me1` in its platform list and answers 400 for it, so both cards failed on every view of `/?region=me`, and that page was never kept at the edge. Read in riot-proxy's source at v2.10.0, not by a live call.
+- Choosing a region with JavaScript scrolled the page to the top, unlike the site's other in-place controls.
+
+**Decision.**
+
+- **Every status entry is kept**, but completed maintenances, which are still dropped. One without a usable title shows as `Incident` or `Maintenance`, with its severity or state when that is readable. One without an integer `id` is keyed by its place in its list (`at-<n>`, otherwise `id-<id>`), which the card's list uses. An entry that is not an object at all is kept the same way, with nothing readable. `parseStatus` records what each entry lacked, and `readStatus` logs `front page: status entries shown with a fallback for <platform>: …` whenever one needed it. The page is still kept at the edge: the card shows that something is open.
+- **A rotation with no champions to show is unavailable**: empty, without integer ids, or with only ids the lookups lack. `readRotation` logs `front page: no free champions to show for <platform>` and returns null, so the card shows its notice and `/` is sent `no-store`, as for a failed call.
+- **The Middle East is left out of the front page's regions** (`FRONT_REGIONS`), in the picker and in `pickRegion`, so `/?region=me` redirects 307 to `/`. `REGIONS` itself is unchanged: profiles and matches use it, and riot-proxy names a player's platform for them. It comes back to the front page when a riot-proxy release accepts `me1`.
+- **The picker keeps the scroll**: its form has `data-sveltekit-reset="false"`, as the champion table's sort links, the match tabs and the set-build tabs do. A Playwright test at a 390 px viewport saw the page go from `scrollY` 655 to 0 without it.
+
+**Consequences.**
+
+- `/` has 14 edge variants, not 15.
+- A degraded `/` costs riot-proxy on every view. With a card missing, `/` is sent `no-store` (ADR-066), so the edge keeps nothing and each view makes three riot-proxy calls (analytics, rotation and status; the patch and lookups are held in memory), each counted against the site key's quota (600 a minute by default). `/` has no edge rate limit: the one rule covers `/summoner/` and `/match/` only (ADR-065). While riot-proxy, Riot's status or its rotation is failing, or for `/?region=` of a platform riot-proxy refuses, the front page's traffic reaches riot-proxy in full. ADR-071's consequence that riot-proxy answers these calls from its own cache of Riot holds for a working platform, not for this. A rate limit or a fallback held in memory for a degraded `/` would be a later decision.
+- An entry kept under a fallback is logged on every render of that region's `/` while Riot's feed holds it; the edge still keeps the page for a minute at a time, per Cloudflare data centre.
+- The log lines are in `docs/integration/monitoring-hooks.md` and `docs/operations/troubleshooting.md` (entry 22).
