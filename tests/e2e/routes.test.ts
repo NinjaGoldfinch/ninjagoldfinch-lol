@@ -198,6 +198,90 @@ test('opened profiles appear under recent searches', async ({ page }) => {
 	);
 });
 
+test('a refresh counts as a view: the card shows the refreshed rank and icon', async ({ page }) => {
+	await page.goto('/summoner/NinjaGoldfinch-OCENZ');
+	await hydrated(page);
+	await recorded(page, 'Emerald III');
+	// The refresh fixture has another rank and icon than the plain profile.
+	await page.getByRole('button', { name: 'Refresh' }).click();
+	await expect(page.getByRole('region', { name: 'Rank' })).toContainText('Emerald II 12 LP');
+	await recorded(page, 'Emerald II"');
+	await page.goto('/');
+
+	const card = page
+		.getByRole('region', { name: 'Recent searches' })
+		.getByRole('link', { name: /NinjaGoldfinch#OCENZ/ });
+	await expect(card).toContainText('Oceania · Emerald II · viewed just now');
+	await expect(card.locator('img')).toHaveAttribute(
+		'src',
+		'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/profileicon/29.png'
+	);
+});
+
+test('an unranked player reads without a stray separator', async ({ page }) => {
+	await page.addInitScript(() => {
+		localStorage.setItem(
+			'recent-searches',
+			JSON.stringify([
+				{
+					gameName: 'Fresh',
+					tagLine: 'NEW',
+					region: 'oce',
+					profileIconId: 29,
+					viewedAt: Date.now()
+				}
+			])
+		);
+	});
+	await page.goto('/');
+
+	const card = page
+		.getByRole('region', { name: 'Recent searches' })
+		.getByRole('link', { name: /Fresh#NEW/ });
+	await expect(card).toHaveText(/^\s*Fresh#NEW\s*Oceania · viewed just now\s*$/);
+});
+
+test('without a patch, a card with an icon shows the initial instead', async ({ page }) => {
+	await page.addInitScript(() => {
+		localStorage.setItem(
+			'recent-searches',
+			JSON.stringify([{ gameName: 'iconic', tagLine: 'ONE', profileIconId: 29 }])
+		);
+	});
+	// The server holds the patch, so the front page's data is rewritten on its
+	// way to the browser: a client-side visit reads `/__data.json`, whose root
+	// object gets `patch` and `patchLabel` of null, as the loader gives when
+	// the patch is unavailable.
+	await page.route('**/__data.json*', async (route) => {
+		const response = await route.fetch();
+		const body = (await response.json()) as {
+			nodes: ({ type: string; data?: unknown[] } | null)[];
+		};
+		for (const node of body.nodes) {
+			const data = node?.data;
+			const root = data?.[0];
+			if (data && root && typeof root === 'object' && 'patch' in root) {
+				data.push(null);
+				Object.assign(root, { patch: data.length - 1, patchLabel: data.length - 1 });
+			}
+		}
+		await route.fulfill({ response, json: body });
+	});
+	await page.goto('/about');
+	await hydrated(page);
+	await page.getByRole('banner').getByRole('link', { name: 'ninjagoldfinch.lol' }).click();
+	await expect(page).toHaveURL('/');
+
+	const card = page
+		.getByRole('region', { name: 'Recent searches' })
+		.getByRole('link', { name: 'iconic#ONE' });
+	await expect(card).toBeVisible();
+	await expect(card.locator('img')).toHaveCount(0);
+	await expect(card).toHaveText(/^I\s*iconic#ONE\s*$/);
+	// The rewrite reached the page: no patch pill either.
+	await expect(page.getByRole('main')).not.toContainText('Patch 16.20');
+});
+
 test('a recent search stored before icons and ranks still shows', async ({ page }) => {
 	await page.addInitScript(() => {
 		localStorage.setItem('recent-searches', JSON.stringify([{ gameName: 'Old', tagLine: 'ONE' }]));
