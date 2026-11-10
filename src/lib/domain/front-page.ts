@@ -1,4 +1,3 @@
-import type { Named } from '#lib/api/ddragon.ts';
 import { record } from '#lib/api/json.ts';
 import { championPath } from './champion-search.ts';
 import {
@@ -70,7 +69,7 @@ export const EXAMPLE_SEARCHES: readonly { label: string; href: string }[] = [
 	}
 ];
 
-/** The region the rotation and status cards show when the URL names none (ADR-071). */
+/** The region the status card shows when the URL names none (ADR-071). */
 export const DEFAULT_REGION_SLUG = 'oce';
 
 function defaultRegion(): Region {
@@ -83,7 +82,7 @@ function defaultRegion(): Region {
 export const DEFAULT_REGION: Region = defaultRegion();
 
 /**
- * The regions the rotation and status cards offer: every region but the
+ * The regions the status card offers: every region but the
  * Middle East. Its platform, `me1`, is not in riot-proxy 2.10.0's platform
  * list, which answers 400 for it; it comes back when a riot-proxy release
  * accepts `me1` (ADR-072). Profiles still use the whole of `REGIONS`.
@@ -101,55 +100,8 @@ export function frontQuery(region: Region): string {
 	return region.slug === DEFAULT_REGION_SLUG ? '' : `?region=${region.slug}`;
 }
 
-/**
- * What the site reads of Riot's champion-v3 `ChampionInfo`, which riot-proxy
- * passes through without a schema (ADR-071).
- */
-export interface Rotation {
-	free: number[];
-	forNewPlayers: number[];
-	maxNewPlayerLevel: number | null;
-}
-
 const isInteger = (value: unknown): value is number =>
 	typeof value === 'number' && Number.isInteger(value);
-
-/** Integer entries of a list; anything else is dropped. */
-function integers(value: unknown): number[] {
-	return Array.isArray(value) ? value.filter(isInteger) : [];
-}
-
-/** A champion-v3 rotation, read narrowly; undefined when `freeChampionIds` is not a list. */
-export function parseRotation(body: unknown): Rotation | undefined {
-	const info = record(body);
-	if (!info || !Array.isArray(info.freeChampionIds)) return undefined;
-	return {
-		free: integers(info.freeChampionIds),
-		forNewPlayers: integers(info.freeChampionIdsForNewPlayers),
-		maxNewPlayerLevel: isInteger(info.maxNewPlayerLevel) ? info.maxNewPlayerLevel : null
-	};
-}
-
-/** A free champion, named for its icon and link. */
-export interface RotationChampion {
-	id: number;
-	/** Data Dragon id: `MasterYi`. */
-	key: string;
-	name: string;
-}
-
-/** The free champions the lookups know, by name; ids the lookups lack are left out. */
-export function rotationChampions(
-	rotation: Rotation,
-	champions: Record<number, Named>
-): RotationChampion[] {
-	return rotation.free
-		.flatMap((id) => {
-			const named = champions[id];
-			return named ? [{ id, key: named.id, name: named.name }] : [];
-		})
-		.toSorted((a, b) => a.name.localeCompare(b.name));
-}
 
 export type StatusSeverity = 'info' | 'warning' | 'critical';
 

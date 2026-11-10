@@ -1102,7 +1102,7 @@ Date: 2026-11-09 · Task: P5
 
 ## ADR-071: the front page's region in the query, Oceania by default; Riot's rotation and status payloads parsed, not typed
 
-Date: 2026-11-09 · Task: FP-02 · Status entries, empty rotations, the Middle East and the cost of a degraded `/` refined by ADR-072; what the status card shows extended by ADR-075
+Date: 2026-11-09 · Task: FP-02 · Status entries, empty rotations, the Middle East and the cost of a degraded `/` refined by ADR-072; what the status card shows extended by ADR-075; the rotation card dropped by ADR-076
 
 **Context.** The front page's free rotation and server status cards (ADR-066) are per platform. riot-proxy's `/v1/lol/rotations/{platform}` and `/v1/lol/status/{platform}` pass Riot's champion-v3 and lol-status-v4 payloads through with an empty schema, so the generated types have them as `unknown`. ADR-037 took the region out of search and profiles, but these two cards still need a platform. The site has no sessions or cookies.
 
@@ -1242,3 +1242,21 @@ Date: 2026-11-10 · Task: FP-04 (owner, 2026-11-10; extends ADR-071 and ADR-072)
 - An update's text is Riot's, in whatever language the platform has when there is no `en_US`; it is rendered as text, never as HTML.
 - An entry's age moves with the clock, so the browser test checks its form, not its value; the unit tests pin the clock.
 - A real recording of a feed with something open would confirm the order of `updates[]` and whether unpublished updates appear. Until then the newest-by-time rule does not depend on either.
+
+## ADR-076: the front page drops the free-rotation card
+
+Date: 2026-11-10 · Task: FP-08 (owner, 2026-11-10; supersedes the rotation card of ADR-066, ADR-071 and ADR-072)
+
+**Context.** The front page's row of live cards (ADR-066) had three: the free rotation, the top win rates and the server status, the first and last for `?region=` (ADR-071). The owner asked for the rotation card to go and for the win-rate card to get more room and more filters. The rotation was also the card most often shown as a notice: an empty or unnamed rotation counts as unavailable (ADR-072), as Brazil's did on 2026-11-10, and a missing card sends `/` as `no-store`.
+
+**Decision.**
+
+- **No free-rotation card.** `RotationCard`, `parseRotation`, `rotationChampions` and the synthetic rotation fixtures are removed, and `loadFrontPage` no longer calls `/v1/lol/rotations/{platform}`.
+- **Two cards in the row**: on a wide screen the top win rates take two of the three columns and the server status the third; stacked on a narrow one, as before.
+- **`?region=` stays**, for the status card, with its one picker. Its URLs, the Middle East's exclusion and the 307s are unchanged (ADR-071, ADR-072).
+
+**Consequences.**
+
+- A front-page miss costs riot-proxy two calls (analytics and status), not three, and `/` is complete, so kept at the edge, whenever those two and the lookups are.
+- The front page's exit check reads Korea's status, not its rotation and status.
+- The site makes no use of riot-proxy's rotations route. RP-2 in `docs/notes/status-card.md` asks for a schema for the status route only.

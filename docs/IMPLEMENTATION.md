@@ -533,8 +533,11 @@ Owner request 2026-11-09: a search-first front page ("Concept 1, search first wi
 - [ ] FP-02 Free rotation and server status for a region: `?region=` with Oceania as the default, a switcher that works without JavaScript, Riot's passed-through payloads parsed at runtime (ADR-071)
 - [ ] FP-03 Recent searches as cards: profile icon, region, solo rank and when it was viewed, recorded by the profile page; entries stored before still read (ADR-068)
 - [ ] FP-04 The server status card shows what Riot's feed has: a count of what is open, entries worst first, each with its newest update and when it was updated, an all-clear state that fills the card, and a link to Riot's status page; what waits on riot-proxy is labelled in `docs/notes/status-card.md` (ADR-075)
+- [ ] FP-08 The free-rotation card removed: no call to riot-proxy's rotations route; the top win rates take two of the row's three columns, the server status the third; `?region=` stays for the status card (ADR-076)
 
-**Exit check:** with JavaScript disabled, `/?region=kr` renders Korea's rotation and status from the server; with riot-proxy stopped, `/` answers 200 with every card's notice and `Cache-Control: no-store`.
+FP-05 to FP-07 are held for the status card's follow-ups in `docs/notes/status-card.md`, which wait on riot-proxy.
+
+**Exit check:** with JavaScript disabled, `/?region=kr` renders Korea's status from the server (its rotation too before FP-08); with riot-proxy stopped, `/` answers 200 with every card's notice and `Cache-Control: no-store`.
 
 ## Riot policy checklist
 

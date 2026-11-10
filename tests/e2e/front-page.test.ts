@@ -32,7 +32,7 @@ test.describe('without JavaScript', () => {
 			main.getByRole('search').getByRole('combobox', { name: 'Riot ID or champion' })
 		).toBeVisible();
 
-		// The rotation links champions too, so the examples are found in their line.
+		// The win-rate card links champions too, so the examples are found in their line.
 		const examples = main.locator('p', { hasText: /^Try / });
 		await expect(examples).toHaveText('Try Ahri, Jinx or NinjaGoldfinch#OCENZ');
 		for (const [name, href] of [
@@ -67,21 +67,17 @@ test.describe('without JavaScript', () => {
 		await expect(page.locator('footer')).toContainText(LEGAL);
 	});
 
-	test("Oceania's free rotation and server status are on the page by default", async ({ page }) => {
+	test("Oceania's server status is on the page by default, and no free rotation", async ({
+		page
+	}) => {
 		await page.goto('/');
 
-		const rotation = page.getByRole('region', { name: 'Free this week' });
-		const icons = rotation.getByRole('list', { name: 'Free champions' }).getByRole('link');
-		await expect(icons).toHaveCount(16);
-		await expect(icons.first()).toHaveAttribute('href', '/champions/ahri');
-		await expect(icons.first().getByRole('img')).toHaveAttribute(
-			'src',
-			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png'
-		);
-		await expect(rotation).toContainText('16 champions free to play on Oceania.');
-		await expect(rotation.getByRole('combobox', { name: 'Region' })).toHaveValue('oce');
+		// The free-rotation card is gone (ADR-076).
+		await expect(page.getByRole('region', { name: 'Free this week' })).toHaveCount(0);
+		await expect(page.getByRole('form', { name: 'Region' })).toHaveCount(1);
 
 		const status = page.getByRole('region', { name: 'Server status' });
+		await expect(status.getByRole('combobox', { name: 'Region' })).toHaveValue('oce');
 		await expect(status).toContainText('All services running');
 		await expect(status).toContainText('No open incidents or maintenance on Oceania.');
 		await expect(status).toContainText(
@@ -95,16 +91,10 @@ test.describe('without JavaScript', () => {
 
 	test('the region picker applies with its button', async ({ page }) => {
 		await page.goto('/');
-		const picker = page.getByRole('form', { name: 'Region' }).first();
+		const picker = page.getByRole('form', { name: 'Region' });
 		await picker.getByRole('combobox', { name: 'Region' }).selectOption({ label: 'Korea' });
 		await picker.getByRole('button', { name: 'Apply' }).click();
 		await expect(page).toHaveURL('/?region=kr');
-
-		const rotation = page.getByRole('region', { name: 'Free this week' });
-		await expect(
-			rotation.getByRole('list', { name: 'Free champions' }).getByRole('link')
-		).toHaveCount(8);
-		await expect(rotation).toContainText('8 champions free to play on Korea.');
 
 		const status = page.getByRole('region', { name: 'Server status' });
 		const open = status.getByRole('list', { name: 'Open incidents and maintenances' });
@@ -198,14 +188,12 @@ test('the Middle East is not offered until riot-proxy serves me1, and its URL re
 	}
 
 	await page.goto('/');
-	for (const card of ['Free this week', 'Server status']) {
-		const picker = page
-			.getByRole('region', { name: card })
-			.getByRole('combobox', { name: 'Region' });
-		await expect(picker.getByRole('option')).toHaveCount(14);
-		await expect(picker.getByRole('option', { name: 'Middle East' })).toHaveCount(0);
-		await expect(picker.getByRole('option', { name: 'Korea' })).toHaveCount(1);
-	}
+	const picker = page
+		.getByRole('region', { name: 'Server status' })
+		.getByRole('combobox', { name: 'Region' });
+	await expect(picker.getByRole('option')).toHaveCount(14);
+	await expect(picker.getByRole('option', { name: 'Middle East' })).toHaveCount(0);
+	await expect(picker.getByRole('option', { name: 'Korea' })).toHaveCount(1);
 });
 
 test("the edge keeps another region's front page for a minute", async ({ request }) => {
@@ -246,8 +234,8 @@ test('on a narrow screen, choosing a region keeps the scroll', async ({ page }) 
 	await expect(page.getByRole('region', { name: 'Server status' })).toContainText(
 		'Ranked queues are disabled'
 	);
-	// Not sent back to the top. Korea's shorter rotation moves the card up a
-	// little, and the browser's scroll anchoring follows it.
+	// Not sent back to the top. Korea's open entries make the card longer, and
+	// the browser's scroll anchoring keeps the picker in place.
 	expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before / 2);
 	await expect(
 		page.getByRole('region', { name: 'Server status' }).getByRole('combobox', { name: 'Region' })

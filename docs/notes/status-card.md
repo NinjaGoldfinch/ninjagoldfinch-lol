@@ -40,7 +40,7 @@ With nothing open: "Last incident: Ranked queues disabled · closed 2 days ago".
 
 ### FP-07: generated types replace the parsers (needs RP-2)
 
-`parseStatus` and `parseRotation` go; the generated types are used as for every other route (ADR-071 expected this).
+`parseStatus` goes; the generated types are used as for every other route (ADR-071 expected this).
 
 ## Requests for riot-proxy
 
@@ -49,7 +49,7 @@ Each is riot-proxy's own task. The shapes are suggestions: the site builds only 
 | Label    | Change in riot-proxy                                                                                                                                                                                                                                                                                                 | Unlocks                                    | Size   |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------ |
 | **RP-1** | **Every platform's status in one call**, such as `GET /v1/lol/status`: per platform, the number of open incidents and of open maintenances, the worst `incident_severity`, and how long ago riot-proxy read it from Riot. Typed in the spec. A platform whose read failed is reported as such, not as a failed call. | FP-05                                      | Medium |
-| **RP-2** | **A schema for the 200 body** of `/v1/lol/status/{platform}` (and `/v1/lol/rotations/{platform}`): today `application/json: {}`, so the generated type is `unknown`. The fields the site reads are in `docs/integration/contract.md`, "Fields the site reads".                                                       | FP-07                                      | Small  |
+| **RP-2** | **A schema for the 200 body** of `/v1/lol/status/{platform}` (the site no longer reads `/v1/lol/rotations/{platform}`, ADR-076): today `application/json: {}`, so the generated type is `unknown`. The fields the site reads are in `docs/integration/contract.md`, "Fields the site reads".                         | FP-07                                      | Small  |
 | **RP-3** | **Entries riot-proxy saw close**: an incident or maintenance that has left Riot's feed, kept for some days with when it was last seen. riot-proxy would have to read each platform's feed on its own timer for this, not only when asked. Served on RP-1's route, or on one of its own.                              | FP-06                                      | Medium |
 | **RP-4** | **`me1` accepted** wherever a platform is. riot-proxy 2.10.0 answers 400 for it, so the Middle East is left out of the front page's picker (ADR-072).                                                                                                                                                                | The Middle East on the front page          | Small  |
 | **RP-5** | **`totalMatches` on `ChampionStatsResponse`**: the matches in the slice, each counted once, which `pickRate` already divides by. `totalGames` counts participants, and the front page divides it by ten (ADR-074, FIX-17).                                                                                           | The games-analysed pill without arithmetic | Small  |

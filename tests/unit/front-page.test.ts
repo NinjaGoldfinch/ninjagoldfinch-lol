@@ -10,11 +10,9 @@ import {
 	formatCount,
 	frontQuery,
 	gamesAnalysed,
-	parseRotation,
 	parseStatus,
 	pickRegion,
 	riotStatusUrl,
-	rotationChampions,
 	statusHeadline,
 	statusView,
 	topWinRates,
@@ -137,43 +135,6 @@ describe('pickRegion and frontQuery', () => {
 	it('leaves the default out of the canonical query', () => {
 		expect(frontQuery(DEFAULT_REGION)).toBe('');
 		expect(korea && frontQuery(korea)).toBe('?region=kr');
-	});
-});
-
-describe('parseRotation', () => {
-	it("reads Riot's ChampionInfo", () => {
-		const rotation = parseRotation(fixtureBody('/v1/lol/rotations/oc1'));
-		expect(rotation?.free).toHaveLength(17);
-		expect(rotation?.forNewPlayers).toEqual([81, 53, 111, 350, 432]);
-		expect(rotation?.maxNewPlayerLevel).toBe(10);
-	});
-
-	it('keeps integer ids only, and needs nothing but freeChampionIds', () => {
-		expect(parseRotation({ freeChampionIds: [1, 'x', 2.5, 3] })).toEqual({
-			free: [1, 3],
-			forNewPlayers: [],
-			maxNewPlayerLevel: null
-		});
-	});
-
-	it('reads nothing else', () => {
-		for (const body of [{}, null, [], 'free', { freeChampionIds: 'all' }]) {
-			expect(parseRotation(body)).toBeUndefined();
-		}
-	});
-});
-
-describe('rotationChampions', () => {
-	it('names the free champions by name, leaving out ids the lookups lack', () => {
-		const rotation = parseRotation(fixtureBody('/v1/lol/rotations/oc1'));
-		if (!rotation) throw new Error('unreadable rotation fixture');
-		const champions = rotationChampions(rotation, recordedNames().champions);
-
-		expect(champions).toHaveLength(16);
-		expect(champions.map((c) => c.id)).not.toContain(999);
-		expect(champions[0]).toEqual({ id: 103, key: 'Ahri', name: 'Ahri' });
-		const names = champions.map((c) => c.name);
-		expect(names).toEqual(names.toSorted((a, b) => a.localeCompare(b)));
 	});
 });
 

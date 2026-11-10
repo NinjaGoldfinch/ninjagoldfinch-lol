@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_SITE_NAME } from '$app/env/public';
 	import RecentSearches from '#lib/components/RecentSearches.svelte';
-	import RotationCard from '#lib/components/RotationCard.svelte';
 	import SearchForm from '#lib/components/SearchForm.svelte';
 	import StatusCard from '#lib/components/StatusCard.svelte';
 	import TopWinRates from '#lib/components/TopWinRates.svelte';
@@ -54,8 +53,9 @@
 </div>
 
 <div class="mt-12 grid gap-4 lg:grid-cols-3">
-	<RotationCard champions={data.rotation} patch={data.patch} region={data.region} />
-	<TopWinRates rows={data.topWinRates} patch={data.patch} minGames={TOP_WIN_RATE_MIN_GAMES} />
+	<div class="grid lg:col-span-2">
+		<TopWinRates rows={data.topWinRates} patch={data.patch} minGames={TOP_WIN_RATE_MIN_GAMES} />
+	</div>
 	<StatusCard
 		status={data.status}
 		statusPage={data.statusPage}
