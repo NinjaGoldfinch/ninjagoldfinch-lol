@@ -1,5 +1,5 @@
 {
-	"_note": "Synthetic: Riot's lol-status-v4 PlatformDataDto for Korea: a warning incident, a scheduled maintenance, a completed maintenance (not shown) and an entry with no titles (not shown). Not a recording.",
+	"_note": "Synthetic: Riot's lol-status-v4 PlatformDataDto for Korea: a warning incident, a scheduled maintenance, a completed maintenance (not shown) and an entry with no titles (shown under the generic title `Incident`, so three entries are shown). Not a recording.",
 	"request": {
 		"method": "GET",
 		"path": "/v1/lol/status/kr"
