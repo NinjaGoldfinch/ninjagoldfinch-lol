@@ -4,22 +4,22 @@ From a clean machine to passing tests and a local ninjagoldfinch.lol rendering p
 
 ## What you need
 
-| Tool                  | Version                                  | Why                                     | Source                                           |
-| --------------------- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------ |
-| Node                  | 22.18 or later (`engines.node >=22.18`)  | Runs Vite, the tests and `node build`   | `package.json:7-9`, `.npmrc:1` (`engine-strict`) |
-| pnpm                  | 12.10.1 exactly (`packageManager`)       | Installs from `pnpm-lock.yaml`          | `package.json:6`                                 |
-| just                  | any recent (1.58.0 used here)            | Task runner for every command           | `justfile`                                       |
-| git                   | any                                      | `just setup` sets `core.hooksPath`      | `justfile:6-9`                                   |
-| Playwright's Chromium | the one `@playwright/test` asks for      | `just e2e` only                         | `README.md:16-17`                                |
-| riot-proxy            | optional; release `v2.7.0` matches specs | Only to see live data instead of mocked | `openapi/riot-proxy.json`, `README.md:56-67`     |
+| Tool                  | Version                                  | Why                                     | Source                                            |
+| --------------------- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------- |
+| Node                  | 22.18 or later (`engines.node >=22.18`)  | Runs Vite, the tests and `node build`   | `package.json:8-10`, `.npmrc:1` (`engine-strict`) |
+| pnpm                  | 12.10.1 exactly (`packageManager`)       | Installs from `pnpm-lock.yaml`          | `package.json:7`                                  |
+| just                  | any recent (1.58.0 used here)            | Task runner for every command           | `justfile`                                        |
+| git                   | any                                      | `just setup` sets `core.hooksPath`      | `justfile:6-9`                                    |
+| Playwright's Chromium | the one `@playwright/test` asks for      | `just e2e` only                         | `README.md:16-17`                                 |
+| riot-proxy            | optional; release `v2.7.0` matches specs | Only to see live data instead of mocked | `openapi/riot-proxy.json`, `README.md:56-67`      |
 
-`README.md:12` and `package.json:8` both say 22.18 or later (`>=22.18`), and `.npmrc` sets `engine-strict=true`, so pnpm refuses an older Node.
+`README.md:12` and `package.json:9` both say 22.18 or later (`>=22.18`), and `.npmrc` sets `engine-strict=true`, so pnpm refuses an older Node.
 
 **pnpm.** `corepack enable` provides the pinned pnpm on most systems (`README.md:13`). On Ubuntu 26.04 the packaged `node-corepack` (0.24) cannot load pnpm 12, so install it directly instead: `npm install -g pnpm@12.10.1` (`riot-proxy:docs/design/12-object-storage-and-hosting.md:802-806`).
 
 ## 1. Clone and install
 
-1. Clone the private repo (you need read access):
+1. Clone the repo (it is public):
 
    ```sh
    git clone git@github.com:NinjaGoldfinch/ninjagoldfinch-lol.git
@@ -32,7 +32,7 @@ From a clean machine to passing tests and a local ninjagoldfinch.lol rendering p
    just setup
    ```
 
-   This runs `pnpm install`, `git config core.hooksPath .githooks`, and copies `.env.example` to `.env` if there is no `.env` yet (`justfile:5-9`). `.env` is git-ignored (`.gitignore:16-18`).
+   This runs `pnpm install`, `git config core.hooksPath .githooks`, and copies `.env.example` to `.env` if there is no `.env` yet (`justfile:5-9`). `.env` is git-ignored (`.gitignore:16-19`).
 
 3. Check that the hooks are active:
 
@@ -48,7 +48,7 @@ From a clean machine to passing tests and a local ninjagoldfinch.lol rendering p
 just check
 ```
 
-This is the gate, and CI runs the same script on every pull request (`scripts/check.sh`, ADR-050). It runs, in order: `prettier --check .`, the `docs/PROGRESS.md` tick check (`scripts/check-progress.ts`: no task ticked twice, no tick for a task the plan does not define, ADR-069), a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and the release package test `scripts/package.test.sh` (`scripts/check.sh`; `just check` runs it). The unit tests need a `.env`: `just setup` copies `.env.example`, and CI does the same. On a fresh clone at `e7c395c` it passed (exit 0); the suite has 34 test files and 332 tests.
+This is the gate, and CI runs the same script on every pull request (`scripts/check.sh`, ADR-050). It runs, in order: `prettier --check .`, the `docs/PROGRESS.md` tick check (`scripts/check-progress.ts`: no task listed twice, ticked or not, no tick for a task the plan does not define, ADR-069), a drift check of `src/lib/api/schema.d.ts` against `openapi/riot-proxy.json`, ESLint, `svelte-kit sync`, `svelte-check`, Vitest, `vite build`, and the release package test `scripts/package.test.sh` (`scripts/check.sh`; `just check` runs it). The unit tests need a `.env`: `just setup` copies `.env.example`, and CI does the same. On a fresh clone at `e7c395c` it passed (exit 0) with 34 test files and 332 tests; in a fresh worktree of `4986766` on 2026-11-10, with the FIX-15 change, it passed with 54 test files and 720 tests.
 
 ## 3. Browser tests (optional)
 
@@ -71,7 +71,7 @@ This is the gate, and CI runs the same script on every pull request (`scripts/ch
 
 ## 4. Run the site locally
 
-`PROXY_URL` is required at start-up in every environment (`src/lib/server/env.ts:10-15`); `PROXY_KEY` is optional unless `NODE_ENV=production` (`src/lib/server/env.ts:47-55`). Choose one of the two back ends below. The dev server loads its variables once, at start-up, with Vite's `loadEnv`, where variables already in the process environment win over `.env` (`node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:295`). Both runs below started with the URL given on the command line.
+`PROXY_URL` is required at start-up in every environment (`src/lib/server/env.ts:11-17`); `PROXY_KEY` is optional unless `NODE_ENV=production` (`src/lib/server/env.ts:56-69`). Choose one of the two back ends below. The dev server loads its variables once, at start-up, with Vite's `loadEnv`, where variables already in the process environment win over `.env` (`node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:294`). Both runs below started with the URL given on the command line.
 
 For anything longer than a quick check, put `PROXY_URL` (and `CDRAGON_URL` if needed) in `.env` instead. On 2026-10-20 a dev server started with `PROXY_URL` on the command line was found, about 20 minutes and many reloads later, calling the `PROXY_URL` from `.env` instead (`ECONNREFUSED 192.168.68.46:8080`, the dormant LAN dev proxy). Running `svelte-kit sync`, `vitest`, `pnpm build` or a second dev server in the same checkout did not reproduce it.
 
@@ -85,7 +85,7 @@ The mock proxy replays `tests/fixtures/` and answers 500 for anything it has no 
 
    ```sh
    node tests/mock-proxy/server.ts 8787
-   # mock-proxy: 50 fixtures on http://127.0.0.1:8787
+   # mock-proxy: 55 fixtures on http://127.0.0.1:8787
    ```
 
 2. Start the dev server in another, pointing both riot-proxy and CommunityDragon at the mock:
@@ -128,7 +128,7 @@ This is the replacement for the dormant LAN dev proxy (see [integration/environm
    - `RIOT_API_KEY` is required and must be at least 8 characters (`riot-proxy:src/config.rs:610-613`). Without a real key riot-proxy still starts and serves `/healthz`, static data and (empty) analytics, but every call that reaches Riot fails: riot-proxy answers `UPSTREAM_ERROR` 502 "Upstream authentication failed" and the site shows 503 (observed with a placeholder key).
    - `AUTH_DISABLED=true` runs every request as the synthetic `dev-local` consumer and is refused when `ENV=production` (`riot-proxy:src/config.rs:658-662`, `riot-proxy:.env.example:158-159`). With it the site needs no `PROXY_KEY`.
    - On first start riot-proxy creates its database and prints a bootstrap admin key once (`riot-proxy:README.md:67`). With auth off you do not need it; never paste it into this repo.
-   - Leave `ARCHIVE_OBJECT_URL` unset: riot-proxy then keeps every body in SQLite and touches no bucket (`riot-proxy:.env.example:80-83`). The site itself never uses object storage ([integration/object-storage.md](../integration/object-storage.md)).
+   - Leave `ARCHIVE_OBJECT_URL` unset: riot-proxy then keeps every body in SQLite and touches no bucket (`riot-proxy:.env.example:81-84`). The site itself never uses object storage ([integration/object-storage.md](../integration/object-storage.md)).
 
 3. Check it:
 
@@ -159,7 +159,7 @@ PROXY_URL=http://127.0.0.1:8787 CDRAGON_URL=http://127.0.0.1:8787 \
 PROXY_KEY=placeholder NODE_ENV=production PORT=4173 node build
 ```
 
-With `NODE_ENV=production` the server refuses to start without `PROXY_KEY` (`src/lib/server/env.ts:47-55`); the mock ignores the value. Form posts (the profile's Refresh) are accepted only from the origin fixed at build time, so build with `ORIGIN=http://localhost:4173 pnpm build` if you want to test Refresh (`vite.config.ts:16-19`, ADR-014).
+With `NODE_ENV=production` the server refuses to start without `PROXY_KEY` (`src/lib/server/env.ts:56-69`); the mock ignores the value. Form posts (the profile's Refresh) are accepted only from the origin fixed at build time, so build with `ORIGIN=http://localhost:4173 pnpm build` if you want to test Refresh (`vite.config.ts:30-33`, ADR-014).
 
 ## 5. Regenerate API types after a spec change
 
@@ -177,11 +177,11 @@ just gen
 | 4173 | `node build` under Playwright       | `playwright.config.ts:5,23`                 |
 | 8787 | mock proxy                          | `playwright.config.ts:3`                    |
 | 8080 | a local riot-proxy                  | `.env.example:3`, `riot-proxy:README.md:98` |
-| 3000 | `node build` default (adapter-node) | `.env.example:22`                           |
+| 3000 | `node build` default (adapter-node) | `.env.example:48`                           |
 
 ## Known noise
 
-The dev server prints `[sveltekit] error_body_deprecated` when a riot-proxy failure is turned into an error page. It comes from `error(status, { message, retryAfter })` in `src/lib/server/errors.ts:36-39`, which SvelteKit 3 still accepts but marks deprecated. The page renders correctly.
+The dev server prints `[sveltekit] error_body_deprecated` when a riot-proxy failure is turned into an error page. It comes from `error(failure.status, failure.body)` in `toHttpError` (`src/lib/server/errors.ts:36-39`), whose body is `{ message, retryAfter }`, which SvelteKit 3 still accepts but marks deprecated. The page renders correctly.
 
 ## Verified on
 
@@ -198,5 +198,5 @@ $ riot-proxy v2.7.0 (placeholder key, AUTH_DISABLED) + just dev
 
 ---
 
-**Sources:** `package.json:L6-L9`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L67`, `.env.example:L1-L25`, `src/lib/server/env.ts:L10-L55`, `src/lib/server/errors.ts:L36-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L16-L19`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L295`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L80-L83,L158-L159`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
-**Last verified:** 2026-11-09 against commit `02630bb`
+**Sources:** `package.json:L7-L10`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L67`, `.env.example:L1-L51`, `scripts/check.sh`, `scripts/check-progress.ts`, `src/lib/server/env.ts:L11-L69`, `src/lib/server/errors.ts:L1-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L30-L33`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L294`, `node_modules/@sveltejs/kit/src/messages/shared-warnings.js:L74-L77`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L81-L84,L158-L159` (riot-proxy at `v2.7.0`), `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
+**Last verified:** 2026-11-09 against commit `4986766`

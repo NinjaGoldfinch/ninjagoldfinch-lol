@@ -1,12 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkProgress, planTasks } from '../../scripts/check-progress.ts';
 
-// ADR-069 (FIX-12): the gate reads docs/PROGRESS.md, so a task ticked twice or a
-// tick for a task the plan does not define fails `just check`.
+// ADR-069 (FIX-12, FIX-15): the gate reads docs/PROGRESS.md, so a task listed
+// twice, ticked or not, or a tick for a task the plan does not define fails
+// `just check`.
 const root = join(import.meta.dirname, '../..');
 const script = join(root, 'scripts/check-progress.ts');
 const read = (file: string) => readFileSync(join(root, file), 'utf8');
@@ -46,14 +47,14 @@ describe('checkProgress', () => {
 	it('fails a task ticked twice, naming both lines', () => {
 		const twice = sound + '- [x] P5-02 Cloudflare, again — #134\n';
 		expect(checkProgress(twice, plan)).toEqual([
-			'docs/PROGRESS.md:9: P5-02 is ticked again (first at line 4)'
+			'docs/PROGRESS.md:9: P5-02 is listed again (first at line 4)'
 		]);
 	});
 
 	it('fails a dropped task that is also ticked', () => {
 		const both = sound + '- [x] SPD-02 done after all\n';
 		expect(checkProgress(both, plan)).toEqual([
-			'docs/PROGRESS.md:9: SPD-02 is ticked again (first at line 6)'
+			'docs/PROGRESS.md:9: SPD-02 is listed again (first at line 6)'
 		]);
 	});
 
@@ -69,7 +70,33 @@ describe('checkProgress', () => {
 		expect(checkProgress(fixes, plan)).toEqual([]);
 	});
 
-	it('ignores unticked items and lines that are not task items', () => {
+	it('fails an id listed twice when one copy is not ticked, either way round', () => {
+		expect(checkProgress(sound + '- [ ] P5-02 Cloudflare, open again\n', plan)).toEqual([
+			'docs/PROGRESS.md:9: P5-02 is listed again (first at line 4)'
+		]);
+		expect(checkProgress(sound + '- [x] SPD-01 done — #70\n', plan)).toEqual([
+			'docs/PROGRESS.md:9: SPD-01 is listed again (first at line 8)'
+		]);
+	});
+
+	it('fails an id listed twice with neither copy ticked', () => {
+		const open = '- [ ] P5-01 Dockerfile\n- [ ] P5-01 Dockerfile\n';
+		expect(checkProgress(open, plan)).toEqual([
+			'docs/PROGRESS.md:2: P5-01 is listed again (first at line 1)'
+		]);
+	});
+
+	it('fails a section a merge duplicated, whatever the ticks in each copy', () => {
+		const section = (a: string, b: string) =>
+			`## P5 — Production\n\n- [${a}] P5-01 Dockerfile\n- [${b}] P5-02 Cloudflare\n\n`;
+		const merged = section('x', ' ') + section(' ', 'x');
+		expect(checkProgress(merged, plan)).toEqual([
+			'docs/PROGRESS.md:8: P5-01 is listed again (first at line 3)',
+			'docs/PROGRESS.md:9: P5-02 is listed again (first at line 4)'
+		]);
+	});
+
+	it('ignores an unticked id the plan does not define, and lines that are not task items', () => {
 		const other = sound + '- [ ] P5-99 planned, not a tick\n- P5-98 is mentioned in prose\n';
 		expect(checkProgress(other, plan)).toEqual([]);
 	});
@@ -118,7 +145,7 @@ describe('scripts/check-progress.ts', () => {
 	it('exits 1 and names the line on a duplicated tick', () => {
 		const r = run(repo(sound + '- [x] P5-02 Cloudflare, again — #134\n'));
 		expect(r.status).toBe(1);
-		expect(r.stderr).toContain('docs/PROGRESS.md:9: P5-02 is ticked again (first at line 4)');
+		expect(r.stderr).toContain('docs/PROGRESS.md:9: P5-02 is listed again (first at line 4)');
 		expect(r.stdout).toContain('1 problems');
 	});
 
@@ -126,6 +153,24 @@ describe('scripts/check-progress.ts', () => {
 		const r = run(repo(sound + '- [x] P5-06 Something new — #140\n'));
 		expect(r.status).toBe(1);
 		expect(r.stderr).toContain('P5-06 is not a task in docs/IMPLEMENTATION.md');
+	});
+
+	it('fails the same when started through a symlinked path', () => {
+		const dir = repo(sound + '- [ ] P5-02 Cloudflare, open again\n');
+		const link = join(dir, 'checkout');
+		symlinkSync(root, link, 'dir');
+		let status = 0;
+		let stderr = '';
+		try {
+			execFileSync(process.execPath, [join(link, 'scripts/check-progress.ts'), dir], {
+				encoding: 'utf8',
+				stdio: ['ignore', 'pipe', 'pipe']
+			});
+		} catch (e) {
+			({ status, stderr } = e as { status: number; stderr: string });
+		}
+		expect(status).toBe(1);
+		expect(stderr).toContain('docs/PROGRESS.md:9: P5-02 is listed again (first at line 4)');
 	});
 
 	it('exits 0 on the repository as it is', () => {

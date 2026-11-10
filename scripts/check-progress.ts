@@ -1,12 +1,14 @@
-// Checks docs/PROGRESS.md against docs/IMPLEMENTATION.md (ADR-069, FIX-12).
-// A task id may be ticked (`- [x]`) or dropped (`- [~]`) once, and a ticked id
-// from a family the plan defines (P0 to P5, SPD, VS, RV, ...) must be a task in
-// the plan. Families the plan does not define (FIX, DEP, STAT, ...) are defined
-// in PROGRESS.md itself and are checked only for duplicates. The families are
-// read from the plan, not listed here.
+// Checks docs/PROGRESS.md against docs/IMPLEMENTATION.md (ADR-069, FIX-12,
+// FIX-15). A task id may appear once as a task item, whether open (`- [ ]`),
+// ticked (`- [x]`) or dropped (`- [~]`), so a section repeated by a merge fails
+// whatever its ticks. A ticked or dropped id from a family the plan defines
+// (P0 to P5, FP, SPD, VS, RV, ...) must be a task in the plan. Families the
+// plan does not define (FIX, DEP, STAT, ...) are defined in PROGRESS.md itself
+// and are checked only for duplicates. The families are read from the plan,
+// not listed here.
 //
 // usage: node scripts/check-progress.ts [repo root]
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,16 +35,16 @@ export function checkProgress(progress: string, plan: string): string[] {
 	const problems: string[] = [];
 	progress.split('\n').forEach((line, i) => {
 		const m = ITEM.exec(line);
-		if (!m || m[1] === ' ') return;
+		if (!m) return;
 		const id = m[2];
 		const n = i + 1;
 		const first = seen.get(id);
 		if (first !== undefined) {
-			problems.push(`docs/PROGRESS.md:${n}: ${id} is ticked again (first at line ${first})`);
+			problems.push(`docs/PROGRESS.md:${n}: ${id} is listed again (first at line ${first})`);
 		} else {
 			seen.set(id, n);
 		}
-		if (families.has(family(id)) && !defined.has(id)) {
+		if (m[1] !== ' ' && families.has(family(id)) && !defined.has(id)) {
 			problems.push(
 				`docs/PROGRESS.md:${n}: ${id} is not a task in docs/IMPLEMENTATION.md, which defines the ${family(id)} tasks`
 			);
@@ -65,6 +67,16 @@ export function main(root: string): number {
 	return problems.length ? 1 : 0;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+/** Whether this file is the script Node was started with, also through a symlinked path. */
+function isEntry(): boolean {
+	if (!process.argv[1]) return false;
+	try {
+		return fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
+	} catch {
+		return false;
+	}
+}
+
+if (isEntry()) {
 	process.exit(main(process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), '..')));
 }
