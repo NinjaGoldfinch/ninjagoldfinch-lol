@@ -205,7 +205,7 @@ Date: 2026-10-09 · Task: P2-02 (fix)
 
 ## ADR-017: Custom games hidden, partial profiles, central cache rules
 
-Date: 2026-10-09 · Task: P2-06
+Date: 2026-10-09 · Task: P2-06 · Recorded fixtures staying unedited refined by ADR-073
 
 **Decision.**
 
@@ -1189,7 +1189,7 @@ Date: 2026-11-09 · Task: FIX-13 (review of #140; refines ADR-071)
 
 ## ADR-073: a Refresh counts as a view of the profile
 
-Date: 2026-11-09 · Task: FIX-14 (review of #141; refines ADR-068)
+Date: 2026-11-09 · Task: FIX-14 (review of #141; refines ADR-068 and ADR-017)
 
 **Context.** The profile records each view under recent searches from an effect (ADR-068). The effect read the load's `data`, while the page renders `profile`, which is `form?.profile ?? data`: after a Refresh, the action's fresh copy (ADR-012). The Refresh form calls `update({ invalidateAll: false })` on purpose, so `data` does not change and the effect neither ran again nor saw the new values. A profile shown at Emerald III from riot-proxy's cache and refreshed to Emerald II kept a front-page card reading Emerald III, with the earlier view time.
 
@@ -1199,4 +1199,4 @@ Date: 2026-11-09 · Task: FIX-14 (review of #141; refines ADR-068)
 
 - After a Refresh, the card shows the refreshed icon and rank and "viewed just now". Without JavaScript nothing is recorded, by a view or a Refresh, as before.
 - ADR-068's "it changes when the player's profile is next opened" now reads "next opened or refreshed".
-- The refresh fixture (`tests/fixtures/profile-ninjagoldfinch-refresh.json`) was edited by hand to Emerald II, 12 LP and icon 29, so a test can tell a refresh's values from the plain profile's (Emerald III, icon 7173). Its note says so.
+- The refresh fixture (`tests/fixtures/profile-ninjagoldfinch-refresh.json`) was edited by hand to Emerald II, 12 LP and icon 29, so a test can tell a refresh's values from the plain profile's (Emerald III, icon 7173). This refines ADR-017, under which recorded fixtures stay unedited, by one narrow rule: a recording may be edited only when a test needs two recordings of the same path to differ, as here the profile with and without `?refresh=true`, and the fixture's `_note` must then begin "Edited:".
