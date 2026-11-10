@@ -74,7 +74,8 @@ describe('loadFrontPage', () => {
 		expect(cards.asked.toSorted()).toEqual(
 			[ANALYTICS, '/v1/lol/rotations/oc1', '/v1/lol/status/oc1'].toSorted()
 		);
-		expect(page.totalGames).toBe(211590);
+		// riot-proxy's `totalGames` is 211590 participant games: ten a game (ADR-074).
+		expect(page.totalGames).toBe(21159);
 		expect(page.topWinRates?.map((r) => r.name)).toEqual([
 			'Taliyah',
 			'Gragas',
