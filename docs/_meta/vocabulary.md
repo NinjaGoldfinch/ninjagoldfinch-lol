@@ -125,4 +125,4 @@ None belong to ninjagoldfinch.lol. All are riot-proxy's.
 ---
 
 **Sources:** `riot-proxy:docs/DECISIONS.md:L1512`, `src/lib/domain/regions.ts:L1-L50`, `src/lib/domain/champion-stats.ts:L13-L63`, `playwright.config.ts:L3-L31`, `src/lib/server/proxy.ts:L69-L78`, `riot-proxy:docs/DECISIONS.md:L1510`, `riot-proxy:deploy/README.md:L14-L36`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L805-L855`, `riot-proxy:docs/design/13-admin-dashboard.md:L55-L67`, `docs/PROGRESS.md` ("P5-05 check"), `ninja-monitor` at `v0.2.3`: `README.md:L1-L10`, `src/heartbeat.rs:L1-L28`
-**Last verified:** 2026-11-03 against commit `2658c48`
+**Last verified:** 2026-11-03 against commit `2658c48`; the entries for staging, releases and deploys, the status bot, events, ninja-ingest and the heartbeat to Healthchecks.io, and the citation note, checked on 2026-11-09 against commit `4986766` (ADR-057, ADR-058, ADR-062, ADR-063, the P5-05 check) and ninja-monitor `v0.2.3`

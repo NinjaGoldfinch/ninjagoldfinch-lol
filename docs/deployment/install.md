@@ -2,7 +2,7 @@
 
 Step by step, how to install ninjagoldfinch.lol on a new Ubuntu 26.04 server next to riot-proxy, as production `ngf-prod-syd1` was installed on 2026-10-13. It reproduces the real systemd unit; there is no reverse proxy to configure, because a Cloudflare Tunnel carries all traffic.
 
-This is the checkout install production ran from 2026-10-13 until `v1.0.0`, and the fallback ADR-054 keeps. Since `v1.0.0` production runs releases from `/srv/ninjagoldfinch-lol/current`, deployed by `ninja-deploy` (ADR-052 to ADR-054). For a new host that runs releases from the start, install the unit as in [releases.md, Setting up staging](./releases.md#setting-up-staging-once), step 2, which is this page's unit with the release as its working directory and a state directory, and skip steps 2, 4 and 5 here; the other steps apply as they are.
+This is the checkout install production ran from 2026-10-13 until `v1.0.0`, and the fallback ADR-054 keeps. Since `v1.0.0` production runs releases from `/srv/ninjagoldfinch-lol/current`, deployed by `ninja-deploy` (ADR-052 to ADR-054). For a new host that runs releases from the start, take the user, the settings file and the unit from [releases.md, Setting up staging](./releases.md#setting-up-staging-once), step 2, instead of steps 3, 6 and 7 here. Its unit is this page's with the release as its working directory and a state directory, and it is enabled but not started: the first deploy starts it. Skip steps 2, 4, 5 and 8 here; steps 1, 9 and 10 apply as they are.
 
 ## Before you start
 
@@ -180,4 +180,4 @@ Expect `cache-control: public, s-maxage=600, stale-while-revalidate=600` on `/ch
 ---
 
 **Sources:** owner-supplied unit and env names (inventory section 14), `package.json:L7-L10`, `.npmrc:L1`, `vite.config.ts:L30-L33`, `src/env.ts:L14-L18`, `src/lib/server/env.ts:L12-L66`, `src/lib/server/cache.ts:L11`, `src/routes/healthz/+server.ts:L6-L9`, `README.md:L184-L207`, `docs/DECISIONS.md:L171-L184,L500-L516` and ADR-052 to ADR-054, ADR-062, ADR-063, `docs/deployment/releases.md` ("Setting up staging"), `riot-proxy:src/config.rs:L752-L756`, `riot-proxy:docs/design/12-object-storage-and-hosting.md:L542-L545,L616-L635,L808-L813,L839-L842`, `riot-proxy:docs/design/13-admin-dashboard.md:L66` (riot-proxy at `7531561`), `ninja-monitor:README.md:L254` (`v0.2.3`)
-**Last verified:** 2026-11-09 against commit `8a2bb46` (statements and citations; the build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)
+**Last verified:** 2026-11-09 against commit `4986766` (statements and citations; the build, env file and start-up checks last run locally on 2026-10-20; not run on a fresh Ubuntu 26.04 server)

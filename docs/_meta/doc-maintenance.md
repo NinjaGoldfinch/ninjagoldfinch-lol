@@ -95,4 +95,4 @@ The docs are meant to be served by a small static docs server on a development m
 ---
 
 **Sources:** `docs/_meta/check-docs.py:L1-L53`, `docs/_meta/check-openapi-paths.py`, `justfile:L19-L21`, `scripts/check.sh:L8`, `.prettierignore:L11-L13`, `docs/README.md`
-**Last verified:** 2026-10-20 against commit `85d9cf8`
+**Last verified:** 2026-10-20 against commit `85d9cf8`; the Formatting check's citations (`scripts/check.sh:L8`, `justfile:L19-L21`, `.prettierignore:L11-L13`) and the external-monitor row checked on 2026-11-09 against commit `4986766`

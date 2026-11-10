@@ -56,7 +56,7 @@ An uncached profile page or Refresh can make riot-proxy call Riot. The productio
 
 ## Disk
 
-Since `v1.0.0` production runs releases, not a checkout (ADR-054). A release is `build/`, `package.json`, `LICENSE` and `version.json`, and needs nothing installed: adapter-node bundles every dependency (ADR-052). `build/` measured 3.3 MB at `8a2bb46` (2026-11-09). `ninja-deploy` keeps the newest 5 releases, never removing the live one or the one before it (`docs/deployment/releases.md:7`, `ninja-actions:infra/deploy.sh:164-166`), so the site's releases take under 20 MB.
+Since `v1.0.0` production runs releases, not a checkout (ADR-054). A release is `build/`, `package.json`, `LICENSE` and `version.json`, and needs nothing installed: adapter-node bundles every dependency (ADR-052). `build/` measured 3.3 MB at `4986766` (2026-11-09). `ninja-deploy` keeps the newest 5 releases, never removing the live one or the one before it (`docs/deployment/releases.md:7`, `ninja-actions:infra/deploy.sh:164-166`), so the site's releases take under 20 MB.
 
 The old checkout `/opt/ninjagoldfinch-lol` is kept as a fallback until releases have settled ([releases.md](./releases.md#6-retire-the-checkout-deploy)). **Measured** (fresh clone at `e7c395c`, 2026-10-20):
 
@@ -103,4 +103,4 @@ Traffic that counts against the host's 6 TB/month is what crosses its network in
 ---
 
 **Sources:** `riot-proxy:docs/design/12-object-storage-and-hosting.md:L839-L845`, `riot-proxy:docs/DECISIONS.md:L1509-L1513`, `riot-proxy:src/consumers.rs:L14` (riot-proxy at `7531561`), `ninja-actions:infra/deploy.sh:L164-L166` (at `1da68ac`), `docs/DECISIONS.md:L517-L541,L712` and ADR-052, ADR-054, ADR-063, `docs/deployment/releases.md:L7,L169-L172`, `src/lib/server/profile.ts:L71-L116`, `src/lib/server/cdragon.ts:L12-L37`, `src/lib/server/static-data.ts:L22-L51`, `src/lib/assets.ts:L9-L10`; measurements on a development machine 2026-10-20 (RSS from `/proc/<pid>/status`, latency with a Python load script, sizes with `curl -w %{size_download}` and `du`), `du -sh build` on 2026-11-09
-**Last verified:** 2026-11-09 against commit `8a2bb46`
+**Last verified:** 2026-11-09 against commit `4986766`
