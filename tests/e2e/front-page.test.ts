@@ -27,7 +27,7 @@ test.describe('without JavaScript', () => {
 
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Look up any League player');
 		await expect(main.getByText('Patch 16.20', { exact: true })).toBeVisible();
-		await expect(main.getByText('211,590 ranked games analysed')).toBeVisible();
+		await expect(main.getByText('21,159 ranked games analysed')).toBeVisible();
 		await expect(
 			main.getByRole('search').getByRole('combobox', { name: 'Riot ID or champion' })
 		).toBeVisible();

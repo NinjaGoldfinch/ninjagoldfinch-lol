@@ -1045,7 +1045,7 @@ Date: 2026-11-07 · Task: P5-02
 
 ## ADR-066: the front page shows live data: a `live` policy, a 2 s front-page deadline, no streaming
 
-Date: 2026-11-09 · Task: FP-01
+Date: 2026-11-09 · Task: FP-01 · The games-analysed pill corrected by ADR-074
 
 **Context.** `/` had no proxy data and a 10-minute `static` policy (ADR-055). The owner's new front page ("Concept 1, search first with live cards") adds a patch pill, the ranked games analysed and the top win rates (FP-01), then the free rotation and server status for a region (FP-02). The rules it must keep: data loads only in `+page.server.ts`; pages work without JavaScript; each card fails on its own, and the page never fails because riot-proxy is slow; the CSP is hash-based (ADR-055); Cloudflare caches every page by its `Cache-Control`, with the query string in the key (ADR-065).
 
@@ -1200,3 +1200,20 @@ Date: 2026-11-09 · Task: FIX-14 (review of #141; refines ADR-068 and ADR-017)
 - After a Refresh, the card shows the refreshed icon and rank and "viewed just now". Without JavaScript nothing is recorded, by a view or a Refresh, as before.
 - ADR-068's "it changes when the player's profile is next opened" now reads "next opened or refreshed".
 - The refresh fixture (`tests/fixtures/profile-ninjagoldfinch-refresh.json`) was edited by hand to Emerald II, 12 LP and icon 29, so a test can tell a refresh's values from the plain profile's (Emerald III, icon 7173). This refines ADR-017, under which recorded fixtures stay unedited, by one narrow rule: a recording may be edited only when a test needs two recordings of the same path to differ, as here the profile with and without `?refresh=true`, and the fixture's `_note` must then begin "Edited:".
+
+## ADR-074: the games-analysed pill counts games, a tenth of riot-proxy's `totalGames`
+
+Date: 2026-11-10 · Task: FIX-17 (owner, 2026-11-10; corrects ADR-066)
+
+**Context.** The front page's pill showed `totalGames` of `/v1/lol/analytics/champions` as "ranked games analysed" (ADR-066). In production it read 23,382,890; riot-proxy has analysed about 2.3 million games (owner, 2026-11-10). `totalGames` counts participant games, a game once for every champion in it: the spec says so of the patches route ("Participant games, as `totalGames` counts them on the champions route", `AnalyticsPatchEntry.games`), and in the recording it is the sum of every row's `games` (211,590). The champions route has no count of matches: `pickRate` is a share of them, rounded to four places, so they cannot be read back from it exactly.
+
+**Decision.**
+
+- The pill shows `totalGames / 10`, rounded down (`gamesAnalysed` in `src/lib/domain/front-page.ts`). The front page asks for Ranked Solo/Duo over every role, tier, side and patch (`FRONT_FILTER`), so every participant of every game is counted, and a Summoner's Rift game has ten. The recording's total, each of its patches' and production's are all whole multiples of ten.
+- Only the front page divides. `/champions` rows show their own `games`, which are that champion's, and the champion page's "games with a build" is the builds route's `totalGames`, one champion's games in a role: each of those is already one game.
+- This is arithmetic on what the spec documents, not a count riot-proxy gives. **Wanted from riot-proxy:** a `totalMatches` on `ChampionStatsResponse`, the matches in the slice each counted once (the denominator `pickRate` already uses). When the spec has it, the pill reads it and `gamesAnalysed` goes.
+
+**Consequences.**
+
+- The pill reads about a tenth of what it did: 21,159 against the fixture, about 2.3 million in production.
+- A slice that is not ten a game would be wrong by this rule: a role or tier filter, or a queue with another team size. `FRONT_FILTER` has none, and a unit test pins that the recording's `totalGames` is the rows' sum and a multiple of ten.

@@ -43,6 +43,18 @@ export function winRateBar(winRate: number, lo = 0.45, hi = 0.6): number {
 	return Math.round(Math.min(1, Math.max(0, share)) * 100);
 }
 
+/** Players in a Summoner's Rift game: five a side. */
+export const PLAYERS_PER_GAME = 10;
+
+/**
+ * Games behind riot-proxy's `totalGames`, which counts participant games:
+ * each game once for every champion in it. Over every role, tier and side of
+ * a ranked queue that is ten a game (ADR-074). Rounded down.
+ */
+export function gamesAnalysed(participantGames: number): number {
+	return Math.floor(participantGames / PLAYERS_PER_GAME);
+}
+
 /** A count with thousands separators: `211,590`. */
 export function formatCount(n: number): string {
 	return n.toLocaleString('en-US');

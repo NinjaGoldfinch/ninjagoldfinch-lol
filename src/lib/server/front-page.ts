@@ -4,6 +4,7 @@ import { proxyQuery, toChampionTable, type ChampionRow } from '#lib/domain/champ
 import {
 	FRONT_FILTER,
 	fetchedAge,
+	gamesAnalysed,
 	parseRotation,
 	parseStatus,
 	rotationChampions,
@@ -25,7 +26,11 @@ export interface FrontPage {
 	patch: string | null;
 	/** `16.20`, for the patch pill; null when the patch is unavailable. */
 	patchLabel: string | null;
-	/** Ranked games riot-proxy has analysed; null when the analytics call failed. */
+	/**
+	 * Ranked games riot-proxy has analysed, each counted once: a tenth of its
+	 * `totalGames`, which counts every participant (ADR-074); null when the
+	 * analytics call failed.
+	 */
 	totalGames: number | null;
 	/** The top-win-rate card's rows; null when the analytics call failed. */
 	topWinRates: ChampionRow[] | null;
@@ -85,7 +90,7 @@ export async function loadFrontPage(
 		region: { slug: region.slug, label: region.label },
 		patch,
 		patchLabel: patchOf(patch),
-		totalGames: stats ? stats.totalGames : null,
+		totalGames: stats ? gamesAnalysed(stats.totalGames) : null,
 		topWinRates: stats ? topWinRates(toChampionTable(stats, names)) : null,
 		rotation,
 		status,

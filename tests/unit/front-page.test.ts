@@ -9,6 +9,7 @@ import {
 	fetchedAge,
 	formatCount,
 	frontQuery,
+	gamesAnalysed,
 	parseRotation,
 	parseStatus,
 	pickRegion,
@@ -67,6 +68,25 @@ describe('winRateBar', () => {
 	it('stays within the bar', () => {
 		expect(winRateBar(0.3)).toBe(0);
 		expect(winRateBar(0.9)).toBe(100);
+	});
+});
+
+describe('gamesAnalysed', () => {
+	it("counts each game once: a tenth of riot-proxy's participant games", () => {
+		expect(gamesAnalysed(23_382_890)).toBe(2_338_289);
+		expect(gamesAnalysed(211590)).toBe(21159);
+		expect(gamesAnalysed(0)).toBe(0);
+	});
+
+	it('rounds down a count that is not a whole number of games', () => {
+		expect(gamesAnalysed(19)).toBe(1);
+		expect(gamesAnalysed(9)).toBe(0);
+	});
+
+	it("divides what the recording shows: `totalGames` is the sum of every champion's games", () => {
+		const { totalGames, champions } = fixtureBody(ANALYTICS_PATH) as ChampionStatsResponse;
+		expect(champions.reduce((sum, c) => sum + c.games, 0)).toBe(totalGames);
+		expect(totalGames % 10).toBe(0);
 	});
 });
 

@@ -83,6 +83,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-14 Recent-search cards: a Refresh counts as a view, so the card shows the refreshed icon, rank and time (ADR-073); an unranked player's line and a card without a patch tested; the docs on what the list holds brought up to date; `architecture/components.md` and `workflows/testing.md` re-read in full and corrected (review of #141) — #147
 - [x] FIX-15 The tick check counts every task item for duplicates, ticked or not, so a section a merge repeated fails; it also runs when started through a symlinked path; README.md and CLAUDE.md list it among the gate's steps, checked by a test (ADR-069; review of #142) — #144
 - [x] FIX-16 The monitoring docs state only what is known of the outside check: a heartbeat from `ngf-mon-syd1` to Healthchecks.io, consistent with ninja-monitor's public source; the `/healthz` fetch, the ping's dependence on it and the check's period marked unverified, with gaps rows; the runbook checks the monitoring box first; stale statements in the monitoring and deployment docs corrected, each re-read in full (review of #143) — #145
+- [x] FIX-17 The front page's games-analysed pill counts games, not participant games: a tenth of riot-proxy's `totalGames` (ADR-074; owner, 2026-11-10) — #149
 
 ## RV — fixes from the code review of 2026-11-03
 
