@@ -7,10 +7,13 @@ import {
 	gamesAnalysed,
 	parseRotation,
 	parseStatus,
+	riotStatusUrl,
 	rotationChampions,
+	statusView,
 	topWinRates,
 	type PlatformStatus,
-	type RotationChampion
+	type RotationChampion,
+	type StatusView
 } from '#lib/domain/front-page.ts';
 import { patchOf } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
@@ -36,8 +39,10 @@ export interface FrontPage {
 	topWinRates: ChampionRow[] | null;
 	/** The region's free champions; null when the call failed or its payload was unreadable. */
 	rotation: RotationChampion[] | null;
-	/** The region's open incidents and maintenances; null likewise. */
-	status: PlatformStatus | null;
+	/** The region's open incidents and maintenances, as the card shows them; null likewise. */
+	status: StatusView | null;
+	/** Riot's own status page for the region, which the card links to. */
+	statusPage: string;
 	/** Seconds since riot-proxy read the status from Riot (`X-Cache-Fetched-Age`), when it said. */
 	statusCheckedSeconds: number | null;
 	/** For the header search's and the hero search's suggestions. */
@@ -61,7 +66,16 @@ interface Lookups {
  */
 export async function loadFrontPage(
 	region: Region,
-	{ client = proxy, cards = frontClient }: { client?: ProxyClient; cards?: ProxyClient } = {}
+	{
+		client = proxy,
+		cards = frontClient,
+		now = Date.now
+	}: {
+		client?: ProxyClient;
+		cards?: ProxyClient;
+		/** The clock the status entries' ages are counted from. */
+		now?: () => number;
+	} = {}
 ): Promise<FrontPage> {
 	const platform = { params: { path: { platform: region.platform } } };
 	const lookups: Promise<Lookups> = currentPatch(client)
@@ -84,7 +98,8 @@ export async function loadFrontPage(
 	if (!stats) console.error('front page: analytics unavailable:', analytics.response.status);
 
 	const rotation = readRotation(rotations, region, fellBack ? undefined : names);
-	const status = readStatus(platformStatus, region);
+	const platformData = readStatus(platformStatus, region);
+	const status = platformData ? statusView(platformData, now()) : null;
 
 	return {
 		region: { slug: region.slug, label: region.label },
@@ -94,6 +109,7 @@ export async function loadFrontPage(
 		topWinRates: stats ? topWinRates(toChampionTable(stats, names)) : null,
 		rotation,
 		status,
+		statusPage: riotStatusUrl(region.platform),
 		statusCheckedSeconds: status
 			? fetchedAge(platformStatus.response.headers.get('x-cache-fetched-age'))
 			: null,

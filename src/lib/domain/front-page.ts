@@ -167,7 +167,11 @@ export interface StatusItem {
 	severity: StatusSeverity | null;
 	/** A maintenance's `scheduled` or `in_progress`; null for an incident. */
 	maintenanceStatus: string | null;
+	/** When Riot opened the entry (`created_at`), as it wrote it. */
+	createdAt: string | null;
 	updatedAt: string | null;
+	/** The newest published update's text, in English when it has it; null without one (ADR-075). */
+	update: string | null;
 	/** What the entry lacked and was filled in for it; empty when it was whole. */
 	missing: ('id' | 'title')[];
 }
@@ -179,16 +183,43 @@ export interface PlatformStatus {
 	maintenances: StatusItem[];
 }
 
-/** The `en_US` title's content, else the first title with any. */
-function title(titles: unknown): string | undefined {
-	if (!Array.isArray(titles)) return undefined;
-	const named = titles.flatMap((t) => {
+/** The `en_US` entry's content of a list of `{ locale, content }`, else the first with any. */
+function localised(texts: unknown): string | undefined {
+	if (!Array.isArray(texts)) return undefined;
+	const named = texts.flatMap((t) => {
 		const entry = record(t);
 		return entry && typeof entry.content === 'string' && entry.content !== ''
 			? [{ locale: entry.locale, content: entry.content }]
 			: [];
 	});
 	return (named.find((t) => t.locale === 'en_US') ?? named[0])?.content;
+}
+
+/** An RFC 3339 time in ms since the epoch; null when it is not a string or not a time. */
+function timeOf(value: unknown): number | null {
+	if (typeof value !== 'string') return null;
+	const ms = Date.parse(value);
+	return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * The text of an entry's newest update (ADR-075): by `updated_at`, else
+ * `created_at`; one without a readable time counts as the oldest, and of
+ * equals the first in the list wins. Updates marked `publish: false`, and
+ * those without text, are passed over.
+ */
+function latestUpdate(updates: unknown): string | null {
+	if (!Array.isArray(updates)) return null;
+	let newest: { text: string; at: number } | undefined;
+	for (const value of updates) {
+		const update = record(value);
+		if (!update || update.publish === false) continue;
+		const text = localised(update.translations)?.trim();
+		if (!text) continue;
+		const at = timeOf(update.updated_at) ?? timeOf(update.created_at) ?? -Infinity;
+		if (!newest || at > newest.at) newest = { text, at };
+	}
+	return newest?.text ?? null;
 }
 
 const stringOrNull = (value: unknown): string | null => (typeof value === 'string' ? value : null);
@@ -202,14 +233,16 @@ function statusItem(fallback: 'Incident' | 'Maintenance') {
 	return (value: unknown, index: number): StatusItem => {
 		const entry = record(value) ?? {};
 		const id = isInteger(entry.id) ? entry.id : null;
-		const text = title(entry.titles);
+		const text = localised(entry.titles);
 		return {
 			id,
 			key: id === null ? `at-${index}` : `id-${id}`,
 			title: text ?? fallback,
 			severity: SEVERITIES.find((s) => s === entry.incident_severity) ?? null,
 			maintenanceStatus: stringOrNull(entry.maintenance_status),
+			createdAt: stringOrNull(entry.created_at),
 			updatedAt: stringOrNull(entry.updated_at),
+			update: latestUpdate(entry.updates),
 			missing: [
 				...(id === null ? ['id' as const] : []),
 				...(text === undefined ? ['title' as const] : [])
@@ -236,9 +269,104 @@ export function parseStatus(body: unknown): PlatformStatus | undefined {
 	};
 }
 
+/** How an open entry is marked and ordered (`STATUS_ORDER`). */
+export type StatusTone = 'critical' | 'warning' | 'maintenance' | 'info';
+
+/** An open incident or maintenance as the status card shows it (ADR-075). */
+export interface StatusEntry {
+	/** Unique in the card: `Incident-id-9101`. */
+	key: string;
+	kind: 'Incident' | 'Maintenance';
+	title: string;
+	/** `warning`, `in progress`, `scheduled`: the severity or the maintenance's state; null when unreadable. */
+	state: string | null;
+	tone: StatusTone;
+	/** The newest update's text; null without one. */
+	update: string | null;
+	/** `updated` or `opened`, and how many seconds ago, from `updated_at`, else `created_at`; null when neither is a time. */
+	age: { event: 'updated' | 'opened'; seconds: number } | null;
+}
+
+/** A platform's status as the card shows it. */
+export interface StatusView {
+	incidents: number;
+	maintenances: number;
+	/** Every open entry, worst first (`STATUS_ORDER`); within a tone, in the feed's order. */
+	entries: StatusEntry[];
+}
+
+/**
+ * The order of the card's entries. An incident whose severity is unreadable
+ * is a `warning`: it is open, and must not read as less than it may be
+ * (ADR-072). A maintenance under way is a `warning` too; any other is
+ * `maintenance`, after the `info` incidents, which are about now.
+ */
+export const STATUS_ORDER: readonly StatusTone[] = ['critical', 'warning', 'info', 'maintenance'];
+
+function incidentTone(item: StatusItem): StatusTone {
+	return item.severity ?? 'warning';
+}
+
+function maintenanceTone(item: StatusItem): StatusTone {
+	return item.maintenanceStatus === 'in_progress' ? 'warning' : 'maintenance';
+}
+
+function statusEntry(kind: StatusEntry['kind'], item: StatusItem, now: number): StatusEntry {
+	const state = kind === 'Incident' ? item.severity : item.maintenanceStatus;
+	const updated = timeOf(item.updatedAt);
+	const at = updated ?? timeOf(item.createdAt);
+	return {
+		key: `${kind}-${item.key}`,
+		kind,
+		title: item.title,
+		state: state ? state.replaceAll('_', ' ') : null,
+		tone: kind === 'Incident' ? incidentTone(item) : maintenanceTone(item),
+		update: item.update,
+		age:
+			at === null
+				? null
+				: {
+						event: updated === null ? 'opened' : 'updated',
+						seconds: Math.max(0, Math.floor((now - at) / 1000))
+					}
+	};
+}
+
+/** The card's view of a platform's status at `now` (ms): counts, and every open entry, worst first. */
+export function statusView(status: PlatformStatus, now: number): StatusView {
+	const entries = [
+		...status.incidents.map((item) => statusEntry('Incident', item, now)),
+		...status.maintenances.map((item) => statusEntry('Maintenance', item, now))
+	];
+	return {
+		incidents: status.incidents.length,
+		maintenances: status.maintenances.length,
+		entries: STATUS_ORDER.flatMap((tone) => entries.filter((entry) => entry.tone === tone))
+	};
+}
+
 /** Nothing open on the platform: the green state. */
-export function allRunning(status: PlatformStatus): boolean {
-	return status.incidents.length === 0 && status.maintenances.length === 0;
+export function allRunning(status: StatusView): boolean {
+	return status.entries.length === 0;
+}
+
+/** The card's first line: `All services running`, or `2 incidents · 1 maintenance`. */
+export function statusHeadline(status: StatusView): string {
+	if (allRunning(status)) return 'All services running';
+	const count = (n: number, one: string, many: string) =>
+		n === 0 ? [] : [`${n} ${n === 1 ? one : many}`];
+	return [
+		...count(status.incidents, 'incident', 'incidents'),
+		...count(status.maintenances, 'maintenance', 'maintenances')
+	].join(' · ');
+}
+
+/**
+ * Riot's own status page for a platform, which the card links to for the
+ * whole of each entry. Seen answering for `oc1` and `kr` on 2026-11-10.
+ */
+export function riotStatusUrl(platform: string): string {
+	return `https://status.riotgames.com/lol?region=${encodeURIComponent(platform)}&locale=en_US`;
 }
 
 /** riot-proxy's `X-Cache-Fetched-Age` in seconds; null when absent or not a non-negative integer. */

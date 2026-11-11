@@ -13,7 +13,10 @@ import {
 	parseRotation,
 	parseStatus,
 	pickRegion,
+	riotStatusUrl,
 	rotationChampions,
+	statusHeadline,
+	statusView,
 	topWinRates,
 	winRateBar,
 	type PlatformStatus
@@ -26,6 +29,9 @@ type ChampionStatsResponse = components['schemas']['ChampionStatsResponse'];
 
 const ANALYTICS_PATH =
 	'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=500';
+
+/** Two hours after the Korean fixture's warning incident was last updated. */
+const NOW = Date.parse('2026-11-09T03:10:00Z');
 
 function recordedTable() {
 	// The recorded body, as the typed client hands it over.
@@ -182,7 +188,9 @@ describe('parseStatus', () => {
 				title: 'Ranked queues are disabled',
 				severity: 'warning',
 				maintenanceStatus: null,
+				createdAt: '2026-11-09T01:00:00Z',
 				updatedAt: '2026-11-09T01:10:00Z',
+				update: 'Ranked queues are disabled while we investigate an issue.',
 				missing: []
 			},
 			// The incident without a title is kept, under a generic one.
@@ -192,7 +200,9 @@ describe('parseStatus', () => {
 				title: 'Incident',
 				severity: 'info',
 				maintenanceStatus: null,
+				createdAt: '2026-11-09T00:00:00Z',
 				updatedAt: null,
+				update: null,
 				missing: ['title']
 			}
 		]);
@@ -220,7 +230,9 @@ describe('parseStatus', () => {
 				title: '점검',
 				severity: null,
 				maintenanceStatus: null,
+				createdAt: null,
 				updatedAt: null,
+				update: null,
 				missing: []
 			}
 		]);
@@ -239,11 +251,13 @@ describe('parseStatus', () => {
 				title: 'Incident',
 				severity: 'critical',
 				maintenanceStatus: null,
+				createdAt: null,
 				updatedAt: null,
+				update: null,
 				missing: ['title']
 			}
 		]);
-		expect(allRunning(status)).toBe(false);
+		expect(allRunning(statusView(status, NOW))).toBe(false);
 	});
 
 	it('keeps entries without a usable id, keyed by their place in the feed', () => {
@@ -273,7 +287,7 @@ describe('parseStatus', () => {
 			['at-0', 'Maintenance', 'in_progress', ['id', 'title']],
 			['at-2', 'Maintenance', null, ['id', 'title']]
 		]);
-		expect(allRunning(status)).toBe(false);
+		expect(allRunning(statusView(status, NOW))).toBe(false);
 		const keys = [...status.incidents, ...status.maintenances].map((i) => i.key);
 		expect(new Set(keys.slice(0, 3)).size).toBe(3);
 	});
@@ -285,16 +299,174 @@ describe('parseStatus', () => {
 	});
 });
 
-describe('allRunning', () => {
-	it('is true with nothing open', () => {
-		const ok = parseStatus(fixtureBody('/v1/lol/status/oc1'));
-		const kr = parseStatus(fixtureBody('/v1/lol/status/kr'));
-		const read = (s: PlatformStatus | undefined) => {
-			if (!s) throw new Error('unreadable status fixture');
-			return allRunning(s);
-		};
-		expect(read(ok)).toBe(true);
-		expect(read(kr)).toBe(false);
+describe('the newest update of a status entry', () => {
+	const update = (updates: unknown) =>
+		parseStatus({ maintenances: [], incidents: [{ id: 1, updates }] })?.incidents[0]?.update;
+	const text = (content: string, locale = 'en_US') => [{ locale, content }];
+
+	it('is the one updated last, whatever its place in the list', () => {
+		expect(
+			update([
+				{ translations: text('first'), updated_at: '2026-11-09T01:00:00Z' },
+				{ translations: text('newest'), updated_at: '2026-11-09T03:00:00Z' },
+				{ translations: text('second'), updated_at: '2026-11-09T02:00:00Z' }
+			])
+		).toBe('newest');
+	});
+
+	it('goes by `created_at` without `updated_at`, and counts one without a time as the oldest', () => {
+		expect(
+			update([
+				{ translations: text('no time') },
+				{ translations: text('created'), created_at: '2026-11-09T01:00:00Z', updated_at: null },
+				{ translations: text('not a time'), updated_at: 'soon' }
+			])
+		).toBe('created');
+		// With no times at all, the first in the list.
+		expect(update([{ translations: text('a') }, { translations: text('b') }])).toBe('a');
+	});
+
+	it('is in English when the update has it, else its first translation', () => {
+		expect(
+			update([{ translations: [...text('점검 중', 'ko_KR'), ...text('Under maintenance')] }])
+		).toBe('Under maintenance');
+		expect(update([{ translations: text('점검 중', 'ko_KR') }])).toBe('점검 중');
+	});
+
+	it('passes over unpublished updates and those without text', () => {
+		expect(
+			update([
+				{ translations: text('draft'), publish: false, updated_at: '2026-11-09T05:00:00Z' },
+				{ translations: text('   '), updated_at: '2026-11-09T04:00:00Z' },
+				{ translations: [], updated_at: '2026-11-09T03:00:00Z' },
+				'nope',
+				{ translations: text(' published \n'), publish: true, updated_at: '2026-11-09T01:00:00Z' }
+			])
+		).toBe('published');
+	});
+
+	it('is null without updates, or with none readable', () => {
+		for (const updates of [undefined, null, 'none', [], [{ translations: 'none' }]]) {
+			expect(update(updates)).toBeNull();
+		}
+	});
+});
+
+function view(body: unknown, now = NOW) {
+	const status: PlatformStatus | undefined = parseStatus(body);
+	if (!status) throw new Error('unreadable status');
+	return statusView(status, now);
+}
+
+describe('statusView', () => {
+	it("shapes Korea's fixture: counts, each entry's state, newest update and age", () => {
+		expect(view(fixtureBody('/v1/lol/status/kr'))).toEqual({
+			incidents: 2,
+			maintenances: 1,
+			entries: [
+				{
+					key: 'Incident-id-9101',
+					kind: 'Incident',
+					title: 'Ranked queues are disabled',
+					state: 'warning',
+					tone: 'warning',
+					update: 'Ranked queues are disabled while we investigate an issue.',
+					age: { event: 'updated', seconds: 7200 }
+				},
+				// Never updated: its age is counted from when it was opened.
+				{
+					key: 'Incident-id-9103',
+					kind: 'Incident',
+					title: 'Incident',
+					state: 'info',
+					tone: 'info',
+					update: null,
+					age: { event: 'opened', seconds: 11400 }
+				},
+				{
+					key: 'Maintenance-id-9201',
+					kind: 'Maintenance',
+					title: 'Scheduled maintenance for patch 16.21',
+					state: 'scheduled',
+					tone: 'maintenance',
+					update: null,
+					age: { event: 'updated', seconds: 18600 }
+				}
+			]
+		});
+	});
+
+	it('lists the worst first: critical, warnings and maintenance under way, notices, then other maintenance', () => {
+		const titled = (content: string) => [{ locale: 'en_US', content }];
+		const status = view({
+			incidents: [
+				{ id: 1, incident_severity: 'info', titles: titled('notice') },
+				{ id: 2, incident_severity: 'warning', titles: titled('warning') },
+				{ id: 3, incident_severity: 'critical', titles: titled('critical') },
+				// A severity the site does not know is open all the same: a warning (ADR-072).
+				{ id: 4, incident_severity: 'catastrophic', titles: titled('unknown') }
+			],
+			maintenances: [
+				{ id: 5, maintenance_status: 'scheduled', titles: titled('scheduled') },
+				{ id: 6, maintenance_status: 'in_progress', titles: titled('under way') },
+				{ id: 7, titles: titled('stateless') }
+			]
+		});
+		expect(status.entries.map((e) => [e.title, e.tone, e.state])).toEqual([
+			['critical', 'critical', 'critical'],
+			['warning', 'warning', 'warning'],
+			['unknown', 'warning', null],
+			['under way', 'warning', 'in progress'],
+			['notice', 'info', 'info'],
+			['scheduled', 'maintenance', 'scheduled'],
+			['stateless', 'maintenance', null]
+		]);
+	});
+
+	it('keys an incident and a maintenance with the same id apart', () => {
+		const status = view({ incidents: [{ id: 1 }, {}], maintenances: [{ id: 1 }, {}] });
+		expect(status.entries.map((e) => e.key).toSorted()).toEqual([
+			'Incident-at-1',
+			'Incident-id-1',
+			'Maintenance-at-1',
+			'Maintenance-id-1'
+		]);
+	});
+
+	it('has no age without a readable time, and never a negative one', () => {
+		const status = view({
+			incidents: [
+				{ id: 1, updated_at: 'yesterday', created_at: null },
+				// Ahead of the server's clock: just now, not in the future.
+				{ id: 2, updated_at: '2026-11-09T04:00:00Z' }
+			],
+			maintenances: []
+		});
+		expect(status.entries.map((e) => e.age)).toEqual([null, { event: 'updated', seconds: 0 }]);
+	});
+});
+
+describe('allRunning and statusHeadline', () => {
+	it('is all clear with nothing open', () => {
+		const ok = view(fixtureBody('/v1/lol/status/oc1'));
+		expect(ok).toEqual({ incidents: 0, maintenances: 0, entries: [] });
+		expect(allRunning(ok)).toBe(true);
+		expect(statusHeadline(ok)).toBe('All services running');
+	});
+
+	it('counts what is open', () => {
+		const kr = view(fixtureBody('/v1/lol/status/kr'));
+		expect(allRunning(kr)).toBe(false);
+		expect(statusHeadline(kr)).toBe('2 incidents · 1 maintenance');
+		expect(statusHeadline(view({ incidents: [{}], maintenances: [] }))).toBe('1 incident');
+		expect(statusHeadline(view({ incidents: [], maintenances: [{}, {}] }))).toBe('2 maintenances');
+	});
+});
+
+describe('riotStatusUrl', () => {
+	it("is Riot's status page for the platform, in English", () => {
+		expect(riotStatusUrl('oc1')).toBe('https://status.riotgames.com/lol?region=oc1&locale=en_US');
+		expect(riotStatusUrl('kr')).toBe('https://status.riotgames.com/lol?region=kr&locale=en_US');
 	});
 });
 

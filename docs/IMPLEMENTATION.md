@@ -532,6 +532,7 @@ Owner request 2026-11-09: a search-first front page ("Concept 1, search first wi
 - [ ] FP-01 Hero and the top-win-rate card: `Patch X.Y` and `N ranked games analysed` pills, a larger search with example links, the six champions with the highest win rate over 800 games; a `live` cache policy and a 2 s deadline for the front page's calls, no streaming (ADR-066)
 - [ ] FP-02 Free rotation and server status for a region: `?region=` with Oceania as the default, a switcher that works without JavaScript, Riot's passed-through payloads parsed at runtime (ADR-071)
 - [ ] FP-03 Recent searches as cards: profile icon, region, solo rank and when it was viewed, recorded by the profile page; entries stored before still read (ADR-068)
+- [ ] FP-04 The server status card shows what Riot's feed has: a count of what is open, entries worst first, each with its newest update and when it was updated, an all-clear state that fills the card, and a link to Riot's status page; what waits on riot-proxy is labelled in `docs/notes/status-card.md` (ADR-075)
 
 **Exit check:** with JavaScript disabled, `/?region=kr` renders Korea's rotation and status from the server; with riot-proxy stopped, `/` answers 200 with every card's notice and `Cache-Control: no-store`.
 

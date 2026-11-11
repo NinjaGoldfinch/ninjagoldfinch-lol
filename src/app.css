@@ -13,6 +13,8 @@
 	--color-loss: oklch(0.66 0.17 25);
 	/* A healthy state (server status): green, not the win blue. */
 	--color-ok: oklch(0.76 0.15 150);
+	/* Degraded but not down (a warning incident, a maintenance under way): amber. */
+	--color-warn: oklch(0.8 0.14 80);
 	/* The map sides, for the timeline chart: Blue and Red, not win and loss. */
 	--color-team-blue: oklch(0.7 0.12 245);
 	--color-team-red: oklch(0.66 0.16 20);

@@ -25,28 +25,28 @@ Commit inspected: `e7c395c` on branch `docs/VS-exit-check` (clean tree), 2026-10
 
 ## 2. Directory tree (tracked files, depth 3)
 
-| Path                  | Purpose                                                                                                                               |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `.githooks/`          | `pre-commit` (refuses commits on `main` and key-like strings), `pre-push` (runs `just check`)                                         |
-| `.vscode/`            | Editor recommendations                                                                                                                |
-| `deploy/`             | `compose.yaml` for the LAN preview VM                                                                                                 |
-| `deploy/proxmox/`     | `create-vm.sh`, `ninjagoldfinch-update`, `test.sh`, README for the Proxmox preview VM                                                 |
-| `docs/`               | `IMPLEMENTATION.md` (plan), `DECISIONS.md` (ADR-001…043), `PROGRESS.md`                                                               |
-| `docs/notes/`         | `page-speed.md` (SPD-07 to SPD-11), `RV-plan.md`, `match-layouts.md` (the decision only); finished plans in `archive/` (`VS-plan.md`) |
-| `openapi/`            | `riot-proxy.json`, the committed riot-proxy OpenAPI spec (v2.7.0)                                                                     |
-| `src/`                | `app.html`, `app.css`, `app.d.ts`, `env.ts` (env declarations), `hooks.server.ts`                                                     |
-| `src/lib/api/`        | `schema.d.ts` (generated), hand-typed parsers `match.ts`, `ddragon.ts`, `cdragon.ts`, `riot.ts`                                       |
-| `src/lib/assets/`     | `favicon.svg`                                                                                                                         |
-| `src/lib/components/` | 19 Svelte components                                                                                                                  |
-| `src/lib/domain/`     | 15 pure modules (each with a unit test)                                                                                               |
-| `src/lib/server/`     | Server-only: proxy client, load timing, env rules, errors, cache policies, loaders, in-memory lookups                                 |
-| `src/routes/`         | Pages and endpoints (section 4)                                                                                                       |
-| `static/`             | `robots.txt`                                                                                                                          |
-| `tests/unit/`         | 41 Vitest files                                                                                                                       |
-| `tests/e2e/`          | 6 Playwright files                                                                                                                    |
-| `tests/fixtures/`     | 54 recorded or synthetic riot-proxy responses; `builds/` holds riot-proxy's golden build fixture                                      |
-| `tests/mock-proxy/`   | Mock riot-proxy replaying fixtures                                                                                                    |
-| `tests/` (files)      | `record-fixture.ts`, `redact.ts`                                                                                                      |
+| Path                  | Purpose                                                                                                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.githooks/`          | `pre-commit` (refuses commits on `main` and key-like strings), `pre-push` (runs `just check`)                                                                                                         |
+| `.vscode/`            | Editor recommendations                                                                                                                                                                                |
+| `deploy/`             | `compose.yaml` for the LAN preview VM                                                                                                                                                                 |
+| `deploy/proxmox/`     | `create-vm.sh`, `ninjagoldfinch-update`, `test.sh`, README for the Proxmox preview VM                                                                                                                 |
+| `docs/`               | `IMPLEMENTATION.md` (plan), `DECISIONS.md` (ADR-001…043), `PROGRESS.md`                                                                                                                               |
+| `docs/notes/`         | `page-speed.md` (SPD-07 to SPD-11), `RV-plan.md`, `status-card.md` (FP-04, and riot-proxy requests RP-1 to RP-5), `match-layouts.md` (the decision only); finished plans in `archive/` (`VS-plan.md`) |
+| `openapi/`            | `riot-proxy.json`, the committed riot-proxy OpenAPI spec (v2.7.0)                                                                                                                                     |
+| `src/`                | `app.html`, `app.css`, `app.d.ts`, `env.ts` (env declarations), `hooks.server.ts`                                                                                                                     |
+| `src/lib/api/`        | `schema.d.ts` (generated), hand-typed parsers `match.ts`, `ddragon.ts`, `cdragon.ts`, `riot.ts`                                                                                                       |
+| `src/lib/assets/`     | `favicon.svg`                                                                                                                                                                                         |
+| `src/lib/components/` | 19 Svelte components                                                                                                                                                                                  |
+| `src/lib/domain/`     | 15 pure modules (each with a unit test)                                                                                                                                                               |
+| `src/lib/server/`     | Server-only: proxy client, load timing, env rules, errors, cache policies, loaders, in-memory lookups                                                                                                 |
+| `src/routes/`         | Pages and endpoints (section 4)                                                                                                                                                                       |
+| `static/`             | `robots.txt`                                                                                                                                                                                          |
+| `tests/unit/`         | 41 Vitest files                                                                                                                                                                                       |
+| `tests/e2e/`          | 6 Playwright files                                                                                                                                                                                    |
+| `tests/fixtures/`     | 54 recorded or synthetic riot-proxy responses; `builds/` holds riot-proxy's golden build fixture                                                                                                      |
+| `tests/mock-proxy/`   | Mock riot-proxy replaying fixtures                                                                                                                                                                    |
+| `tests/` (files)      | `record-fixture.ts`, `redact.ts`                                                                                                                                                                      |
 
 Untracked build artefacts present on disk: `build/`, `.svelte-kit/`, `node_modules/`, `test-results/` (all in `.gitignore:1-25`).
 
