@@ -1220,7 +1220,7 @@ Date: 2026-11-10 · Task: FIX-17 (owner, 2026-11-10; corrects ADR-066)
 
 ## ADR-075: the status card shows the feed's updates and ages, worst first, and links to Riot's status page
 
-Date: 2026-11-10 · Task: FP-04 (owner, 2026-11-10; extends ADR-071 and ADR-072)
+Date: 2026-11-10 · Task: FP-04 (owner, 2026-11-10; extends ADR-071 and ADR-072) · A maintenance without a known state, and which update is the newest, refined by ADR-078
 
 **Context.** With nothing open, the status card (ADR-071) was one line over an empty card; with something open, a title and a severity. The owner asked for it to be improved, and for what riot-proxy would have to change to be labelled. The site may read Riot's status only through riot-proxy, whose `/v1/lol/status/{platform}` passes one platform's lol-status-v4 `PlatformDataDto` through. That payload has more than the card read (each entry's `updates[]`, `created_at` and `updated_at`), and nothing at all about a platform that is clear, about other platforms, or about what has closed.
 
@@ -1283,3 +1283,23 @@ Date: 2026-11-10 · Task: FP-09 (owner, 2026-11-10; extends ADR-066 and ADR-071)
 - A filtered view is complete, so kept at the edge, only when both analytics calls and the status answered.
 - A tier form submitted without JavaScript sends `rank=diamond%2B`, which redirects once to `rank=diamond+`, as on `/champions`.
 - The newest-patch fixture is synthetic: the 16.19 recording at the path without `patch`, relabelled 16.20, which riot-proxy's patch list names as its newest.
+
+## ADR-078: a maintenance without a known state is a warning; an entry's newest update is the one posted last
+
+Date: 2026-11-11 · Task: FIX-20 (owner's review of #150; refines ADR-075)
+
+**Context.** The owner's review of #150 found two of ADR-075's rules reading the feed for less than it may hold:
+
+- **The order.** A maintenance's tone came from `maintenance_status`: `in_progress` was a `warning`, and anything else, a missing or unknown state included, was `maintenance`, the lowest tone. Such an entry was listed last, after the `info` incidents, with a lavender dot, though it may be under way. An incident whose severity is unreadable is a `warning` because it must not read as less than it may be (ADR-072); a maintenance whose state is unreadable was not held to that.
+- **The newest update.** `latestUpdate` ranked an entry's published updates by `updated_at`, else `created_at`. An update Riot edits after posting a later one would then outrank it: if Riot fixes a typo in update A ("Investigating", posted 01:00, edited 03:30) after posting update B ("A fix is rolling out", 03:00), the card showed A. Nobody has seen Riot do this, and both status fixtures are synthetic (ADR-075), so this is a suspected problem; the rule is the owner's decision either way.
+
+**Decision.**
+
+- **A maintenance is `maintenance` only when its `maintenance_status` is `scheduled`.** `in_progress`, a missing state and any value the site does not know are a `warning`, listed with the warnings and given the amber dot, as an incident of unknown severity is (ADR-072). `complete` is still dropped by `parseStatus`. The order is otherwise ADR-075's: critical; warnings; `info` incidents; scheduled maintenance; the feed's order within each (`STATUS_ORDER`, `maintenanceTone` in `src/lib/domain/front-page.ts`).
+- **An entry's newest update is the published one with the latest `created_at`**, the time it was posted; else its `updated_at`; one with neither readable counts as the oldest (`latestUpdate`). ADR-075's other rules stay: an update marked `publish: false` or without text is skipped, and of equals the first in the list wins. The entry's own age is unchanged: its `updated_at`, else `created_at` (`updated …` or `opened …`).
+
+**Consequences.**
+
+- An entry with an unknown or missing state now sorts ahead of `info` incidents and scheduled maintenance, with an amber dot; its label stays the raw state, or none.
+- An update edited after a newer one was posted no longer replaces it on the card. An update with only an `updated_at` is ranked by it, so an edit time still stands in for a missing posting time.
+- Both rules are pinned by unit tests: the order with a missing and an unknown maintenance state, a maintenance with no state in `statusView`, and the A/B case above. A real recording of a feed with something open (`docs/notes/status-card.md`) would show whether Riot edits updates in place.

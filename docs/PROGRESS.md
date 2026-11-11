@@ -85,6 +85,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-16 The monitoring docs state only what is known of the outside check: a heartbeat from `ngf-mon-syd1` to Healthchecks.io, consistent with ninja-monitor's public source; the `/healthz` fetch, the ping's dependence on it and the check's period marked unverified, with gaps rows; the runbook checks the monitoring box first; stale statements in the monitoring and deployment docs corrected, each re-read in full (review of #143) — #145
 - [x] FIX-17 The front page's games-analysed pill counts games, not participant games: a tenth of riot-proxy's `totalGames` (ADR-074; owner, 2026-11-10) — #149
 - [x] FIX-19 Doc counts left stale by FP-08 and FP-09: `integration/contract.md` names thirteen routes, and `workflows/testing.md` and `workflows/development-setup.md` count 54 fixtures (review of #151 and #152)
+- [x] FIX-20 Status card: a maintenance whose state is missing or unknown is a warning, as an incident of unknown severity is, not listed last; an entry's newest update is the one posted last, by `created_at`, else `updated_at`, so an edit to an older update does not replace a newer one (ADR-078; owner's review of #150)
 
 ## RV — fixes from the code review of 2026-11-03
 

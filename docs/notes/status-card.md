@@ -22,8 +22,8 @@ The feed has no per-service rows, no history, no other platforms, and no start t
 ### FP-04: show what the feed has (this PR; no riot-proxy change)
 
 - A first line that counts what is open, with a dot for the worst entry.
-- Entries worst first: critical, warnings and a maintenance under way, notices, then other maintenance.
-- Each entry's newest published update, in English when it has it, and when the entry was last updated.
+- Entries worst first: critical, warnings and a maintenance under way, notices, then scheduled maintenance. A maintenance whose state is missing or unknown counts as under way (ADR-078).
+- Each entry's newest published update, the one posted last (ADR-078), in English when it has it, and when the entry was last updated.
 - With nothing open, "All services running" centred in the card with "No open incidents or maintenance on Oceania."
 - A link to Riot's status page for the region (`https://status.riotgames.com/lol?region=oc1&locale=en_US`), in every state, the unavailable one included.
 - Ages are counted on the server at render, so the page hydrates to the same text. ADR-075.
