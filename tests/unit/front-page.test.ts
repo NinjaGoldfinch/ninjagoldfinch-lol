@@ -582,12 +582,13 @@ describe('the newest update of a status entry', () => {
 
 	it('goes to the first in the list of two posted at the same time', () => {
 		const at = '2026-11-09T01:00:00Z';
+		// The second was edited later; ranked by `updated_at` first, it would win.
 		expect(
 			update([
-				{ translations: text('one'), created_at: at, updated_at: '2026-11-09T02:00:00Z' },
-				{ translations: text('two'), created_at: at }
+				{ translations: text('two'), created_at: at },
+				{ translations: text('one'), created_at: at, updated_at: '2026-11-09T02:00:00Z' }
 			])
-		).toBe('one');
+		).toBe('two');
 	});
 
 	it('is in English when the update has it, else its first translation', () => {
