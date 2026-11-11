@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_REGION, FRONT_CARD, allRunning, parseFrontCard } from '#lib/domain/front-page.ts';
 import { findRegion } from '#lib/domain/regions.ts';
 import { loadFrontPage } from '#lib/server/front-page.ts';
@@ -6,6 +6,7 @@ import { createProxyClient } from '#lib/server/proxy.ts';
 import { clearStaticNames } from '#lib/server/static-data.ts';
 import { clearPatchVersions } from '#lib/server/patch.ts';
 import { loadFixtures } from '../mock-proxy/mock.ts';
+import { championStatsWithDefault } from './champion-stats-default.ts';
 
 const fixtures = loadFixtures();
 const json = (status: number, body: unknown) =>
@@ -349,5 +350,36 @@ describe('loadFrontPage', () => {
 			expect(page.complete).toBe(false);
 			expect(log).toHaveBeenCalledWith('front page: analytics unavailable:', 503);
 		});
+	});
+});
+
+describe("the default card with /champions' DEFAULT_PATCH at newest (ADR-033, ADR-077)", () => {
+	afterEach(() => {
+		vi.doUnmock('#lib/domain/champion-stats.ts');
+		vi.resetModules();
+	});
+
+	it('makes one analytics call, for all patches', async () => {
+		vi.resetModules();
+		vi.doMock('#lib/domain/champion-stats.ts', () => championStatsWithDefault('newest'));
+		const champions = await import('#lib/domain/champion-stats.ts');
+		expect(champions.DEFAULT_PATCH).toBe('newest');
+		const front = await import('#lib/domain/front-page.ts');
+		const server = await import('#lib/server/front-page.ts');
+
+		// `/` as the route reads it: no query, so no redirect.
+		const defaultCard = front.parseFrontCard(new URLSearchParams(''));
+		expect(front.frontQuery(OCEANIA, defaultCard)).toBe('');
+		const cards = answering();
+		const page = await server.loadFrontPage(OCEANIA, {
+			...clients(undefined, cards.fetch),
+			card: defaultCard
+		});
+
+		// The card's call is the pill's: not the newest patch and all patches as well.
+		expect(cards.asked.filter((p) => p.startsWith('/v1/lol/analytics/'))).toEqual([ANALYTICS]);
+		expect(page.top?.patch).toBe('all');
+		expect(page.totalGames).toBe(21159);
+		expect(page.complete).toBe(true);
 	});
 });

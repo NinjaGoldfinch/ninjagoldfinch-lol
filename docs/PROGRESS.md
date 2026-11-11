@@ -88,6 +88,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-20 Status card: a maintenance whose state is missing or unknown is a warning, as an incident of unknown severity is, not listed last; an entry's newest update is the one posted last, by `created_at`, else `updated_at`, so an edit to an older update does not replace a newer one (ADR-078; owner's review of #150)
 - [x] FIX-21 The top-win-rate card's default is all patches whatever `/champions`' `DEFAULT_PATCH` (ADR-033): `parseFrontCard` and `cardFields` read and write the patch themselves, `patch=newest` or nothing, so flipping the switch leaves `/`, its canonical URLs and its single analytics call as they are (ADR-077; owner's review of #152)
 - [x] FIX-22 Status card: the test of two updates posted at the same time lists the one edited later second, so it fails if `updated_at` outranks `created_at` again; `StatusItem.maintenanceStatus`'s comment says it holds whatever Riot wrote and that anything but `scheduled` is a warning (ADR-078; owner's review of #155)
+- [x] FIX-23 Top-win-rate card: a loader test pins ADR-077's single analytics call, `patch=all`, for the default view with `/champions`' `DEFAULT_PATCH` at `newest`, through #156's `championStatsWithDefault`, now a shared test helper; `api/pagination-filtering-and-versioning.md` documents `/`'s query: its parameters, values and defaults, the canonical order and the 307 to it (ADR-071, ADR-077; owner's review of #156)
 
 ## RV — fixes from the code review of 2026-11-03
 

@@ -47,6 +47,26 @@ Redirect status: `/champions` uses `307` (`src/routes/champions/+page.server.ts:
 
 Analytics lists are not paginated: the table asks riot-proxy for `limit=500`, the detail for `limit=10`, matchups for `limit=200` (`src/lib/domain/champion-stats.ts:191-194`, `src/lib/server/champion-page.ts:123,132`).
 
+## Front page query
+
+`/` reads the status card's region and the top-win-rate card's view from the query (ADR-071, ADR-077). The card uses `/champions`' words, so its link to `/champions` carries the view, but not all of its values or defaults:
+
+| Query    | Values                                                                                                                                     | Default        |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| `region` | `br`, `eune`, `euw`, `jp`, `kr`, `lan`, `las`, `na`, `oce`, `ru`, `sea`, `tw`, `tr`, `vn`, read without regard to case; not `me` (ADR-072) | `oce`, Oceania |
+| `role`   | `top`, `jungle`, `mid`, `bot`, `support`                                                                                                   | every role     |
+| `rank`   | `<tier>` or `<tier>+`, Iron to Challenger, read as on `/champions`                                                                         | every tier     |
+| `patch`  | `newest`, riot-proxy's newest patch; any other value, `all` and `major.minor` included, is all patches                                     | all patches    |
+| `sort`   | `pick`, `ban`; any other value is win rate                                                                                                 | win rate       |
+
+- **The patch default is the card's own.** No `patch` means all patches whatever `/champions`' `DEFAULT_PATCH` (ADR-033): `parseFrontCard` and `cardFields` read and write `patch` themselves, `patch=newest` or nothing, so flipping the switch changes neither the card's default view nor its canonical URL, and the default view stays one analytics call, shared with the games-analysed pill (FIX-21).
+- **Defaults are left out of the URL**, and an unknown value is read as the default, never an error: `?region=atlantis&role=wizard` is Oceania's default view.
+- **`sort` is read by the load** on `/`, unlike `/champions`: it picks the card's six rows. It does not change the analytics call.
+- **Canonical form**, in this order: `region`, `role`, `rank`, `patch`, `sort`, at most `?region=kr&role=mid&rank=diamond+&patch=newest&sort=pick`; `/`, with no query, for Oceania and the default card (`frontQuery`). A query in any other form, with a default written out, an upper-case region, an unknown value or another parameter, gets `307` to it, sent `no-store` (`src/routes/+page.server.ts:14-18`, `src/hooks.server.ts:46-50`).
+- **The canonical URL is the edge-cache key**: one copy per region and card view, kept a minute (`live`) when every card answered and not kept with one missing (ADR-066).
+
+Sources: `src/lib/domain/front-page.ts:22-71` (`FRONT_FILTER`, `parseFrontCard`, `cardFields`), `src/lib/domain/front-page.ts:178-215` (`pickRegion`, `frontQuery`, `regionFields`), `src/lib/domain/champion-stats.ts:95-120` (role and rank).
+
 ## Match page parameters
 
 `player=<GameName-TAG>`, `tab=timeline` and `build=<participant id>` are read in the browser (`src/routes/match/[matchId]/+page.svelte:33,52,69`). The server ignores them and does not redirect, but each combination is a separate edge cache entry (ADR-024).
@@ -69,5 +89,5 @@ riot-proxy's routes are under `/v1`. The site pins a riot-proxy version by commi
 
 ---
 
-**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L99-L109`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L102`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L22-L27`, `src/routes/match/[matchId]/+page.svelte:L33-L69`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`
-**Last verified:** 2026-11-03 against commit `ea998cb`
+**Sources:** `src/lib/domain/match-filters.ts:L5-L59`, `src/lib/components/Pagination.svelte:L9-L17`, `src/lib/server/profile.ts:L43-L48,L99-L109`, `src/routes/summoner/[riotId]/+page.server.ts:L18-L22`, `src/routes/summoner/[riotId]/+page.svelte:L102`, `src/lib/domain/champion-stats.ts:L66-L194`, `src/lib/domain/champion-page.ts:L212-L244`, `src/lib/server/champion-page.ts:L123,L132`, `src/routes/champions/+page.server.ts:L14`, `src/routes/champions/[key]/+page.server.ts:L15-L26`, `src/hooks.server.ts:L22-L27`, `src/routes/match/[matchId]/+page.svelte:L33-L69`, `docs/IMPLEMENTATION.md:L277`, `docs/DECISIONS.md:L423,L493,L574,L617-L630`, `README.md:L52-L67`, `justfile:L20-L22`, `riot-proxy:src/routes/players.rs:L697,L866`, `src/lib/domain/front-page.ts:L22-L71,L178-L215`, `src/routes/+page.server.ts:L10-L22`, `src/lib/domain/champion-stats.ts:L95-L120,L163-L183`, `src/lib/domain/regions.ts:L16-L36`, `src/lib/server/cache.ts:L12-L13,L33-L38`, `src/hooks.server.ts:L46-L50`, `docs/DECISIONS.md:L411,L1103,L1264-L1285`
+**Last verified:** 2026-11-03 against commit `ea998cb`; the Front page query section added on 2026-11-11 against commit `8e93918`

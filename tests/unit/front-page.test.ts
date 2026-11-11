@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-	toChampionTable,
-	type ChampionFilter,
-	type ChampionRow,
-	type ChampionSort
-} from '#lib/domain/champion-stats.ts';
+import { toChampionTable, type ChampionRow } from '#lib/domain/champion-stats.ts';
 import {
 	DEFAULT_REGION,
 	EXAMPLE_SEARCHES,
@@ -36,6 +31,7 @@ import {
 } from '#lib/domain/front-page.ts';
 import { REGIONS, findRegion } from '#lib/domain/regions.ts';
 import type { components } from '#lib/api/schema.d.ts';
+import { championStatsWithDefault } from './champion-stats-default.ts';
 import { fixtureBody, recordedNames } from './fixtures.ts';
 
 type ChampionStatsResponse = components['schemas']['ChampionStatsResponse'];
@@ -194,39 +190,6 @@ describe('the card in the query', () => {
 		expect(isFrontFilter(parseFrontCard(params('sort=pick')).filter)).toBe(true);
 	});
 });
-
-/**
- * champion-stats.ts as it would be with `DEFAULT_PATCH` set to `newest`
- * (ADR-033): its default patch, the one `parseChampionFilter` falls back to
- * and `filterFields` leaves out, is riot-proxy's newest (null), not `all`.
- * The switch is a constant its functions read inside the module, so the
- * flipped module is modelled on the real one.
- */
-async function championStatsWithDefault(defaultPatch: 'all' | 'newest') {
-	const actual = await vi.importActual<typeof import('#lib/domain/champion-stats.ts')>(
-		'#lib/domain/champion-stats.ts'
-	);
-	if (defaultPatch === 'all') return actual;
-	return {
-		...actual,
-		DEFAULT_PATCH: defaultPatch,
-		parseChampionFilter(params: URLSearchParams): ChampionFilter {
-			const filter = actual.parseChampionFilter(params);
-			// `all` that the query did not name is the real module's default.
-			return filter.patch === 'all' && params.get('patch') !== 'all'
-				? { ...filter, patch: null }
-				: filter;
-		},
-		filterFields(filter: ChampionFilter, sort?: ChampionSort): [string, string][] {
-			const fields = actual.filterFields({ ...filter, patch: 'all' }, sort);
-			if (filter.patch !== null) {
-				const at = fields.findIndex(([key]) => key === 'sort');
-				fields.splice(at === -1 ? fields.length : at, 0, ['patch', filter.patch]);
-			}
-			return fields;
-		}
-	};
-}
 
 describe.each(['all', 'newest'] as const)(
 	"the card's default with /champions' DEFAULT_PATCH at %s (ADR-077)",
