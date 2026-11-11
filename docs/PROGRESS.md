@@ -84,6 +84,7 @@ Exit check (amended in ADR-011): a profile with a page of matches (10) renders i
 - [x] FIX-15 The tick check counts every task item for duplicates, ticked or not, so a section a merge repeated fails; it also runs when started through a symlinked path; README.md and CLAUDE.md list it among the gate's steps, checked by a test (ADR-069; review of #142) — #144
 - [x] FIX-16 The monitoring docs state only what is known of the outside check: a heartbeat from `ngf-mon-syd1` to Healthchecks.io, consistent with ninja-monitor's public source; the `/healthz` fetch, the ping's dependence on it and the check's period marked unverified, with gaps rows; the runbook checks the monitoring box first; stale statements in the monitoring and deployment docs corrected, each re-read in full (review of #143) — #145
 - [x] FIX-17 The front page's games-analysed pill counts games, not participant games: a tenth of riot-proxy's `totalGames` (ADR-074; owner, 2026-11-10) — #149
+- [x] FIX-18 riot-proxy's answers to RP-1 to RP-5 recorded in `docs/notes/status-card.md`: what each gives the site once released, and the site work queued for that release; FP-05 leaves out platforms the site has no region for (owner, 2026-11-11) — #153
 
 ## RV — fixes from the code review of 2026-11-03
 
