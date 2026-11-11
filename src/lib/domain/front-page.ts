@@ -231,7 +231,7 @@ export interface StatusItem {
 	title: string;
 	/** An incident's severity; null for a maintenance or an unknown value. */
 	severity: StatusSeverity | null;
-	/** A maintenance's `scheduled` or `in_progress`; null for an incident. */
+	/** A maintenance's state as Riot wrote it (`complete` ones are dropped); null when missing or not a string, as for an incident. Anything but `scheduled` ranks as a warning (ADR-078). */
 	maintenanceStatus: string | null;
 	/** When Riot opened the entry (`created_at`), as it wrote it. */
 	createdAt: string | null;
