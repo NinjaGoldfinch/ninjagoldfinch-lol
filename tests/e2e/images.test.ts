@@ -37,13 +37,15 @@ test("the champion page's header icon and the profile icon load first", async ({
 });
 
 test('every image keeps its size and decodes off the main thread', async ({ page }) => {
-	for (const path of [
-		'/',
-		'/?region=kr',
-		'/summoner/NinjaGoldfinch-OCENZ',
-		'/match/OC1_712351051?tab=builds&build=1',
-		'/champions/ahri'
-	]) {
+	// The fewest images each page shows from the fixtures. The front page's
+	// are the top win rates the trimmed static data can name (ADR-076).
+	for (const [path, least] of [
+		['/', 2],
+		['/?region=kr', 2],
+		['/summoner/NinjaGoldfinch-OCENZ', 6],
+		['/match/OC1_712351051?tab=builds&build=1', 6],
+		['/champions/ahri', 6]
+	] as const) {
 		await page.goto(path);
 		const images = await page.locator('img').evaluateAll((imgs) =>
 			imgs.map((i) => ({
@@ -53,7 +55,7 @@ test('every image keeps its size and decodes off the main thread', async ({ page
 				decoding: i.getAttribute('decoding')
 			}))
 		);
-		expect(images.length, path).toBeGreaterThan(5);
+		expect(images.length, path).toBeGreaterThanOrEqual(least);
 		for (const image of images) {
 			expect(image.width, `${path} ${image.src}`).toBeTruthy();
 			expect(image.height, `${path} ${image.src}`).toBeTruthy();

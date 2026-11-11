@@ -219,14 +219,13 @@ If the old patch stays well past that, the refresh is failing, and every request
 
 ## 22. A front-page card shows a notice, or `/` is never cached
 
-**Cause.** The front page makes three optional calls to riot-proxy, all with a 2 s deadline (`frontClient`), besides the held patch and lookups: the analytics for the games-analysed pill and the top-win-rate card, and the region's free rotation and server status (ADR-066, ADR-071). When one fails, its card shows a notice, the rest of the page is served, and the page is sent `no-store`, so every view of it calls riot-proxy again (ADR-072). Each is logged with a `front page:` prefix (`src/lib/server/front-page.ts:67-185`):
+**Cause.** The front page makes two optional calls to riot-proxy, both with a 2 s deadline (`frontClient`), besides the held patch and lookups: the analytics for the games-analysed pill and the top-win-rate card, and the region's server status (ADR-066, ADR-071; the free rotation was dropped in ADR-076). When one fails, its card shows a notice, the rest of the page is served, and the page is sent `no-store`, so every view of it calls riot-proxy again (ADR-072). Each is logged with a `front page:` prefix (`src/lib/server/front-page.ts:62-140`):
 
-- `front page: analytics unavailable: <status>`, `front page: rotations unavailable for <platform>: <status>`, `front page: status unavailable for <platform>: <status>`: riot-proxy answered with an error, or 503 when it did not answer in 2 s, with a `proxy timeout` or `proxy unreachable` line beside it.
-- `front page: unexpected rotations payload for <platform>`, `front page: unexpected status payload for <platform>`: riot-proxy passes Riot's payloads through, and Riot's shape changed (ADR-071).
-- `front page: no free champions to show for <platform>`: the rotation was empty, held no integer ids, or named only champions the lookups lack, which also logs `front page: free champions without lookups: <id>, …` (ADR-072).
+- `front page: analytics unavailable: <status>`, `front page: status unavailable for <platform>: <status>`: riot-proxy answered with an error, or 503 when it did not answer in 2 s, with a `proxy timeout` or `proxy unreachable` line beside it.
+- `front page: unexpected status payload for <platform>`: riot-proxy passes Riot's payload through, and Riot's shape changed (ADR-071).
 - `front page: patch unavailable:`: no patch or lookups, so no patch pill, no icons and plain names.
 
-`front page: free champions without lookups` alone, with other champions shown, is usually a champion newer than the held patch (entry 14); the page is still cached. So is `front page: status entries shown with a fallback for <platform>: …`, which means Riot sent an incident or maintenance without a title or an id: the card shows it as `Incident` or `Maintenance`, not as all clear (ADR-072).
+`front page: status entries shown with a fallback for <platform>: …` leaves the page cached. It means Riot sent an incident or maintenance without a title or an id: the card shows it as `Incident` or `Maintenance`, not as all clear (ADR-072).
 
 `/?region=me` is not a failure: the Middle East is left out of the front page's regions, because riot-proxy 2.10.0 does not accept its platform `me1`, and the URL redirects to `/` (ADR-072).
 

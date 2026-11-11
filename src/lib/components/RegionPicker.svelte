@@ -2,7 +2,7 @@
 	import { FRONT_REGIONS } from '#lib/domain/front-page.ts';
 
 	/**
-	 * The front page's region, for its rotation and status cards (ADR-071). A
+	 * The front page's region, for its status card (ADR-071, ADR-076). A
 	 * GET form, so it works without JavaScript; with it, it applies on change
 	 * and keeps the scroll, as the other in-place controls do (ADR-072).
 	 */

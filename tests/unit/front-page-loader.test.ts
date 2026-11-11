@@ -71,9 +71,9 @@ describe('loadFrontPage', () => {
 		const cards = answering();
 		const page = await loadFrontPage(OCEANIA, clients(undefined, cards.fetch));
 
-		expect(cards.asked.toSorted()).toEqual(
-			[ANALYTICS, '/v1/lol/rotations/oc1', '/v1/lol/status/oc1'].toSorted()
-		);
+		// No free rotation: the front page dropped its card (ADR-076).
+		expect(cards.asked.toSorted()).toEqual([ANALYTICS, '/v1/lol/status/oc1'].toSorted());
+		expect(page).not.toHaveProperty('rotation');
 		// riot-proxy's `totalGames` is 211590 participant games: ten a game (ADR-074).
 		expect(page.totalGames).toBe(21159);
 		expect(page.topWinRates?.map((r) => r.name)).toEqual([
@@ -88,15 +88,13 @@ describe('loadFrontPage', () => {
 		expect(page.patchLabel).toBe('16.20');
 		expect(page.championNames).toContain('Taliyah');
 		expect(page.region).toEqual({ slug: 'oce', label: 'Oceania' });
-		expect(page.rotation).toHaveLength(16);
-		expect(page.rotation?.[0]).toEqual({ id: 103, key: 'Ahri', name: 'Ahri' });
 		expect(page.status).toEqual({ incidents: 0, maintenances: 0, entries: [] });
 		expect(page.statusPage).toBe('https://status.riotgames.com/lol?region=oc1&locale=en_US');
 		expect(page.statusCheckedSeconds).toBe(180);
 		expect(page.complete).toBe(true);
 	});
 
-	it("asks for another region's rotation and status", async () => {
+	it("asks for another region's status", async () => {
 		const korea = findRegion('kr');
 		if (!korea) throw new Error('no Korea');
 		vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -105,10 +103,8 @@ describe('loadFrontPage', () => {
 		const now = () => Date.parse('2026-11-09T03:10:00Z');
 		const page = await loadFrontPage(korea, { ...clients(undefined, cards.fetch), now });
 
-		expect(cards.asked).toContain('/v1/lol/rotations/kr');
-		expect(cards.asked).toContain('/v1/lol/status/kr');
+		expect(cards.asked.toSorted()).toEqual([ANALYTICS, '/v1/lol/status/kr'].toSorted());
 		expect(page.region).toEqual({ slug: 'kr', label: 'Korea' });
-		expect(page.rotation).toHaveLength(8);
 		// The fixture's incident without a title is kept, under a generic one.
 		expect(page.status?.entries.map((e) => e.title)).toEqual([
 			'Ranked queues are disabled',
@@ -125,20 +121,6 @@ describe('loadFrontPage', () => {
 		expect(page.complete).toBe(true);
 	});
 
-	it('shows the rest of the page without the rotation', async () => {
-		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const page = await loadFrontPage(
-			OCEANIA,
-			clients((path) => (path === '/v1/lol/rotations/oc1' ? json(404, {}) : undefined))
-		);
-
-		expect(page.rotation).toBeNull();
-		expect(page.status).not.toBeNull();
-		expect(page.topWinRates).toHaveLength(6);
-		expect(page.complete).toBe(false);
-		expect(log).toHaveBeenCalledWith('front page: rotations unavailable for oc1:', 404);
-	});
-
 	it('logs a status payload it cannot read, and leaves the card out', async () => {
 		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
 		const page = await loadFrontPage(
@@ -150,7 +132,7 @@ describe('loadFrontPage', () => {
 		expect(page.statusCheckedSeconds).toBeNull();
 		// The card still links to Riot's own page.
 		expect(page.statusPage).toBe('https://status.riotgames.com/lol?region=oc1&locale=en_US');
-		expect(page.rotation).toHaveLength(16);
+		expect(page.topWinRates).toHaveLength(6);
 		expect(page.complete).toBe(false);
 		expect(log).toHaveBeenCalledWith('front page: unexpected status payload for oc1');
 	});
@@ -223,53 +205,19 @@ describe('loadFrontPage', () => {
 		expect(log.mock.calls.flat().join(' ')).not.toContain('status entries');
 	});
 
-	describe('a rotation with no champions to show is unavailable, logged and not kept', () => {
-		const cases: [string, unknown[], string[]][] = [
-			['an empty list', [], []],
-			['a list of strings', ['Ahri', 'Jinx'], []],
-			['ids the lookups lack', [998, 999], ['front page: free champions without lookups: 998, 999']]
-		];
-		for (const [name, ids, also] of cases) {
-			it(name, async () => {
-				const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-				const page = await loadFrontPage(
-					OCEANIA,
-					clients((path) =>
-						path === '/v1/lol/rotations/oc1' ? json(200, { freeChampionIds: ids }) : undefined
-					)
-				);
-
-				expect(page.rotation).toBeNull();
-				expect(page.status).not.toBeNull();
-				expect(page.topWinRates).toHaveLength(6);
-				expect(page.complete).toBe(false);
-				expect(log).toHaveBeenCalledWith('front page: no free champions to show for oc1');
-				for (const line of also) expect(log).toHaveBeenCalledWith(line);
-			});
-		}
-	});
-
-	it('gives up on a rotation that never answers, keeping the other cards', async () => {
+	it('gives up on a status that never answers, keeping the other cards', async () => {
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		const cards = answering();
 		const fetch = (request: Request) =>
-			new URL(request.url).pathname === '/v1/lol/rotations/oc1'
-				? hang(request)
-				: cards.fetch(request);
+			new URL(request.url).pathname === '/v1/lol/status/oc1' ? hang(request) : cards.fetch(request);
 		const started = performance.now();
 		const page = await loadFrontPage(OCEANIA, clients(undefined, fetch, 50));
 
 		expect(performance.now() - started).toBeLessThan(200);
-		expect(page.rotation).toBeNull();
-		expect(page.status).not.toBeNull();
+		expect(page.status).toBeNull();
+		expect(page.totalGames).toBe(21159);
 		expect(page.topWinRates).toHaveLength(6);
 		expect(page.complete).toBe(false);
-	});
-
-	it('logs free champions the lookups lack', async () => {
-		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-		await loadFrontPage(OCEANIA, clients());
-		expect(log).toHaveBeenCalledWith('front page: free champions without lookups: 999');
 	});
 
 	it('shows the rest of the page when the analytics call fails', async () => {

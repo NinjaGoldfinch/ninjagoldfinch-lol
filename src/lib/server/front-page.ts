@@ -5,14 +5,11 @@ import {
 	FRONT_FILTER,
 	fetchedAge,
 	gamesAnalysed,
-	parseRotation,
 	parseStatus,
 	riotStatusUrl,
-	rotationChampions,
 	statusView,
 	topWinRates,
 	type PlatformStatus,
-	type RotationChampion,
 	type StatusView
 } from '#lib/domain/front-page.ts';
 import { patchOf } from '#lib/domain/matches.ts';
@@ -23,7 +20,7 @@ import { frontClient, proxy, type ProxyClient } from './proxy.ts';
 import { NO_NAMES, namesOrFallback } from './static-data.ts';
 
 export interface FrontPage {
-	/** The region the rotation and status cards are for. */
+	/** The region the status card is for. */
 	region: { slug: string; label: string };
 	/** The Data Dragon version for icons; null when it is unavailable. */
 	patch: string | null;
@@ -37,9 +34,7 @@ export interface FrontPage {
 	totalGames: number | null;
 	/** The top-win-rate card's rows; null when the analytics call failed. */
 	topWinRates: ChampionRow[] | null;
-	/** The region's free champions; null when the call failed or its payload was unreadable. */
-	rotation: RotationChampion[] | null;
-	/** The region's open incidents and maintenances, as the card shows them; null likewise. */
+	/** The region's open incidents and maintenances, as the card shows them; null when the call failed or its payload was unreadable. */
 	status: StatusView | null;
 	/** Riot's own status page for the region, which the card links to. */
 	statusPage: string;
@@ -85,11 +80,10 @@ export async function loadFrontPage(
 			return { patch: null, names: NO_NAMES, fellBack: true };
 		});
 
-	const [analytics, rotations, platformStatus, { patch, names, fellBack }] = await Promise.all([
+	const [analytics, platformStatus, { patch, names, fellBack }] = await Promise.all([
 		optional(
 			cards.GET('/v1/lol/analytics/champions', { params: { query: proxyQuery(FRONT_FILTER) } })
 		),
-		optional(cards.GET('/v1/lol/rotations/{platform}', platform)),
 		optional(cards.GET('/v1/lol/status/{platform}', platform)),
 		lookups
 	]);
@@ -97,7 +91,6 @@ export async function loadFrontPage(
 	const stats = analytics.response.ok ? analytics.data : undefined;
 	if (!stats) console.error('front page: analytics unavailable:', analytics.response.status);
 
-	const rotation = readRotation(rotations, region, fellBack ? undefined : names);
 	const platformData = readStatus(platformStatus, region);
 	const status = platformData ? statusView(platformData, now()) : null;
 
@@ -107,55 +100,17 @@ export async function loadFrontPage(
 		patchLabel: patchOf(patch),
 		totalGames: stats ? gamesAnalysed(stats.totalGames) : null,
 		topWinRates: stats ? topWinRates(toChampionTable(stats, names)) : null,
-		rotation,
 		status,
 		statusPage: riotStatusUrl(region.platform),
 		statusCheckedSeconds: status
 			? fetchedAge(platformStatus.response.headers.get('x-cache-fetched-age'))
 			: null,
 		championNames: championNames(names.champions),
-		complete:
-			stats !== undefined && rotation !== null && status !== null && patch !== null && !fellBack
+		complete: stats !== undefined && status !== null && patch !== null && !fellBack
 	};
 }
 
 type Answer = { data?: unknown; response: Response };
-
-/**
- * The free champions, or null when riot-proxy failed, sent something else, or
- * none of them can be named: an empty rotation is unavailable, not a notice
- * worth keeping at the edge (ADR-072).
- */
-function readRotation(
-	answer: Answer,
-	region: Region,
-	/** undefined when the lookups fell back: no champion can be named. */
-	names: StaticNames | undefined
-): RotationChampion[] | null {
-	if (!answer.response.ok) {
-		console.error(
-			`front page: rotations unavailable for ${region.platform}:`,
-			answer.response.status
-		);
-		return null;
-	}
-	const rotation = parseRotation(answer.data);
-	if (!rotation) {
-		console.error(`front page: unexpected rotations payload for ${region.platform}`);
-		return null;
-	}
-	if (!names) return null;
-	const unknown = rotation.free.filter((id) => !names.champions[id]);
-	if (unknown.length > 0) {
-		console.error(`front page: free champions without lookups: ${unknown.join(', ')}`);
-	}
-	const champions = rotationChampions(rotation, names.champions);
-	if (champions.length === 0) {
-		console.error(`front page: no free champions to show for ${region.platform}`);
-		return null;
-	}
-	return champions;
-}
 
 /** The platform's status, or null when riot-proxy failed or sent something else. */
 function readStatus(answer: Answer, region: Region): PlatformStatus | null {
