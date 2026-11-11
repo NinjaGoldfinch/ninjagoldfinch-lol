@@ -4,7 +4,7 @@
 	import SearchForm from '#lib/components/SearchForm.svelte';
 	import StatusCard from '#lib/components/StatusCard.svelte';
 	import TopWinRates from '#lib/components/TopWinRates.svelte';
-	import { EXAMPLE_SEARCHES, TOP_WIN_RATE_MIN_GAMES, formatCount } from '#lib/domain/front-page.ts';
+	import { EXAMPLE_SEARCHES, cardFields, formatCount } from '#lib/domain/front-page.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -54,12 +54,13 @@
 
 <div class="mt-12 grid gap-4 lg:grid-cols-3">
 	<div class="grid lg:col-span-2">
-		<TopWinRates rows={data.topWinRates} patch={data.patch} minGames={TOP_WIN_RATE_MIN_GAMES} />
+		<TopWinRates top={data.top} card={data.card} region={data.region} patch={data.patch} />
 	</div>
 	<StatusCard
 		status={data.status}
 		statusPage={data.statusPage}
 		checkedSeconds={data.statusCheckedSeconds}
 		region={data.region}
+		keep={cardFields(data.card)}
 	/>
 </div>

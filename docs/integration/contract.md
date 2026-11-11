@@ -26,21 +26,21 @@ The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a n
 
 Fourteen of the spec's 70 paths. Required means a failure fails the page.
 
-| Route                                                     | Used by              | Query the site sends                                                                     | Required |
-| --------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------- | -------- |
-| `GET /v1/players/by-riot-id/{gameName}/{tagLine}/profile` | profile              | `refresh=true` on Refresh only; no `platform`                                            | yes      |
-| `GET /v1/players/{puuid}/matches`                         | profile              | `platform`, `start` (page > 1), `count=10`, `queue`, `champion`, `refresh`               | no       |
-| `GET /v1/lol/matches/{region}/{matchId}`                  | match                | —                                                                                        | yes      |
-| `GET /v1/lol/matches/{region}/{matchId}/timeline`         | match                | —                                                                                        | no       |
-| `GET /v1/static/versions`                                 | every page with data | —                                                                                        | yes      |
-| `GET /v1/static/{file}`                                   | every page with data | `version`; `file` one of `champion`, `item`, `summoner`, `runesReforged`                 | no*      |
-| `GET /v1/static/queues`                                   | every page with data | —                                                                                        | no*      |
-| `GET /v1/lol/analytics/champions`                         | `/champions`, `/`    | `queue=RANKED_SOLO_5x5`, `patch`, `role`, `tier` or `minTier`, `minGames=0`, `limit=500` | yes      |
-| `GET /v1/lol/analytics/champions/{championId}`            | `/champions/{key}`   | as above with `limit=10`                                                                 | yes      |
-| `GET /v1/lol/analytics/champions/{championId}/builds`     | `/champions/{key}`   | as above without `limit`, plus `opponentId` against an opponent                          | no       |
-| `GET /v1/lol/analytics/champions/{championId}/matchups`   | `/champions/{key}`   | as above with `limit=200`                                                                | no       |
-| `GET /v1/lol/analytics/patches`                           | champion pages       | `queue=RANKED_SOLO_5x5`, `championId` on a champion page                                 | no       |
-| `GET /v1/lol/status/{platform}`                           | `/`                  | — (`platform` from `?region=`)                                                           | no       |
+| Route                                                     | Used by              | Query the site sends                                                                                                              | Required |
+| --------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `GET /v1/players/by-riot-id/{gameName}/{tagLine}/profile` | profile              | `refresh=true` on Refresh only; no `platform`                                                                                     | yes      |
+| `GET /v1/players/{puuid}/matches`                         | profile              | `platform`, `start` (page > 1), `count=10`, `queue`, `champion`, `refresh`                                                        | no       |
+| `GET /v1/lol/matches/{region}/{matchId}`                  | match                | —                                                                                                                                 | yes      |
+| `GET /v1/lol/matches/{region}/{matchId}/timeline`         | match                | —                                                                                                                                 | no       |
+| `GET /v1/static/versions`                                 | every page with data | —                                                                                                                                 | yes      |
+| `GET /v1/static/{file}`                                   | every page with data | `version`; `file` one of `champion`, `item`, `summoner`, `runesReforged`                                                          | no*      |
+| `GET /v1/static/queues`                                   | every page with data | —                                                                                                                                 | no*      |
+| `GET /v1/lol/analytics/champions`                         | `/champions`, `/`    | `queue=RANKED_SOLO_5x5`, `patch` (`/`: `all`, or left out for the newest), `role`, `tier` or `minTier`, `minGames=0`, `limit=500` | yes      |
+| `GET /v1/lol/analytics/champions/{championId}`            | `/champions/{key}`   | as above with `limit=10`                                                                                                          | yes      |
+| `GET /v1/lol/analytics/champions/{championId}/builds`     | `/champions/{key}`   | as above without `limit`, plus `opponentId` against an opponent                                                                   | no       |
+| `GET /v1/lol/analytics/champions/{championId}/matchups`   | `/champions/{key}`   | as above with `limit=200`                                                                                                         | no       |
+| `GET /v1/lol/analytics/patches`                           | champion pages       | `queue=RANKED_SOLO_5x5`, `championId` on a champion page                                                                          | no       |
+| `GET /v1/lol/status/{platform}`                           | `/`                  | — (`platform` from `?region=`)                                                                                                    | no       |
 
 \* The Data Dragon files fall back to plain names when unavailable, except on a champion page, which cannot resolve its URL without them (`src/lib/server/champion-page.ts:92-97`).
 

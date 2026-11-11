@@ -1,16 +1,20 @@
 import type { StaticNames } from '#lib/api/ddragon.ts';
 import { championNames } from '#lib/domain/champion-search.ts';
-import { proxyQuery, toChampionTable, type ChampionRow } from '#lib/domain/champion-stats.ts';
+import { proxyQuery, toChampionTable, type ChampionFilter } from '#lib/domain/champion-stats.ts';
 import {
+	FRONT_CARD,
 	FRONT_FILTER,
 	fetchedAge,
 	gamesAnalysed,
+	isFrontFilter,
 	parseStatus,
 	riotStatusUrl,
 	statusView,
-	topWinRates,
+	topChampions,
+	type FrontCard,
 	type PlatformStatus,
-	type StatusView
+	type StatusView,
+	type TopChampions
 } from '#lib/domain/front-page.ts';
 import { patchOf } from '#lib/domain/matches.ts';
 import type { Region } from '#lib/domain/regions.ts';
@@ -28,12 +32,14 @@ export interface FrontPage {
 	patchLabel: string | null;
 	/**
 	 * Ranked games riot-proxy has analysed, each counted once: a tenth of its
-	 * `totalGames`, which counts every participant (ADR-074); null when the
-	 * analytics call failed.
+	 * `totalGames`, which counts every participant (ADR-074), over the default
+	 * slice whatever the card shows; null when that analytics call failed.
 	 */
 	totalGames: number | null;
-	/** The top-win-rate card's rows; null when the analytics call failed. */
-	topWinRates: ChampionRow[] | null;
+	/** The view the top-win-rate card shows, from the query (ADR-077). */
+	card: FrontCard;
+	/** The card's rows and floor; null when its analytics call failed. */
+	top: TopChampions | null;
 	/** The region's open incidents and maintenances, as the card shows them; null when the call failed or its payload was unreadable. */
 	status: StatusView | null;
 	/** Riot's own status page for the region, which the card links to. */
@@ -53,19 +59,22 @@ interface Lookups {
 }
 
 /**
- * The front page's cards for a region (ADR-066, ADR-071). Every call is
- * optional and they all start together: a card whose call fails, or does not
- * answer within the front page's deadline (`cards`), shows a notice instead,
- * and the page is still served. The patch and its lookups come from `client`,
+ * The front page's cards for a region and the card's view (ADR-066, ADR-071,
+ * ADR-077). Every call is optional and they all start together: a card whose
+ * call fails, or does not answer within the front page's deadline (`cards`),
+ * shows a notice instead, and the page is still served. The patch and its lookups come from `client`,
  * normally held in memory.
  */
 export async function loadFrontPage(
 	region: Region,
 	{
+		card = FRONT_CARD,
 		client = proxy,
 		cards = frontClient,
 		now = Date.now
 	}: {
+		/** The card's view; the default slice when absent. */
+		card?: FrontCard;
 		client?: ProxyClient;
 		cards?: ProxyClient;
 		/** The clock the status entries' ages are counted from. */
@@ -80,16 +89,25 @@ export async function loadFrontPage(
 			return { patch: null, names: NO_NAMES, fellBack: true };
 		});
 
-	const [analytics, platformStatus, { patch, names, fellBack }] = await Promise.all([
-		optional(
-			cards.GET('/v1/lol/analytics/champions', { params: { query: proxyQuery(FRONT_FILTER) } })
-		),
+	const analytics = (filter: ChampionFilter) =>
+		optional(cards.GET('/v1/lol/analytics/champions', { params: { query: proxyQuery(filter) } }));
+	const cardCall = analytics(card.filter);
+	// The pill counts the default slice; the card's call is it unless the card is filtered.
+	const pillCall = isFrontFilter(card.filter) ? cardCall : analytics(FRONT_FILTER);
+
+	const [cardAnswer, pillAnswer, platformStatus, { patch, names, fellBack }] = await Promise.all([
+		cardCall,
+		pillCall,
 		optional(cards.GET('/v1/lol/status/{platform}', platform)),
 		lookups
 	]);
 
-	const stats = analytics.response.ok ? analytics.data : undefined;
-	if (!stats) console.error('front page: analytics unavailable:', analytics.response.status);
+	const stats = cardAnswer.response.ok ? cardAnswer.data : undefined;
+	if (!stats) console.error('front page: analytics unavailable:', cardAnswer.response.status);
+	const pill = pillAnswer.response.ok ? pillAnswer.data : undefined;
+	if (!pill && pillCall !== cardCall) {
+		console.error('front page: games analysed unavailable:', pillAnswer.response.status);
+	}
 
 	const platformData = readStatus(platformStatus, region);
 	const status = platformData ? statusView(platformData, now()) : null;
@@ -98,15 +116,17 @@ export async function loadFrontPage(
 		region: { slug: region.slug, label: region.label },
 		patch,
 		patchLabel: patchOf(patch),
-		totalGames: stats ? gamesAnalysed(stats.totalGames) : null,
-		topWinRates: stats ? topWinRates(toChampionTable(stats, names)) : null,
+		totalGames: pill ? gamesAnalysed(pill.totalGames) : null,
+		card,
+		top: stats ? topChampions(toChampionTable(stats, names), card.sort) : null,
 		status,
 		statusPage: riotStatusUrl(region.platform),
 		statusCheckedSeconds: status
 			? fetchedAge(platformStatus.response.headers.get('x-cache-fetched-age'))
 			: null,
 		championNames: championNames(names.champions),
-		complete: stats !== undefined && status !== null && patch !== null && !fellBack
+		complete:
+			stats !== undefined && pill !== undefined && status !== null && patch !== null && !fellBack
 	};
 }
 

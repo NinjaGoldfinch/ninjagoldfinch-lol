@@ -1045,7 +1045,7 @@ Date: 2026-11-07 · Task: P5-02
 
 ## ADR-066: the front page shows live data: a `live` policy, a 2 s front-page deadline, no streaming
 
-Date: 2026-11-09 · Task: FP-01 · The games-analysed pill corrected by ADR-074
+Date: 2026-11-09 · Task: FP-01 · The games-analysed pill corrected by ADR-074; the top-win-rate card's filters and floor by ADR-077
 
 **Context.** `/` had no proxy data and a 10-minute `static` policy (ADR-055). The owner's new front page ("Concept 1, search first with live cards") adds a patch pill, the ranked games analysed and the top win rates (FP-01), then the free rotation and server status for a region (FP-02). The rules it must keep: data loads only in `+page.server.ts`; pages work without JavaScript; each card fails on its own, and the page never fails because riot-proxy is slow; the CSP is hash-based (ADR-055); Cloudflare caches every page by its `Cache-Control`, with the query string in the key (ADR-065).
 
@@ -1260,3 +1260,26 @@ Date: 2026-11-10 · Task: FP-08 (owner, 2026-11-10; supersedes the rotation card
 - A front-page miss costs riot-proxy two calls (analytics and status), not three, and `/` is complete, so kept at the edge, whenever those two and the lookups are.
 - The front page's exit check reads Korea's status, not its rotation and status.
 - The site makes no use of riot-proxy's rotations route. RP-2 in `docs/notes/status-card.md` asks for a schema for the status route only.
+
+## ADR-077: the top-win-rate card slices by patch, role and tier, ranks by win, pick or ban rate, and lowers its floor to fill
+
+Date: 2026-11-10 · Task: FP-09 (owner, 2026-11-10; extends ADR-066 and ADR-071)
+
+**Context.** The front page's top-win-rate card (ADR-066) listed the six highest win rates over 800 games, every patch, role and tier summed. The owner asked for 7-day, 30-day and this-patch filters, a role filter and other useful stats. riot-proxy's `/v1/lol/analytics/champions` slices by `patch` (one `major.minor`, or `all`), `role`, `tier` or `minTier`, `queue` and `side`; it has no window in days, as its tables are aggregated per patch. The site may not work around that (CLAUDE.md). Asked on 2026-11-10, the owner chose: this patch and all patches now, with 7D and 30D raised with riot-proxy; a tier filter, pick and ban rates, and a sort; and a floor of games that scales with the slice, 800 for the default.
+
+**Decision.**
+
+- **The card's view is in the query, in `/champions`' words**: `role` (`top` … `support`), `rank` (`diamond`, `diamond+`), `patch=newest` for this patch, `sort` (`pick`, `ban`). Defaults are left out: every role and tier, all patches, by win rate. The card offers no patch by number: any `patch` but `newest` is all patches (`parseFrontCard`). The query is canonical with the region first (`frontQuery`: `?region=kr&role=mid&rank=diamond+&patch=newest&sort=pick`), and anything else redirects 307 to it, as `?region=` did alone (ADR-071).
+- **"This patch" is riot-proxy's newest aggregated patch**: the call leaves `patch` out, and the card names the patch riot-proxy answered with (`Patch 16.20`). It can be newer or older than the Data Dragon patch in the hero's pill.
+- **Controls that work without JavaScript**: links for the patch and role tabs and for the Win rate, Pick rate and Ban rate column headings, which sort, as on `/champions`; a GET form for the tier, applied on change with JavaScript and by a `<noscript>` Apply button without. Every control keeps the region and the rest of the view; the status card's region picker keeps the card's view as hidden inputs. All keep the scroll (`data-sveltekit-reset="false"`, ADR-072).
+- **Each row shows its win, pick and ban rates and its games**, the sorted one in bold; the games and a bar are left out on narrow screens. The bar is the win rate on its fixed scale (`winRateBar`), or a pick or ban rate against the card's highest (`rateBar`). The link to `/champions` carries the view.
+- **A floor that fills the card** (`gamesFloor`): the first of 800, 400, 200 and 100 games that six champions reach, else 100. The default slice keeps 800 in production and in the fixtures; a new patch or a narrow role and tier still lists six. It never goes under 100, where `/champions` marks a low sample (ADR-035). The same floor applies to every sort: a ban rate counts every match, not the role's, so without it a role's top bans would be champions barely played in it. The card shows the floor it used (`All patches · Mid · min. 800 games`), and with no champion over 100 says so for the slice.
+- **The games-analysed pill still counts the default slice** (ADR-074): when the card is filtered, the load makes a second analytics call for the pill, and logs `front page: games analysed unavailable: <status>` if only that one fails. A sort alone is the same slice, so one call.
+- **7D and 30D wait on riot-proxy**: labelled RP-6 in `docs/notes/status-card.md`, with FP-10 to bring them to the card once a release has it.
+
+**Consequences.**
+
+- `/` has far more edge variants: up to 14 regions × 2 patches × 6 roles × 20 tier choices × 3 sorts. Each miss costs riot-proxy at most three calls (the card's slice, the pill's and the status), all answered from riot-proxy's memory or cache; a degraded view still costs them on every view (ADR-072).
+- A filtered view is complete, so kept at the edge, only when both analytics calls and the status answered.
+- A tier form submitted without JavaScript sends `rank=diamond%2B`, which redirects once to `rank=diamond+`, as on `/champions`.
+- The newest-patch fixture is synthetic: the 16.19 recording at the path without `patch`, relabelled 16.20, which riot-proxy's patch list names as its newest.

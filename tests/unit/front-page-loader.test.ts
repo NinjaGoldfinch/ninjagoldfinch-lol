@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_REGION, allRunning } from '#lib/domain/front-page.ts';
+import { DEFAULT_REGION, FRONT_CARD, allRunning, parseFrontCard } from '#lib/domain/front-page.ts';
 import { findRegion } from '#lib/domain/regions.ts';
 import { loadFrontPage } from '#lib/server/front-page.ts';
 import { createProxyClient } from '#lib/server/proxy.ts';
@@ -18,6 +18,12 @@ const OCEANIA = DEFAULT_REGION;
 
 const ANALYTICS =
 	'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&minGames=0&limit=500';
+const MIDDLE =
+	'/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&patch=all&role=MIDDLE&minGames=0&limit=500';
+const NEWEST = '/v1/lol/analytics/champions?queue=RANKED_SOLO_5x5&minGames=0&limit=500';
+
+/** The card's view for a query, as the route reads it. */
+const card = (query: string) => parseFrontCard(new URLSearchParams(query));
 
 type Fetch = (request: Request) => Promise<Response>;
 
@@ -76,7 +82,7 @@ describe('loadFrontPage', () => {
 		expect(page).not.toHaveProperty('rotation');
 		// riot-proxy's `totalGames` is 211590 participant games: ten a game (ADR-074).
 		expect(page.totalGames).toBe(21159);
-		expect(page.topWinRates?.map((r) => r.name)).toEqual([
+		expect(page.top?.rows.map((r) => r.name)).toEqual([
 			'Taliyah',
 			'Gragas',
 			'Riven',
@@ -84,6 +90,9 @@ describe('loadFrontPage', () => {
 			"Vel'Koz",
 			'Nocturne'
 		]);
+		expect(page.card).toEqual(FRONT_CARD);
+		expect(page.top?.minGames).toBe(800);
+		expect(page.top?.patch).toBe('all');
 		expect(page.patch).toBe('16.20.1');
 		expect(page.patchLabel).toBe('16.20');
 		expect(page.championNames).toContain('Taliyah');
@@ -132,7 +141,7 @@ describe('loadFrontPage', () => {
 		expect(page.statusCheckedSeconds).toBeNull();
 		// The card still links to Riot's own page.
 		expect(page.statusPage).toBe('https://status.riotgames.com/lol?region=oc1&locale=en_US');
-		expect(page.topWinRates).toHaveLength(6);
+		expect(page.top?.rows).toHaveLength(6);
 		expect(page.complete).toBe(false);
 		expect(log).toHaveBeenCalledWith('front page: unexpected status payload for oc1');
 	});
@@ -216,7 +225,7 @@ describe('loadFrontPage', () => {
 		expect(performance.now() - started).toBeLessThan(200);
 		expect(page.status).toBeNull();
 		expect(page.totalGames).toBe(21159);
-		expect(page.topWinRates).toHaveLength(6);
+		expect(page.top?.rows).toHaveLength(6);
 		expect(page.complete).toBe(false);
 	});
 
@@ -228,7 +237,7 @@ describe('loadFrontPage', () => {
 		);
 
 		expect(page.totalGames).toBeNull();
-		expect(page.topWinRates).toBeNull();
+		expect(page.top).toBeNull();
 		expect(page.patchLabel).toBe('16.20');
 		expect(page.complete).toBe(false);
 		expect(log).toHaveBeenCalledWith('front page: analytics unavailable:', 503);
@@ -244,7 +253,7 @@ describe('loadFrontPage', () => {
 			})
 		);
 
-		expect(page.topWinRates).toBeNull();
+		expect(page.top).toBeNull();
 		expect(page.totalGames).toBeNull();
 		expect(page.complete).toBe(false);
 	});
@@ -255,7 +264,7 @@ describe('loadFrontPage', () => {
 		const page = await loadFrontPage(OCEANIA, clients(undefined, hang, 50));
 
 		expect(performance.now() - started).toBeLessThan(1_000);
-		expect(page.topWinRates).toBeNull();
+		expect(page.top).toBeNull();
 		expect(page.patchLabel).toBe('16.20');
 		expect(page.complete).toBe(false);
 		expect(log).toHaveBeenCalledWith(`proxy timeout GET /v1/lol/analytics/champions after 50 ms`);
@@ -272,8 +281,73 @@ describe('loadFrontPage', () => {
 		expect(page.patchLabel).toBeNull();
 		expect(page.championNames).toEqual([]);
 		// riot-proxy's own names stand in for Data Dragon's.
-		expect(page.topWinRates?.[0]?.name).toBe('Taliyah');
-		expect(page.topWinRates?.[0]?.key).toBeNull();
+		expect(page.top?.rows[0]?.name).toBe('Taliyah');
+		expect(page.top?.rows[0]?.key).toBeNull();
 		expect(page.complete).toBe(false);
+	});
+	describe('a filtered card', () => {
+		it("asks for the card's slice, and the default slice for the pill", async () => {
+			const cards = answering();
+			const page = await loadFrontPage(OCEANIA, {
+				...clients(undefined, cards.fetch),
+				card: card('role=mid&sort=pick')
+			});
+
+			expect(cards.asked.toSorted()).toEqual([ANALYTICS, MIDDLE, '/v1/lol/status/oc1'].toSorted());
+			// The pill counts every role, whatever the card shows (ADR-074, ADR-077).
+			expect(page.totalGames).toBe(21159);
+			expect(page.card.sort).toBe('pick');
+			expect(page.top?.rows).toHaveLength(6);
+			expect(page.top?.minGames).toBe(800);
+			const picks = page.top?.rows.map((r) => r.pickRate ?? 0) ?? [];
+			expect(picks).toEqual(picks.toSorted((a, b) => b - a));
+			expect(page.complete).toBe(true);
+		});
+
+		it('makes one analytics call when only the sort changes', async () => {
+			const cards = answering();
+			await loadFrontPage(OCEANIA, { ...clients(undefined, cards.fetch), card: card('sort=ban') });
+			expect(cards.asked.filter((p) => p.startsWith('/v1/lol/analytics/'))).toEqual([ANALYTICS]);
+		});
+
+		it("shows riot-proxy's newest patch, and an empty card when no champion has 100 games", async () => {
+			const cards = answering();
+			const page = await loadFrontPage(OCEANIA, {
+				...clients(undefined, cards.fetch),
+				card: card('patch=newest')
+			});
+
+			expect(cards.asked).toContain(NEWEST);
+			expect(page.top).toEqual({ patch: '16.20', minGames: 100, rows: [] });
+			expect(page.totalGames).toBe(21159);
+			expect(page.complete).toBe(true);
+		});
+
+		it('keeps the card without the pill, logged and not kept at the edge', async () => {
+			const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const page = await loadFrontPage(OCEANIA, {
+				...clients((path) => (path === ANALYTICS ? json(503, {}) : undefined)),
+				card: card('role=mid')
+			});
+
+			expect(page.totalGames).toBeNull();
+			expect(page.top?.rows).toHaveLength(6);
+			expect(page.complete).toBe(false);
+			expect(log).toHaveBeenCalledWith('front page: games analysed unavailable:', 503);
+			expect(log).not.toHaveBeenCalledWith('front page: analytics unavailable:', 503);
+		});
+
+		it('keeps the pill without the card', async () => {
+			const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const page = await loadFrontPage(OCEANIA, {
+				...clients((path) => (path === MIDDLE ? json(503, {}) : undefined)),
+				card: card('role=mid')
+			});
+
+			expect(page.totalGames).toBe(21159);
+			expect(page.top).toBeNull();
+			expect(page.complete).toBe(false);
+			expect(log).toHaveBeenCalledWith('front page: analytics unavailable:', 503);
+		});
 	});
 });

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { hydrated } from './hydrated.ts';
 
 const LEGAL = "ninjagoldfinch.lol isn't endorsed by Riot Games";
@@ -44,14 +44,20 @@ test.describe('without JavaScript', () => {
 		}
 
 		const card = page.getByRole('region', { name: 'Top win rate · Ranked Solo' });
-		await expect(card).toContainText('min. 800 games');
-		const rows = card.getByRole('listitem');
+		await expect(card).toContainText('All patches · min. 800 games');
+		const rows = card.locator('tbody').getByRole('row');
 		await expect(rows).toHaveCount(6);
 		for (const [i, row] of top.entries()) {
 			await expect(rows.nth(i)).toContainText(row.championName);
 		}
 		await expect(rows.first()).toContainText('Taliyah');
 		await expect(rows.first()).toContainText('54.8%');
+		// Its pick and ban rates and games beside the win rate.
+		await expect(rows.first().getByRole('cell')).toHaveText(['1', '54.8%', /%$/, /%$/, /^[\d,]+$/]);
+		await expect(card.getByRole('columnheader', { name: 'Win rate' })).toHaveAttribute(
+			'aria-sort',
+			'descending'
+		);
 		await expect(rows.first().getByRole('img', { name: 'Taliyah' })).toHaveAttribute(
 			'src',
 			'https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Taliyah.png'
@@ -152,6 +158,141 @@ test.describe('without JavaScript', () => {
 		await expect(page).toHaveURL('/summoner/NinjaGoldfinch-OCENZ');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('NinjaGoldfinch#OCENZ');
 	});
+});
+
+test.describe('the top-champions card without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	const card = (page: Page, heading = 'Top win rate · Ranked Solo') =>
+		page.getByRole('region', { name: heading });
+
+	test('a role tab shows that role, and every control keeps it', async ({ page }) => {
+		await page.goto('/');
+		await card(page)
+			.getByRole('navigation', { name: 'Role' })
+			.getByRole('link', { name: 'Mid' })
+			.click();
+		await expect(page).toHaveURL('/?role=mid');
+
+		await expect(card(page)).toContainText('All patches · Mid · min. 800 games');
+		await expect(card(page).locator('tbody').getByRole('row')).toHaveCount(6);
+		await expect(
+			card(page).getByRole('navigation', { name: 'Role' }).getByRole('link', { name: 'Mid' })
+		).toHaveAttribute('aria-current', 'page');
+		// The pill still counts every role.
+		await expect(page.getByText('21,159 ranked games analysed')).toBeVisible();
+		await expect(card(page).getByRole('link', { name: 'All champions' })).toHaveAttribute(
+			'href',
+			'/champions?role=mid&sort=win'
+		);
+		await expect(card(page).getByRole('link', { name: 'Pick rate' })).toHaveAttribute(
+			'href',
+			'/?role=mid&sort=pick'
+		);
+
+		// The region picker keeps the card's view.
+		const picker = page.getByRole('form', { name: 'Region' });
+		await picker.getByRole('combobox', { name: 'Region' }).selectOption({ label: 'Korea' });
+		await picker.getByRole('button', { name: 'Apply' }).click();
+		await expect(page).toHaveURL('/?region=kr&role=mid');
+		await expect(card(page)).toContainText('Mid · min. 800 games');
+		await expect(
+			card(page).getByRole('navigation', { name: 'Role' }).getByRole('link', { name: 'All roles' })
+		).toHaveAttribute('href', '/?region=kr');
+	});
+
+	test("this patch is riot-proxy's newest, and says when no champion has 100 games", async ({
+		page
+	}) => {
+		await page.goto('/');
+		const patch = card(page).getByRole('navigation', { name: 'Patch' });
+		await expect(patch.getByRole('link', { name: 'All patches' })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		await patch.getByRole('link', { name: 'This patch' }).click();
+		await expect(page).toHaveURL('/?patch=newest');
+
+		await expect(card(page)).toContainText('No champion has 100 games for Patch 16.20 yet.');
+		await expect(card(page).getByRole('table')).toHaveCount(0);
+		// The controls stay, to go back.
+		await expect(patch.getByRole('link', { name: 'All patches' })).toHaveAttribute('href', '/');
+		await expect(card(page).getByRole('link', { name: 'All champions' })).toHaveAttribute(
+			'href',
+			'/champions?patch=newest&sort=win'
+		);
+	});
+
+	test('a column heading ranks by its rate', async ({ page }) => {
+		await page.goto('/');
+		await card(page).getByRole('link', { name: 'Ban rate' }).click();
+		await expect(page).toHaveURL('/?sort=ban');
+
+		const banned = card(page, 'Top ban rate · Ranked Solo');
+		await expect(banned.getByRole('columnheader', { name: 'Ban rate' })).toHaveAttribute(
+			'aria-sort',
+			'descending'
+		);
+		// #, champion, bar, win, pick, ban, games.
+		const bans = await banned
+			.locator('tbody tr')
+			.evaluateAll((rows) => rows.map((r) => parseFloat(r.children[5]?.textContent ?? '')));
+		expect(bans).toHaveLength(6);
+		expect(bans).toEqual(bans.toSorted((a, b) => b - a));
+	});
+
+	test('the tier applies with its button, keeping the region and the rest', async ({ page }) => {
+		await page.goto('/?region=kr&sort=pick');
+		const tier = card(page, 'Top pick rate · Ranked Solo').getByRole('form', { name: 'Tier' });
+		await tier.getByRole('combobox', { name: 'Tier' }).selectOption({ label: 'Emerald+' });
+		await tier.getByRole('button', { name: 'Apply' }).click();
+
+		// The form writes `+` as `%2B`; the page tidies it.
+		await expect(page).toHaveURL('/?region=kr&rank=emerald+&sort=pick');
+		await expect(card(page, 'Top pick rate · Ranked Solo')).toContainText(
+			'All patches · Emerald+ · min. 800 games'
+		);
+	});
+});
+
+test("the card's view has one URL, and is kept at the edge", async ({ request }) => {
+	for (const [path, location] of [
+		['/?sort=win', '/'],
+		['/?patch=16.19', '/'],
+		['/?patch=all', '/'],
+		['/?role=feeder', '/'],
+		['/?rank=emerald%2B', '/?rank=emerald+'],
+		['/?sort=pick&role=mid&region=kr', '/?region=kr&role=mid&sort=pick']
+	]) {
+		const response = await request.get(path, { maxRedirects: 0 });
+		expect(response.status(), path).toBe(307);
+		expect(response.headers()['location'], path).toBe(location);
+	}
+	const filtered = await request.get('/?region=kr&role=mid&sort=pick');
+	expect(filtered.status()).toBe(200);
+	expect(filtered.headers()['cache-control']).toBe(
+		'public, s-maxage=60, stale-while-revalidate=120'
+	);
+});
+
+test('with JavaScript, a role tab applies in place and keeps the scroll', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 700 });
+	await page.goto('/');
+	await hydrated(page);
+	const mid = page
+		.getByRole('region', { name: 'Top win rate · Ranked Solo' })
+		.getByRole('navigation', { name: 'Role' })
+		.getByRole('link', { name: 'Mid' });
+	await mid.evaluate((link) => link.scrollIntoView({ block: 'center' }));
+	const before = await page.evaluate(() => window.scrollY);
+	expect(before).toBeGreaterThan(0);
+
+	await mid.click();
+	await expect(page).toHaveURL('/?role=mid');
+	await expect(page.getByRole('region', { name: 'Top win rate · Ranked Solo' })).toContainText(
+		'All patches · Mid'
+	);
+	expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before / 2);
 });
 
 test('the edge keeps the front page for a minute', async ({ request }) => {

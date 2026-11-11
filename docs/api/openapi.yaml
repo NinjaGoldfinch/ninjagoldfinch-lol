@@ -47,11 +47,15 @@ paths:
       operationId: getHome
       summary: Front page with the search form and live cards
       description: >-
-        The patch, the ranked games analysed and the top win rates, from
+        The patch, the ranked games analysed and the top champions, from
         riot-proxy's analytics, and the region's server status, each within
         a 2 s deadline; a card whose call fails shows a notice and the page
         is sent with `Cache-Control: no-store` (ADR-066, ADR-071, ADR-076).
-        Recent searches are filled in by the browser.
+        The top-champions card slices by patch, role and tier and ranks by
+        win, pick or ban rate, in `/champions`' words (ADR-077). Recent
+        searches are filled in by the browser. The query is canonical: the
+        region, then role, rank, patch and sort, defaults left out; anything
+        else redirects to it.
       parameters:
         - name: region
           in: query
@@ -63,6 +67,22 @@ paths:
             type: string
             enum: [br, eune, euw, jp, kr, lan, las, me, na, oce, ru, sea, tw, tr, vn]
             default: oce
+        - $ref: '#/components/parameters/Role'
+        - $ref: '#/components/parameters/Rank'
+        - name: patch
+          in: query
+          description: >-
+            `newest` for riot-proxy's newest patch; left out for all patches,
+            the default. Any other value is all patches.
+          schema:
+            type: string
+            enum: [newest]
+        - name: sort
+          in: query
+          description: The card's order; left out for win rate, the default.
+          schema:
+            type: string
+            enum: [pick, ban]
       responses:
         '200':
           $ref: '#/components/responses/Html'

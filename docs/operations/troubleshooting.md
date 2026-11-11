@@ -219,9 +219,9 @@ If the old patch stays well past that, the refresh is failing, and every request
 
 ## 22. A front-page card shows a notice, or `/` is never cached
 
-**Cause.** The front page makes two optional calls to riot-proxy, both with a 2 s deadline (`frontClient`), besides the held patch and lookups: the analytics for the games-analysed pill and the top-win-rate card, and the region's server status (ADR-066, ADR-071; the free rotation was dropped in ADR-076). When one fails, its card shows a notice, the rest of the page is served, and the page is sent `no-store`, so every view of it calls riot-proxy again (ADR-072). Each is logged with a `front page:` prefix (`src/lib/server/front-page.ts:62-140`):
+**Cause.** The front page makes two or three optional calls to riot-proxy, each with a 2 s deadline (`frontClient`), besides the held patch and lookups: the analytics for the top-win-rate card's slice, which is the games-analysed pill's too unless the card is filtered, when the pill's default slice is a call of its own, and the region's server status (ADR-066, ADR-071, ADR-077; the free rotation was dropped in ADR-076). When one fails, its card shows a notice, the rest of the page is served, and the page is sent `no-store`, so every view of it calls riot-proxy again (ADR-072). Each is logged with a `front page:` prefix (`src/lib/server/front-page.ts:68-160`):
 
-- `front page: analytics unavailable: <status>`, `front page: status unavailable for <platform>: <status>`: riot-proxy answered with an error, or 503 when it did not answer in 2 s, with a `proxy timeout` or `proxy unreachable` line beside it.
+- `front page: analytics unavailable: <status>`, `front page: games analysed unavailable: <status>`, `front page: status unavailable for <platform>: <status>`: riot-proxy answered with an error, or 503 when it did not answer in 2 s, with a `proxy timeout` or `proxy unreachable` line beside it.
 - `front page: unexpected status payload for <platform>`: riot-proxy passes Riot's payload through, and Riot's shape changed (ADR-071).
 - `front page: patch unavailable:`: no patch or lookups, so no patch pill, no icons and plain names.
 
