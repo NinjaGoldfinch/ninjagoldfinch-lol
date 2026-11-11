@@ -21,7 +21,8 @@ import { profilePath } from './riot-id.ts';
 
 /**
  * The top-win-rate card's default slice, and the games-analysed pill's only
- * one: Ranked Solo, every role, tier, region and patch, as `/champions`.
+ * one: Ranked Solo, every role, tier, region and patch, whatever `/champions`'
+ * default patch (ADR-033, ADR-077).
  */
 export const FRONT_FILTER: ChampionFilter = { role: null, patch: 'all', rank: null };
 
@@ -40,13 +41,14 @@ export const FRONT_CARD: FrontCard = { filter: FRONT_FILTER, sort: FRONT_SORT };
 /**
  * The card's view from the query, in `/champions`' words (`role`, `rank`,
  * `patch`, `sort`), so its link to `/champions` carries it. A patch other
- * than `newest` is every patch; a sort other than `pick` or `ban` is win rate.
+ * than `newest` is every patch, whatever `/champions`' default; a sort other
+ * than `pick` or `ban` is win rate.
  */
 export function parseFrontCard(params: URLSearchParams): FrontCard {
-	const filter = parseChampionFilter(params);
+	const { role, rank } = parseChampionFilter(params);
 	const sort = params.get('sort');
 	return {
-		filter: { ...filter, patch: filter.patch === null ? null : 'all' },
+		filter: { role, rank, patch: params.get('patch') === 'newest' ? null : 'all' },
 		sort: sort === 'pick' || sort === 'ban' ? sort : FRONT_SORT
 	};
 }
@@ -56,9 +58,14 @@ export function isFrontFilter(filter: ChampionFilter): boolean {
 	return filter.role === null && filter.rank === null && filter.patch === FRONT_FILTER.patch;
 }
 
-/** The card's fields in a URL, defaults left out: a form's hidden inputs keep the view. */
+/**
+ * The card's fields in a URL, defaults left out: a form's hidden inputs keep
+ * the view. `patch=newest` for this patch, and no field for all patches,
+ * whatever `/champions` leaves out.
+ */
 export function cardFields(card: FrontCard): [string, string][] {
-	const fields = filterFields(card.filter);
+	const fields = filterFields(card.filter).filter(([key]) => key !== 'patch');
+	if (card.filter.patch === null) fields.push(['patch', 'newest']);
 	if (card.sort !== FRONT_SORT) fields.push(['sort', card.sort]);
 	return fields;
 }
