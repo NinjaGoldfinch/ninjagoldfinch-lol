@@ -24,7 +24,7 @@ The site may use only what the spec declares (`CLAUDE.md:21-22`). To move to a n
 
 ## Routes used
 
-Fourteen of the spec's 70 paths. Required means a failure fails the page.
+Thirteen of the spec's 70 paths. Required means a failure fails the page.
 
 | Route                                                     | Used by              | Query the site sends                                                                                                              | Required |
 | --------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -112,4 +112,4 @@ WebSockets (`/v1/ws`), admin routes, `riot` account routes, live game and master
 ---
 
 **Sources:** `openapi/riot-proxy.json` (version, path count, sha256), `src/lib/server/proxy.ts:L15-L154`, `src/lib/server/errors.ts:L16-L84`, `src/lib/server/profile.ts:L86-L154`, `src/lib/server/match.ts:L39-L61`, `src/lib/server/patch.ts:L17-L162`, `src/lib/server/static-data.ts:L54-L63`, `src/lib/server/champions.ts:L40-L43`, `src/lib/server/champion-page.ts:L91-L186`, `src/lib/server/front-page.ts:L67-L185`, `src/lib/domain/front-page.ts:L85-L97,L123-L375`, `src/lib/domain/champion-stats.ts:L34-L63,L178-L245`, `src/lib/domain/champion-page.ts:L37-L215`, `src/lib/domain/matches.ts:L49-L85,L160-L163`, `src/lib/domain/match-filters.ts:L5-L11`, `src/lib/domain/regions.ts:L15-L31`, `src/lib/api/match.ts:L159-L217`, `src/lib/api/riot.ts:L11-L35`, `README.md:L52-L67`, `justfile:L16-L22`, `CLAUDE.md:L21-L22`, `docs/DECISIONS.md:L87,L143,L225,L415,L441,L540,L577,L597`, `riot-proxy:src/http/error.rs:L13-L172`, `riot-proxy:src/routes/docs.rs:L118-L126`, `riot-proxy:src/routes/lol.rs:L53-L64`, `riot-proxy:src/routes/players/refresh.rs:L22-L28`
-**Last verified:** 2026-11-03 against commit `e183749`; the platform values and the rotations and status rows on 2026-11-09 against `a193653`; `totalGames` in the champions row and the status row on 2026-11-10 against `91c83d3` with FIX-17's and FP-04's changes; the rotations rows removed on 2026-11-10 with FP-08's change
+**Last verified:** 2026-11-03 against commit `e183749`; the platform values and the rotations and status rows on 2026-11-09 against `a193653`; `totalGames` in the champions row and the status row on 2026-11-10 against `91c83d3` with FIX-17's and FP-04's changes; the rotations rows removed on 2026-11-10 with FP-08's change; the route count (13 rows) and the spec's 70 paths on 2026-11-11 against `13ff501`

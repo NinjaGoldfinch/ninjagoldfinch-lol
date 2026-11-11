@@ -85,7 +85,7 @@ The mock proxy replays `tests/fixtures/` and answers 500 for anything it has no 
 
    ```sh
    node tests/mock-proxy/server.ts 8787
-   # mock-proxy: 55 fixtures on http://127.0.0.1:8787
+   # mock-proxy: 54 fixtures on http://127.0.0.1:8787
    ```
 
 2. Start the dev server in another, pointing both riot-proxy and CommunityDragon at the mock:
@@ -199,4 +199,4 @@ $ riot-proxy v2.7.0 (placeholder key, AUTH_DISABLED) + just dev
 ---
 
 **Sources:** `package.json:L7-L10`, `.npmrc:L1`, `justfile:L5-L28`, `.githooks/pre-commit:L4-L23`, `.githooks/pre-push:L1-L3`, `README.md:L10-L67`, `.env.example:L1-L51`, `scripts/check.sh`, `scripts/check-progress.ts`, `src/lib/server/env.ts:L11-L69`, `src/lib/server/errors.ts:L1-L39`, `playwright.config.ts:L3-L31`, `tests/mock-proxy/mock.ts:L27-L48`, `tests/mock-proxy/server.ts:L1-L12`, `vite.config.ts:L30-L33`, `node_modules/@sveltejs/kit/src/exports/vite/dev/index.js:L294`, `node_modules/@sveltejs/kit/src/messages/shared-warnings.js:L74-L77`, `riot-proxy:README.md:L1-L98`, `riot-proxy:src/config.rs:L610-L662`, `riot-proxy:.env.example:L81-L84,L158-L159` (riot-proxy at `v2.7.0`), `riot-proxy:docs/design/12-object-storage-and-hosting.md:L802-L806`
-**Last verified:** 2026-11-09 against commit `4986766`
+**Last verified:** 2026-11-09 against commit `4986766`; the mock's fixture count (54) on 2026-11-11 against `13ff501`
