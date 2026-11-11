@@ -428,26 +428,59 @@ describe('the newest update of a status entry', () => {
 		parseStatus({ maintenances: [], incidents: [{ id: 1, updates }] })?.incidents[0]?.update;
 	const text = (content: string, locale = 'en_US') => [{ locale, content }];
 
-	it('is the one updated last, whatever its place in the list', () => {
+	it('is the one posted last, by `created_at`, whatever its place in the list', () => {
 		expect(
 			update([
-				{ translations: text('first'), updated_at: '2026-11-09T01:00:00Z' },
-				{ translations: text('newest'), updated_at: '2026-11-09T03:00:00Z' },
-				{ translations: text('second'), updated_at: '2026-11-09T02:00:00Z' }
+				{ translations: text('first'), created_at: '2026-11-09T01:00:00Z' },
+				{ translations: text('newest'), created_at: '2026-11-09T03:00:00Z' },
+				{ translations: text('second'), created_at: '2026-11-09T02:00:00Z' }
 			])
 		).toBe('newest');
 	});
 
-	it('goes by `created_at` without `updated_at`, and counts one without a time as the oldest', () => {
+	it('is the one posted last, not an older one edited since (ADR-078)', () => {
+		// Riot fixes a typo in A after posting B: A's `updated_at` is the later.
+		const a = {
+			translations: text('Investigating'),
+			created_at: '2026-11-09T01:00:00Z',
+			updated_at: '2026-11-09T03:30:00Z'
+		};
+		const b = {
+			translations: text('A fix is rolling out'),
+			created_at: '2026-11-09T03:00:00Z',
+			updated_at: '2026-11-09T03:00:00Z'
+		};
+		expect(update([a, b])).toBe('A fix is rolling out');
+		expect(update([b, a])).toBe('A fix is rolling out');
+	});
+
+	it('goes by `updated_at` without `created_at`, and counts one without a time as the oldest', () => {
 		expect(
 			update([
 				{ translations: text('no time') },
-				{ translations: text('created'), created_at: '2026-11-09T01:00:00Z', updated_at: null },
-				{ translations: text('not a time'), updated_at: 'soon' }
+				{ translations: text('updated'), created_at: null, updated_at: '2026-11-09T01:00:00Z' },
+				{ translations: text('not a time'), created_at: 'soon' }
 			])
-		).toBe('created');
+		).toBe('updated');
+		// Against another update's `created_at`, the fallback is its time.
+		expect(
+			update([
+				{ translations: text('posted'), created_at: '2026-11-09T01:00:00Z' },
+				{ translations: text('edited later'), updated_at: '2026-11-09T02:00:00Z' }
+			])
+		).toBe('edited later');
 		// With no times at all, the first in the list.
 		expect(update([{ translations: text('a') }, { translations: text('b') }])).toBe('a');
+	});
+
+	it('goes to the first in the list of two posted at the same time', () => {
+		const at = '2026-11-09T01:00:00Z';
+		expect(
+			update([
+				{ translations: text('one'), created_at: at, updated_at: '2026-11-09T02:00:00Z' },
+				{ translations: text('two'), created_at: at }
+			])
+		).toBe('one');
 	});
 
 	it('is in English when the update has it, else its first translation', () => {
@@ -520,7 +553,7 @@ describe('statusView', () => {
 		});
 	});
 
-	it('lists the worst first: critical, warnings and maintenance under way, notices, then other maintenance', () => {
+	it('lists the worst first: critical, warnings and maintenance not known to be scheduled, notices, then scheduled maintenance', () => {
 		const titled = (content: string) => [{ locale: 'en_US', content }];
 		const status = view({
 			incidents: [
@@ -533,7 +566,10 @@ describe('statusView', () => {
 			maintenances: [
 				{ id: 5, maintenance_status: 'scheduled', titles: titled('scheduled') },
 				{ id: 6, maintenance_status: 'in_progress', titles: titled('under way') },
-				{ id: 7, titles: titled('stateless') }
+				// A maintenance with no state, or one the site does not know, may be
+				// under way: a warning, as an incident of unknown severity (ADR-078).
+				{ id: 7, titles: titled('stateless') },
+				{ id: 8, maintenance_status: 'delayed', titles: titled('unknown state') }
 			]
 		});
 		expect(status.entries.map((e) => [e.title, e.tone, e.state])).toEqual([
@@ -541,10 +577,46 @@ describe('statusView', () => {
 			['warning', 'warning', 'warning'],
 			['unknown', 'warning', null],
 			['under way', 'warning', 'in progress'],
+			['stateless', 'warning', null],
+			['unknown state', 'warning', 'delayed'],
 			['notice', 'info', 'info'],
-			['scheduled', 'maintenance', 'scheduled'],
-			['stateless', 'maintenance', null]
+			['scheduled', 'maintenance', 'scheduled']
 		]);
+	});
+
+	it('shows a maintenance with no status as a warning, ahead of a notice (ADR-078)', () => {
+		const status = view({
+			incidents: [
+				{ id: 1, incident_severity: 'info', titles: [{ locale: 'en_US', content: 'Notice' }] }
+			],
+			maintenances: [
+				{
+					id: 2,
+					maintenance_status: 'scheduled',
+					titles: [{ locale: 'en_US', content: 'Patch 16.21' }]
+				},
+				{
+					id: 3,
+					titles: [{ locale: 'en_US', content: 'Store maintenance' }],
+					updated_at: '2026-11-09T02:10:00Z'
+				}
+			]
+		});
+		expect(status.entries[0]).toEqual({
+			key: 'Maintenance-id-3',
+			kind: 'Maintenance',
+			title: 'Store maintenance',
+			state: null,
+			tone: 'warning',
+			update: null,
+			age: { event: 'updated', seconds: 3600 }
+		});
+		expect(status.entries.map((e) => [e.key, e.tone])).toEqual([
+			['Maintenance-id-3', 'warning'],
+			['Incident-id-1', 'info'],
+			['Maintenance-id-2', 'maintenance']
+		]);
+		expect(statusHeadline(status)).toBe('1 incident · 2 maintenances');
 	});
 
 	it('keys an incident and a maintenance with the same id apart', () => {

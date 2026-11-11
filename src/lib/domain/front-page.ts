@@ -229,7 +229,7 @@ export interface StatusItem {
 	/** When Riot opened the entry (`created_at`), as it wrote it. */
 	createdAt: string | null;
 	updatedAt: string | null;
-	/** The newest published update's text, in English when it has it; null without one (ADR-075). */
+	/** The newest published update's text, in English when it has it; null without one (ADR-075, ADR-078). */
 	update: string | null;
 	/** What the entry lacked and was filled in for it; empty when it was whole. */
 	missing: ('id' | 'title')[];
@@ -262,10 +262,10 @@ function timeOf(value: unknown): number | null {
 }
 
 /**
- * The text of an entry's newest update (ADR-075): by `updated_at`, else
- * `created_at`; one without a readable time counts as the oldest, and of
- * equals the first in the list wins. Updates marked `publish: false`, and
- * those without text, are passed over.
+ * The text of an entry's newest update (ADR-078): the one posted last, by
+ * `created_at`, else `updated_at`, so an edit to an older update does not
+ * outrank a newer one. One without a readable time counts as the oldest; of
+ * equals the first wins. Unpublished updates, and those without text, are skipped.
  */
 function latestUpdate(updates: unknown): string | null {
 	if (!Array.isArray(updates)) return null;
@@ -275,7 +275,7 @@ function latestUpdate(updates: unknown): string | null {
 		if (!update || update.publish === false) continue;
 		const text = localised(update.translations)?.trim();
 		if (!text) continue;
-		const at = timeOf(update.updated_at) ?? timeOf(update.created_at) ?? -Infinity;
+		const at = timeOf(update.created_at) ?? timeOf(update.updated_at) ?? -Infinity;
 		if (!newest || at > newest.at) newest = { text, at };
 	}
 	return newest?.text ?? null;
@@ -356,9 +356,9 @@ export interface StatusView {
 
 /**
  * The order of the card's entries. An incident whose severity is unreadable
- * is a `warning`: it is open, and must not read as less than it may be
- * (ADR-072). A maintenance under way is a `warning` too; any other is
- * `maintenance`, after the `info` incidents, which are about now.
+ * is a `warning`, as is a maintenance under way or whose state is unreadable:
+ * open, neither may read as less than it may be (ADR-072, ADR-078). Only a
+ * `scheduled` maintenance is `maintenance`, after the `info` incidents.
  */
 export const STATUS_ORDER: readonly StatusTone[] = ['critical', 'warning', 'info', 'maintenance'];
 
@@ -367,7 +367,7 @@ function incidentTone(item: StatusItem): StatusTone {
 }
 
 function maintenanceTone(item: StatusItem): StatusTone {
-	return item.maintenanceStatus === 'in_progress' ? 'warning' : 'maintenance';
+	return item.maintenanceStatus === 'scheduled' ? 'maintenance' : 'warning';
 }
 
 function statusEntry(kind: StatusEntry['kind'], item: StatusItem, now: number): StatusEntry {
